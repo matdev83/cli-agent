@@ -1,6 +1,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Dict, cast
 from src.cli import run_agent
 
 # Reconstruct APP_DIR as in the test file
@@ -27,7 +28,8 @@ result, history = run_agent(
 )
 
 print("\n--- Agent History (Dialogue with LLM) ---")
-for i, msg in enumerate(history):
+for i, item in enumerate(history):
+    msg = cast(Dict[str, str], item)
     print(f"--- Message {i+1} ({msg['role']}) ---")
     print(msg['content'])
     print("-" * 30)

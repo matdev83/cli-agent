@@ -25,11 +25,11 @@ def test_openrouter_list_files(tmp_path: Path):
 
     # Assert that the list_files tool was called and its output contains the expected file
     assert any(
-        msg["role"] == "user" and "Result of list_files:" in msg["content"] and "tictactoe.py" in msg["content"]
+        isinstance(msg, dict) and msg.get("role") == "user" and "Result of list_files:" in msg.get("content", "") and "tictactoe.py" in msg.get("content", "")
         for msg in history
     )
     # Optionally, assert that the agent attempted completion
     assert any(
-        msg["role"] == "assistant" and "<attempt_completion>" in msg["content"]
+        isinstance(msg, dict) and msg.get("role") == "assistant" and "<attempt_completion>" in msg.get("content", "")
         for msg in history
     )
