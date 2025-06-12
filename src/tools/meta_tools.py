@@ -29,7 +29,9 @@ class NewTaskTool(Tool):
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
         """Executes the tool. Expects 'context' in params. Full task creation logic is pending."""
-        context = params.get("context", "No context provided.")
+        context = params.get("context")
+        if context is None: # Check if None, empty string might be valid context
+            return "Error: Missing required parameter 'context' for tool 'new_task'."
         return f"Success: NewTaskTool called with context: '{context}'. Full implementation of new task creation is pending."
 
 class AskFollowupQuestionTool(Tool):
@@ -53,8 +55,10 @@ class AskFollowupQuestionTool(Tool):
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
         """Executes the tool. Expects 'question' and optionally 'options' in params. Full implementation pending."""
-        question = params.get("question", "No question provided.")
-        options = params.get("options", "No options provided.")
+        question = params.get("question")
+        if question is None: # Check if None, empty string might be a (bad) question
+            return "Error: Missing required parameter 'question' for tool 'ask_followup_question'."
+        options = params.get("options", "No options provided.") # Optional, so default is fine
         return f"Success: AskFollowupQuestionTool called. Question: '{question}', Options: '{options}'. Full implementation pending."
 
 class AttemptCompletionTool(Tool):
@@ -78,8 +82,10 @@ class AttemptCompletionTool(Tool):
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
         """Executes the tool. Expects 'result' and optionally 'command' in params. Full implementation pending."""
-        result = params.get("result", "No result provided.")
-        command = params.get("command", "No command provided.")
+        result = params.get("result")
+        if result is None: # Check if None
+            return "Error: Missing required parameter 'result' for tool 'attempt_completion'."
+        command = params.get("command", "No command provided.") # Optional
         return f"Success: AttemptCompletionTool called. Result: '{result}', Command: '{command}'. Full implementation pending."
 
 class PlanModeRespondTool(Tool):
@@ -102,7 +108,9 @@ class PlanModeRespondTool(Tool):
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
         """Executes the tool. Expects 'response' in params. Full implementation pending."""
-        response = params.get("response", "No response provided.")
+        response = params.get("response")
+        if response is None: # Check if None
+            return "Error: Missing required parameter 'response' for tool 'plan_mode_respond'."
         return f"Success: PlanModeRespondTool called. Response: '{response}'. Full implementation pending."
 
 class LoadMcpDocumentationTool(Tool):
@@ -147,7 +155,9 @@ class CondenseTool(Tool):
         ]
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        context = params.get("context", "No context provided.")
+        context = params.get("context")
+        if context is None: # Check if None
+            return "Error: Missing required parameter 'context' for tool 'condense'."
         return f"Success: CondenseTool called with context: '{context}'. Full implementation of context condensation is pending."
 
 class ReportBugTool(Tool):
@@ -195,12 +205,28 @@ class ReportBugTool(Tool):
         ]
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        # For a stub, just acknowledging the parameters is useful.
-        title = params.get('title', 'N/A')
-        what_happened = params.get('what_happened', 'N/A')
-        # Add more if desired for the stub message.
-        return (f"Success: ReportBugTool called. Title: '{title}', What Happened: '{what_happened}'. "
-                f"Received params: {params}. Full implementation of bug reporting is pending.")
+        title = params.get('title')
+        what_happened = params.get('what_happened')
+        steps_to_reproduce = params.get('steps_to_reproduce')
+
+        missing_required = []
+        if title is None:
+            missing_required.append('title')
+        if what_happened is None:
+            missing_required.append('what_happened')
+        if steps_to_reproduce is None:
+            missing_required.append('steps_to_reproduce')
+
+        if missing_required:
+            return f"Error: Missing required parameters for 'report_bug': {', '.join(missing_required)}."
+
+        # Optional params can use .get with a default
+        api_request_output = params.get('api_request_output', 'N/A')
+        additional_context = params.get('additional_context', 'N/A')
+
+        return (f"Success: ReportBugTool called. Title: '{title}', What Happened: '{what_happened}', "
+                f"Steps: '{steps_to_reproduce}', API Output: '{api_request_output}', Additional: '{additional_context}'. "
+                f"Full implementation of bug reporting is pending.")
 
 class NewRuleTool(Tool):
     @property
@@ -229,8 +255,19 @@ class NewRuleTool(Tool):
         ]
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        path = params.get("path", "No path provided.")
-        content_preview = params.get("content", "No content provided.")[:50] + "..."
+        path = params.get("path")
+        content = params.get("content") # Renamed for clarity, was content_preview
+
+        missing_required = []
+        if path is None:
+            missing_required.append('path')
+        if content is None:
+            missing_required.append('content')
+
+        if missing_required:
+            return f"Error: Missing required parameters for 'new_rule': {', '.join(missing_required)}."
+
+        content_preview = content[:50] + "..." if content else "No content provided."
         # In a real tool, this would use file writing tools, considering agent_memory.cwd
         return (f"Success: NewRuleTool called. Path: '{path}', Content (preview): '{content_preview}'. "
                 f"Full implementation of rule file creation is pending.")

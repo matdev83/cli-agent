@@ -27,6 +27,10 @@ TOOL_USE_NAMES = [
     # "web_fetch", # Was commented out, keeping it so
 ]
 
+# Tags that are expected and not tool uses or simple text content.
+KNOWN_NON_TOOL_TAGS = ["thinking", "explanation"]
+MALFORMED_TOOL_PREFIX = "Error: Malformed tool use - "
+
 @dataclass
 class TextContent:
     content: str
@@ -54,8 +58,13 @@ def parse_assistant_message(message: str) -> List[AssistantMessageContent]:
     try:
         root = ET.fromstring(wrapped_message)
     except ET.ParseError:
-        if message.strip():
-            result.append(TextContent(content=message.strip(), partial=False))
+        stripped_message = message.strip()
+        if stripped_message:
+            # If it looks like an attempt at XML, add a prefix.
+            if stripped_message.startswith("<") and stripped_message.endswith(">"):
+                result.append(TextContent(content=f"{MALFORMED_TOOL_PREFIX}Could not parse XML: {stripped_message}", partial=False))
+            else:
+                result.append(TextContent(content=stripped_message, partial=False))
         return result
 
     if root.text and root.text.strip():
@@ -73,9 +82,10 @@ def parse_assistant_message(message: str) -> List[AssistantMessageContent]:
 
         elif element.tag == "tool_use": # Handles wrapped tool calls like <tool_use><tool_name>...</tool_name>...</tool_use>
             tool_name_element = element.find("tool_name")
+            original_xml_snippet = ET.tostring(element, encoding='unicode', method='xml').strip()
             if tool_name_element is None or not (tool_name_element.text and tool_name_element.text.strip()):
-                # Malformed wrapped tool_use (missing tool_name), treat as text
-                result.append(TextContent(content=ET.tostring(element, encoding='unicode', method='xml')))
+                # Malformed wrapped tool_use (missing tool_name)
+                result.append(TextContent(content=f"{MALFORMED_TOOL_PREFIX}Missing <tool_name> in <tool_use> block: {original_xml_snippet}"))
             else:
                 actual_tool_name = tool_name_element.text.strip()
                 parameters: Dict[str, str] = {}
@@ -91,13 +101,19 @@ def parse_assistant_message(message: str) -> List[AssistantMessageContent]:
             text_val = (element.text or "").strip()
             if text_val:
                 result.append(TextContent(content=text_val))
-        else: # Fallback for other unknown top-level tags
-            element_copy = copy.deepcopy(element) # Create a deep copy to avoid modifying the original element
-            element_copy.tail = None # Clear the tail on the copy
-            # Serialize the copy. method='xml' preserves more XML structure like self-closing tags if appropriate.
+        elif element.tag in KNOWN_NON_TOOL_TAGS: # Known non-tool XML elements
+            # Treat as plain text, including the tags
+            element_copy = copy.deepcopy(element)
+            element_copy.tail = None
             element_str = ET.tostring(element_copy, encoding='unicode', method='xml').strip()
-            if element_str: # Add if not empty after stripping
+            if element_str:
                 result.append(TextContent(content=element_str))
+        else: # Fallback for other unknown top-level tags - likely malformed tool attempt
+            element_copy = copy.deepcopy(element)
+            element_copy.tail = None
+            original_xml_snippet = ET.tostring(element_copy, encoding='unicode', method='xml').strip()
+            if original_xml_snippet:
+                result.append(TextContent(content=f"{MALFORMED_TOOL_PREFIX}Unrecognized or malformed tag: {original_xml_snippet}"))
 
         if element.tail and element.tail.strip(): # Text after the current element
             result.append(TextContent(content=element.tail.strip()))

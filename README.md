@@ -54,6 +54,7 @@ python -m src.cli "Your task description here"
 *   `--responses-file <path>`: Path to a JSON file containing a list of mock responses for the `MockLLM`. Required if `model` is `mock`.
 *   `--auto-approve`: If set, automatically approves commands that would normally require user confirmation (e.g., `execute_command` with `requires_approval=true`).
 *   `--cwd <path>`: Sets the current working directory for the agent. Defaults to the directory where the script is run.
+*   `--llm-timeout <seconds>`: Sets the timeout in seconds for LLM API calls. Defaults to `120.0`. This applies to calls made via `OpenRouterLLM`.
 
 **Example with Mock LLM:**
 
@@ -69,8 +70,26 @@ python -m src.cli "Refactor the main function in utils.py to be more efficient" 
 
 ## How to Run Tests
 
-Currently, dedicated test infrastructure (e.g., using `pytest`) is not yet implemented.
-Please refer to the "Testability (TDD aspects)" section in `docs/CODE_REVIEW.md` for detailed recommendations on adding tests. The `MockLLM` is designed to facilitate testing.
+The project uses `pytest` for running tests. Tests are located in the `tests/` directory.
+
+1.  **Install development dependencies** (including pytest and other testing tools):
+    ```bash
+    poetry install -E dev
+    ```
+    (If you haven't installed Poetry yet, please follow standard Poetry installation instructions.)
+
+2.  **Run all tests:**
+    ```bash
+    poetry run pytest
+    ```
+
+3.  **Run specific test files:**
+    ```bash
+    poetry run pytest tests/test_agent.py
+    poetry run pytest tests/test_llm.py
+    ```
+
+The `MockLLM` is used extensively in tests to provide deterministic LLM responses, facilitating testing of agent logic and tool interactions.
 
 ## Project Structure Overview
 

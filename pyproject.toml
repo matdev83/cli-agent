@@ -23,6 +23,7 @@ where = ["src"]
 dev = [
     "pytest>=7.0",
     "ruff>=0.4.0",
+    "requests>=2.20", # Added requests for test mocking
 ]
 
 [tool.pytest.ini_options]

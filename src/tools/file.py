@@ -231,10 +231,19 @@ class ListFilesTool(Tool):
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
         dir_path_str = params.get("path")
-        recursive = params.get("recursive", False)
+        recursive_param = params.get("recursive")
 
         if not dir_path_str:
             return "Error: Missing required parameter 'path'."
+
+        recursive = False # Default value
+        if recursive_param is not None:
+            if isinstance(recursive_param, bool):
+                recursive = recursive_param
+            elif isinstance(recursive_param, str) and recursive_param.lower() in ["true", "false"]:
+                recursive = recursive_param.lower() == "true"
+            else:
+                return "Error: Invalid parameter type for 'recursive' in tool 'list_files'. Expected boolean (true/false)."
 
         try:
             abs_dir_path = _resolve_path(dir_path_str, agent_memory)

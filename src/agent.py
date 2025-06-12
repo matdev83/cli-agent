@@ -28,6 +28,23 @@ from src.tools import (
     NewRuleTool
 )
 
+# For Step 3: General Failure Counter
+MALFORMED_TOOL_PREFIX = "Error: Malformed tool use - " # Should be same as in assistant_message.py
+MAX_CONSECUTIVE_TOOL_ERRORS = 3
+ADMONISHMENT_MESSAGE = (
+    "System: You have made several consecutive errors in tool usage or formatting. "
+    "Please carefully review the available tools, their required parameters, "
+    "and the expected XML format. Ensure your next response is a valid tool call "
+    "or a text response."
+)
+
+MAX_DIFF_FAILURES_PER_FILE = 2
+REPLACE_SUGGESTION_MESSAGE_TEMPLATE = (
+    "\nAdditionally, applying diffs to '{file_path}' has failed multiple times. "
+    "Consider reading the file content and using 'write_to_file' "
+    "with the full desired content instead."
+)
+
 class DeveloperAgent:
     """Simple developer agent coordinating tools and LLM messages."""
 
@@ -49,6 +66,8 @@ class DeveloperAgent:
 
         self.memory = Memory()
         self.history: List[Dict[str, str]] = self.memory.history
+        self.consecutive_tool_errors: int = 0 # For LLM error counting
+        self.diff_failure_tracker: Dict[str, int] = {} # For diff-to-full-write escalation
 
         tool_instances: List[Tool] = [
             ReadFileTool(), WriteToFileTool(), ReplaceInFileTool(), ListFilesTool(),
@@ -79,11 +98,46 @@ class DeveloperAgent:
         tool_to_execute = self.tools_map.get(tool_name)
 
         if tool_to_execute is None:
+            self.consecutive_tool_errors += 1
             return f"Error: Unknown tool '{tool_name}'. Please choose from the available tools."
 
         try:
             result_str = tool_to_execute.execute(tool_params, agent_memory=self)
 
+            if result_str.startswith("Error:"):
+                self.consecutive_tool_errors += 1
+                # Diff-to-full-write escalation logic for replace_in_file failures
+                if tool_name == "replace_in_file":
+                    if "Error: Search block" in result_str or "Error processing diff_blocks" in result_str:
+                        file_path_param = tool_params.get("path")
+                        if file_path_param:
+                            abs_file_path_str = str((Path(self.cwd) / file_path_param).resolve())
+                            current_failures = self.diff_failure_tracker.get(abs_file_path_str, 0) + 1
+                            self.diff_failure_tracker[abs_file_path_str] = current_failures
+                            if current_failures >= MAX_DIFF_FAILURES_PER_FILE:
+                                suggestion = REPLACE_SUGGESTION_MESSAGE_TEMPLATE.format(file_path=file_path_param)
+                                augmented_result_str = result_str + suggestion
+                                self.diff_failure_tracker[abs_file_path_str] = 0 # Reset after suggesting
+                                return augmented_result_str # Return the augmented string immediately
+            else:
+                # Successful tool execution
+                self.consecutive_tool_errors = 0
+                # Reset diff failure count for the specific file if replace_in_file was successful
+                if tool_name == "replace_in_file":
+                    file_path_param = tool_params.get("path")
+                    if file_path_param:
+                        abs_file_path_str = str((Path(self.cwd) / file_path_param).resolve())
+                        if abs_file_path_str in self.diff_failure_tracker:
+                            self.diff_failure_tracker[abs_file_path_str] = 0
+                # Reset diff failure count if write_to_file was successful for a tracked file
+                elif tool_name == "write_to_file":
+                    file_path_param = tool_params.get("path")
+                    if file_path_param:
+                        abs_file_path_str = str((Path(self.cwd) / file_path_param).resolve())
+                        if abs_file_path_str in self.diff_failure_tracker:
+                            self.diff_failure_tracker[abs_file_path_str] = 0
+
+            # Specific handling for read_file success (remains unchanged)
             if tool_name == "read_file" and not result_str.startswith("Error:"):
                 file_path_param = tool_params.get("path")
                 if file_path_param:
@@ -108,9 +162,17 @@ class DeveloperAgent:
         """Run the agent loop until attempt_completion or step limit reached."""
         self.memory.add_message("user", user_input)
         for _i in range(max_steps):
+            # Step 3: Admonishment before calling LLM
+            if self.consecutive_tool_errors >= MAX_CONSECUTIVE_TOOL_ERRORS:
+                self.memory.add_message("system", ADMONISHMENT_MESSAGE)
+                self.consecutive_tool_errors = 0 # Reset after admonishing
+
             assistant_reply = self.send_message(self.history)
 
             if assistant_reply is None:
+                # This is an LLM failure, not a tool error from the LLM's perspective.
+                # Decide if this should count towards consecutive_tool_errors.
+                # For now, not counting it as a "tool error" from the LLM.
                 no_reply_message = "LLM did not provide a response. Ending task."
                 # Add a system message to history for context, or perhaps 'assistant' role
                 # to indicate the assistant (LLM) failed to respond.
@@ -123,14 +185,25 @@ class DeveloperAgent:
             # this was a potential point of failure. Now guarded by the None check above.
             parsed_responses = parse_assistant_message(assistant_reply)
 
-            text_content_parts = [p.content for p in parsed_responses if isinstance(p, TextContent)]
+            text_content_parts = []
+            malformed_tool_error_this_turn = False
+            for p_res in parsed_responses:
+                if isinstance(p_res, TextContent):
+                    text_content_parts.append(p_res.content)
+                    if p_res.content.startswith(MALFORMED_TOOL_PREFIX):
+                        self.consecutive_tool_errors += 1
+                        malformed_tool_error_this_turn = True
             final_text_response = "\n".join(text_content_parts).strip()
 
             tool_uses = [p for p in parsed_responses if isinstance(p, ToolUse)]
 
             if not tool_uses:
+                # Pure text response from LLM
+                if not malformed_tool_error_this_turn: # If it was a pure text response AND not a malformed tool error
+                    self.consecutive_tool_errors = 0
                 return final_text_response if final_text_response else "No further action taken."
 
+            # If there are tool uses, process the first one
             tool_to_run = tool_uses[0]
 
             if tool_to_run.name == "attempt_completion":
