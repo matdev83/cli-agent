@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "CLI-based software development agent"
 readme = "README.md"
 requires-python = ">=3.8"
+dependencies = [
+    "openai>=1.0.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -5,8 +5,10 @@ import logging
 import sys
 from typing import List, Optional
 
+import os
+
 from .agent import DeveloperAgent
-from .llm import MockLLM
+from .llm import MockLLM, OpenRouterLLM
 
 
 def setup_logging(log_file: str = "agent.log") -> None:
@@ -17,10 +19,29 @@ def setup_logging(log_file: str = "agent.log") -> None:
     )
 
 
-def run_agent(task: str, responses_file: str, *, auto_approve: bool = False, cwd: str = ".") -> str:
-    llm = MockLLM.from_file(responses_file)
+def run_agent(
+    task: str,
+    responses_file: str | None = None,
+    *,
+    auto_approve: bool = False,
+    cwd: str = ".",
+    model: str = "mock",
+    return_history: bool = False,
+) -> str | tuple[str, list[dict[str, str]]]:
+    if model == "mock":
+        if not responses_file:
+            raise ValueError("responses_file is required for mock model")
+        llm = MockLLM.from_file(responses_file)
+    else:
+        api_key = os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY not set")
+        llm = OpenRouterLLM(model=model, api_key=api_key)
+
     agent = DeveloperAgent(llm.send_message, cwd=cwd, auto_approve=auto_approve)
     result = agent.run_task(task)
+    if return_history:
+        return result, list(agent.history)
     return result
 
 
@@ -43,10 +64,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     setup_logging()
     logging.info("Starting agent for task: %s", args.task)
 
-    if args.model != "mock":
-        parser.error("Only the mock model backend is implemented")
-
-    if not args.responses_file:
+    if args.model == "mock" and not args.responses_file:
         parser.error("--responses-file is required when using the mock model")
 
     try:
@@ -55,6 +73,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             args.responses_file,
             auto_approve=args.auto_approve,
             cwd=args.cwd,
+            model=args.model,
         )
     except Exception as exc:  # pragma: no cover - unexpected failures
         logging.exception("Agent run failed")
