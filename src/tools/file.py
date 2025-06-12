@@ -185,15 +185,31 @@ class ReplaceInFileTool(Tool):
             blocks = _parse_diff_blocks(diff_str) # Helper function handles format errors
 
             modified_text = original_text
+            matching_strictness = getattr(agent_memory, 'matching_strictness', 100)
+
             for i, (search, replace) in enumerate(blocks):
-                if search not in modified_text:
-                    # Be more specific about which block failed.
-                    max_preview = 30
-                    search_preview = search[:max_preview].replace('\n', '\\n') + ('...' if len(search) > max_preview else '')
-                    return (f"Error: Search block {i+1} (starting with '{search_preview}') "
-                            f"not found in the current state of the file {str(abs_file_path)}. "
-                            "Ensure blocks are ordered correctly and match the file content.")
-                modified_text = modified_text.replace(search, replace, 1)
+                if matching_strictness == 100:
+                    if search not in modified_text:
+                        max_preview = 30
+                        search_preview = search[:max_preview].replace('\n', '\\n') + ('...' if len(search) > max_preview else '')
+                        return (f"Error: Search block {i+1} (starting with '{search_preview}') "
+                                f"not found in the current state of the file {str(abs_file_path)} (exact match). "
+                                "Ensure blocks are ordered correctly and match the file content.")
+                    modified_text = modified_text.replace(search, replace, 1)
+                else:
+                    # Case-insensitive matching
+                    try:
+                        regex = re.compile(search, re.IGNORECASE)
+                        if not regex.search(modified_text):
+                            max_preview = 30
+                            search_preview = search[:max_preview].replace('\n', '\\n') + ('...' if len(search) > max_preview else '')
+                            return (f"Error: Search block {i+1} (starting with '{search_preview}') "
+                                    f"not found in the current state of the file {str(abs_file_path)} (case-insensitive match). "
+                                    "Ensure blocks are ordered correctly and match the file content.")
+                        modified_text = regex.sub(replace, modified_text, count=1)
+                    except re.error as e:
+                        return f"Error compiling regex for search block {i+1}: {e}"
+
 
             abs_file_path.write_text(modified_text, encoding="utf-8")
             return f"File {str(abs_file_path)} modified successfully with {len(blocks)} block(s)."

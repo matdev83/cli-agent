@@ -28,6 +28,7 @@ def run_agent(
     model: str = "mock",
     return_history: bool = False,
     llm_timeout: Optional[float] = None,
+    matching_strictness: int = 100,
 ) -> str | tuple[str, list[dict[str, str]]]:
     if model == "mock":
         if not responses_file:
@@ -51,7 +52,12 @@ def run_agent(
     # or the LLM send_message methods need to align with what DeveloperAgent expects.
     # For now, assuming DeveloperAgent.send_message call signature is what llm.send_message provides.
     # The current DeveloperAgent.send_message(self.history) matches the basic signature.
-    agent = DeveloperAgent(llm.send_message, cwd=cwd, auto_approve=auto_approve)
+    agent = DeveloperAgent(
+        llm.send_message,
+        cwd=cwd,
+        auto_approve=auto_approve,
+        matching_strictness=matching_strictness,
+    )
     result = agent.run_task(task)
     if return_history:
         return result, list(agent.history)
@@ -79,7 +85,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=120.0,
         help="Timeout in seconds for LLM API calls.",
     )
+    parser.add_argument(
+        "--matching-strictness",
+        type=int,
+        default=100,
+        help="Set the string matching strictness for file edits (0-100, 100 is exact match).",
+    )
     args = parser.parse_args(argv)
+
+    if not (0 <= args.matching_strictness <= 100):
+        parser.error("--matching-strictness must be between 0 and 100.")
 
     setup_logging()
     logging.info("Starting agent for task: %s with model %s", args.task, args.model)
@@ -97,6 +112,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             cwd=args.cwd,
             model=args.model,
             llm_timeout=args.llm_timeout,
+            matching_strictness=args.matching_strictness,
         )
         print(result) # Print result only on success
         logging.info("Agent completed successfully")

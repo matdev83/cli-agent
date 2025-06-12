@@ -57,12 +57,14 @@ class DeveloperAgent:
         auto_approve: bool = False,
         supports_browser_use: bool = False,
         browser_settings: dict | None = None,
-        mcp_servers_documentation: str = "(No MCP servers currently connected)"
+        mcp_servers_documentation: str = "(No MCP servers currently connected)",
+        matching_strictness: int = 100,
     ) -> None:
         self.send_message = send_message
         self.cwd: str = os.path.abspath(cwd)
         self.auto_approve: bool = auto_approve
         self.supports_browser_use: bool = supports_browser_use
+        self.matching_strictness: int = matching_strictness
 
         self.memory = Memory()
         self.history: List[Dict[str, str]] = self.memory.history
