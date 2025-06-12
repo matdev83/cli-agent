@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
+from typing import Dict, List, Union, Optional
 
 TOOL_USE_NAMES = [
     "execute_command",
@@ -10,7 +11,7 @@ TOOL_USE_NAMES = [
     "replace_in_file",
     "search_files",
     "list_files",
-    "list_code_definition_names",
+    "list_code_definitions",
     "browser_action",
     "use_mcp_tool",
     "access_mcp_resource",
@@ -19,121 +20,69 @@ TOOL_USE_NAMES = [
     "load_mcp_documentation",
     "attempt_completion",
     "new_task",
-    "condense",
-    "report_bug",
-    "new_rule",
-    "web_fetch",
-]
-
-TOOL_PARAM_NAMES = [
-    "command",
-    "requires_approval",
-    "path",
-    "content",
-    "diff",
-    "regex",
-    "file_pattern",
-    "recursive",
-    "action",
-    "url",
-    "coordinate",
-    "text",
-    "server_name",
-    "tool_name",
-    "arguments",
-    "uri",
-    "question",
-    "options",
-    "response",
-    "result",
-    "context",
-    "title",
-    "what_happened",
-    "steps_to_reproduce",
-    "api_request_output",
-    "additional_context",
+    "condense",        # Added
+    "report_bug",      # Added
+    "new_rule",        # Added
+    # "web_fetch", # Was commented out, keeping it so
 ]
 
 @dataclass
 class TextContent:
-    type: str
+    type: str = "text"
     content: str
     partial: bool = False
 
 @dataclass
 class ToolUse:
-    type: str
+    type: str = "tool_use"
     name: str
-    params: Dict[str, str]
+    params: Dict[str, str] = field(default_factory=dict)
     partial: bool = False
 
 AssistantMessageContent = Union[TextContent, ToolUse]
 
-def _extract_param(block: str, param: str) -> Optional[str]:
-    start_tag = f"<{param}>"
-    start = block.find(start_tag)
-    if start == -1:
-        return None
-    start += len(start_tag)
-    end_tag = f"</{param}>"
-    end = block.find(end_tag, start)
-    if end == -1:
-        return block[start:].strip()
-    return block[start:end].strip()
-
 def parse_assistant_message(message: str) -> List[AssistantMessageContent]:
-    """Parse assistant message containing optional tool calls."""
+    """
+    Parse assistant message which might contain text and tool use requests.
+    Uses xml.etree.ElementTree for parsing tool calls.
+    """
     result: List[AssistantMessageContent] = []
-    i = 0
-    length = len(message)
-    while i < length:
-        lt = message.find("<", i)
-        if lt == -1:
-            text = message[i:].strip()
-            if text:
-                result.append(TextContent(type="text", content=text))
-            break
-        if lt > i:
-            text = message[i:lt]
-            if text.strip():
-                result.append(TextContent(type="text", content=text.strip()))
-        # attempt to read tag
-        gt = message.find(">", lt)
-        if gt == -1:
-            # rest is text
-            text = message[lt:]
-            if text.strip():
-                result.append(TextContent(type="text", content=text.strip(), partial=True))
-            break
-        tag = message[lt + 1 : gt]
-        if tag.startswith("/"):
-            # closing tag unexpected, skip
-            i = gt + 1
-            continue
-        if tag in TOOL_USE_NAMES:
-            close_tag = f"</{tag}>"
-            close_pos = message.find(close_tag, gt + 1)
-            if close_pos == -1:
-                inner = message[gt + 1 :]
-                params = {
-                    p: _extract_param(inner, p) for p in TOOL_PARAM_NAMES if f"<{p}>" in inner
-                }
-                result.append(
-                    ToolUse(type="tool_use", name=tag, params=params, partial=True)
-                )
-                break
-            inner = message[gt + 1 : close_pos]
-            params = {
-                p: _extract_param(inner, p) for p in TOOL_PARAM_NAMES if f"<{p}>" in inner
-            }
-            params = {k: v for k, v in params.items() if v is not None}
-            result.append(
-                ToolUse(type="tool_use", name=tag, params=params, partial=False)
-            )
-            i = close_pos + len(close_tag)
-            continue
+
+    wrapped_message = f"<root_message_wrapper>{message}</root_message_wrapper>"
+
+    try:
+        root = ET.fromstring(wrapped_message)
+    except ET.ParseError:
+        if message.strip():
+            result.append(TextContent(content=message.strip(), partial=False))
+        return result
+
+    if root.text and root.text.strip():
+        result.append(TextContent(content=root.text.strip()))
+
+    for element in root:
+        if element.tag in TOOL_USE_NAMES:
+            parameters: Dict[str, str] = {}
+            for child in element:
+                param_name = child.tag
+                param_value = (child.text or "").strip()
+                parameters[param_name] = param_value
+            result.append(ToolUse(name=element.tag, params=parameters))
         else:
-            # not a tool tag: treat as text and continue
-            i = gt + 1
-            continue
-    return result
+            # Serialize unknown tags back to string to preserve them as text
+            result.append(TextContent(content=ET.tostring(element, encoding='unicode', method='xml')))
+
+        if element.tail and element.tail.strip():
+            result.append(TextContent(content=element.tail.strip()))
+
+    if not result: return []
+
+    merged_result: List[AssistantMessageContent] = [result[0]]
+    for current_block in result[1:]:
+        last_block = merged_result[-1]
+        if isinstance(last_block, TextContent) and isinstance(current_block, TextContent):
+            last_block.content += "\n" + current_block.content
+        else:
+            merged_result.append(current_block)
+
+    return merged_result

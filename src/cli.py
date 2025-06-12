@@ -31,13 +31,25 @@ def run_agent(
     if model == "mock":
         if not responses_file:
             raise ValueError("responses_file is required for mock model")
+        # Ensure responses_file exists if model is mock (FileNotFoundError will be caught by main)
         llm = MockLLM.from_file(responses_file)
     else:
         api_key = os.environ.get("OPENROUTER_API_KEY")
         if not api_key:
-            raise RuntimeError("OPENROUTER_API_KEY not set")
+            # Raising RuntimeError here, which will be caught by the generic Exception in main.
+            # Could be a custom error or handled more specifically if desired.
+            raise RuntimeError("OPENROUTER_API_KEY environment variable not set, required for non-mock models.")
         llm = OpenRouterLLM(model=model, api_key=api_key)
 
+    # The LLMWrapper protocol expects send_message to take temperature and max_tokens.
+    # The DeveloperAgent's __init__ expects a send_message callable that matches
+    # `Callable[[List[Dict[str, str]]], str]`.
+    # The current LLM implementations `send_message` methods were updated to `Optional[str]`
+    # and to accept optional temp/tokens.
+    # DeveloperAgent needs to be updated to pass these if it's to use the full protocol,
+    # or the LLM send_message methods need to align with what DeveloperAgent expects.
+    # For now, assuming DeveloperAgent.send_message call signature is what llm.send_message provides.
+    # The current DeveloperAgent.send_message(self.history) matches the basic signature.
     agent = DeveloperAgent(llm.send_message, cwd=cwd, auto_approve=auto_approve)
     result = agent.run_task(task)
     if return_history:
@@ -51,21 +63,24 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--model",
         default="mock",
-        help="Model name to use (only 'mock' supported)",
+        help="Specify the LLM to use. 'mock' uses MockLLM (requires --responses-file). "
+             "Other values (e.g., 'anthropic/claude-3-opus') use OpenRouterLLM (requires OPENROUTER_API_KEY)."
     )
     parser.add_argument(
         "--responses-file",
-        help="Path to JSON file with mock LLM responses",
+        help="Path to JSON file with mock LLM responses (required for 'mock' model).",
     )
     parser.add_argument("--auto-approve", action="store_true", help="Auto approve commands")
     parser.add_argument("--cwd", default=".", help="Working directory")
     args = parser.parse_args(argv)
 
     setup_logging()
-    logging.info("Starting agent for task: %s", args.task)
+    logging.info("Starting agent for task: %s with model %s", args.task, args.model)
 
     if args.model == "mock" and not args.responses_file:
-        parser.error("--responses-file is required when using the mock model")
+        # This specific check is good, but ValueError in run_agent also covers it.
+        # parser.error will exit, which is fine.
+        parser.error("--responses-file is required when using the mock model.")
 
     try:
         result = run_agent(
@@ -75,18 +90,28 @@ def main(argv: Optional[List[str]] = None) -> int:
             cwd=args.cwd,
             model=args.model,
         )
-    except Exception as exc:  # pragma: no cover - unexpected failures
-        logging.exception("Agent run failed")
-        print(f"Error: {exc}", file=sys.stderr)
-        resp = input("Continue anyway? [y/N]: ").strip().lower()
-        if resp not in {"y", "yes"}:
-            print("Aborted.", file=sys.stderr)
-            return 1
+        print(result) # Print result only on success
+        logging.info("Agent completed successfully")
         return 0
-
-    print(result)
-    logging.info("Agent completed successfully")
-    return 0
+    except FileNotFoundError as e:
+        logging.error("File not found: %s", e, exc_info=True)
+        print(f"Error: A required file was not found. Details: {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        logging.error("Invalid value provided: %s", e, exc_info=True)
+        # This can be from responses_file not provided for mock, or other ValueErrors in agent/tools.
+        print(f"Error: An invalid value was encountered. Details: {e}", file=sys.stderr)
+        return 1
+    except RuntimeError as e: # Catching RuntimeError specifically e.g. for API key missing
+        logging.error("Runtime error encountered: %s", e, exc_info=True)
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except Exception as exc:  # Catch-all for other unexpected failures
+        logging.exception("Agent run failed due to an unexpected error.") # Logs full traceback
+        print(f"An unexpected error occurred: {exc}", file=sys.stderr)
+        # The prompt to continue was removed as per typical CLI error handling.
+        # If debugging is needed, logs are the place.
+        return 1
 
 
 if __name__ == "__main__":
