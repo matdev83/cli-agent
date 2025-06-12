@@ -8,6 +8,7 @@ from .tool_protocol import Tool
 from src.utils import to_bool # Import the new utility function
 
 class ExecuteCommandTool(Tool):
+    """A tool to execute shell commands."""
     @property
     def name(self) -> str:
         return "execute_command"
@@ -41,6 +42,7 @@ class ExecuteCommandTool(Tool):
         ]
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+        """Executes the given shell command. Expects 'command' and optionally 'timeout' and 'requires_approval' in params."""
         command = params.get("command")
         timeout_val = params.get("timeout") # Renamed variable, can be float/int
         requires_approval_val = params.get("requires_approval")

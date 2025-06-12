@@ -8,16 +8,19 @@ from .file import (
 )
 from .command import ExecuteCommandTool
 from .code import (
-    ListCodeDefinitionsTool,
-    BrowserActionTool,
-    UseMCPTool,
-    AccessMCPResourceTool,
+    ListCodeDefinitionNamesTool,
 )
+from .browser import BrowserActionTool # Added import from .browser
+from .mcp import UseMCPTool, AccessMCPResourceTool # Corrected case
 from .meta_tools import ( # Added import for meta_tools
     NewTaskTool,
     CondenseTool,
     ReportBugTool,
     NewRuleTool,
+    AskFollowupQuestionTool,
+    AttemptCompletionTool,
+    PlanModeRespondTool,
+    LoadMcpDocumentationTool,
 )
 # Import new wrapper functions from .file
 from .file import (
@@ -47,7 +50,7 @@ __all__ = [
     "execute_command", # Added
     "list_code_definition_names", # Added
     "ExecuteCommandTool",
-    "ListCodeDefinitionsTool",
+    "ListCodeDefinitionNamesTool",
     "BrowserActionTool",
     "UseMCPTool",
     "AccessMCPResourceTool",
@@ -55,4 +58,8 @@ __all__ = [
     "CondenseTool",    # Added to __all__
     "ReportBugTool", # Added to __all__
     "NewRuleTool",   # Added to __all__
+    "AskFollowupQuestionTool", # Added to __all__
+    "AttemptCompletionTool",   # Added to __all__
+    "PlanModeRespondTool",     # Added to __all__
+    "LoadMcpDocumentationTool",# Added to __all__
 ]

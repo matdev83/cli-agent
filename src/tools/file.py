@@ -12,10 +12,10 @@ from .tool_protocol import Tool
 def _parse_diff_blocks(diff: str) -> List[tuple[str, str]]:
     """
     Parses a diff string into search and replace blocks.
-    The expected format is <<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE.
+    The expected format is ------- SEARCH ... ======= ... +++++++ REPLACE.
     """
     pattern = re.compile(
-        r"<<<<<<< SEARCH\n(?P<search>.*?)\n=======\n(?P<replace>.*?)\n>>>>>>> REPLACE",
+        r"------- SEARCH\n(?P<search>.*?)\n=======\n(?P<replace>.*?)\n\+\+\+\+\+\+\+ REPLACE",
         re.DOTALL,
     )
     blocks = []
@@ -24,7 +24,7 @@ def _parse_diff_blocks(diff: str) -> List[tuple[str, str]]:
 
     # If the diff string is not empty but no blocks were found, it's a format error.
     if not blocks and diff.strip():
-        raise ValueError("No valid diff blocks found. Ensure the format is: <<<<<<< SEARCH...=======...>>>>>>> REPLACE")
+        raise ValueError("No valid diff blocks found. Ensure the format is: ------- SEARCH...=======...+++++++ REPLACE")
     return blocks
 
 # --- Utility for path resolution ---
@@ -141,7 +141,7 @@ class ReplaceInFileTool(Tool):
     @property
     def description(self) -> str:
         return ("Applies one or more SEARCH/REPLACE diff blocks to a file. "
-                "Each block must follow the format: <<<<<<< SEARCH\\n(lines to search)\\n=======\\n(lines to replace)\\n>>>>>>> REPLACE")
+                "Each block must follow the format: ------- SEARCH\\n(lines to search)\\n=======\\n(lines to replace)\\n+++++++ REPLACE")
 
     @property
     def parameters(self) -> List[Dict[str, str]]:
@@ -273,20 +273,21 @@ class SearchFilesTool(Tool):
     @property
     def description(self) -> str:
         return ("Searches for a regex pattern in files within a directory. "
-                "Can filter by file pattern (glob). Returns a JSON list of match objects.")
+                "Can filter by file pattern (glob). Returns a JSON list of match objects. "
+                "This tool uses Python's `re` module for regular expression matching.")
 
     @property
     def parameters(self) -> List[Dict[str, str]]:
         return [
             {
-                "name": "directory",
+                "name": "path",
                 "description": "The relative or absolute path to the directory to search within.",
                 "type": "string",
                 "required": True
             },
             {
-                "name": "regex_pattern",
-                "description": "The Python regex pattern to search for within file lines.",
+                "name": "regex",
+                "description": "The Python regex to search for within file lines.",
                 "type": "string",
                 "required": True
             },
@@ -299,17 +300,17 @@ class SearchFilesTool(Tool):
         ]
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        directory_str = params.get("directory")
-        regex_str = params.get("regex_pattern")
+        path_str = params.get("path")
+        regex_str = params.get("regex")
         file_glob_pattern = params.get("file_pattern", "*")
 
-        if not directory_str:
-            return "Error: Missing required parameter 'directory'."
+        if not path_str:
+            return "Error: Missing required parameter 'path'."
         if not regex_str:
-            return "Error: Missing required parameter 'regex_pattern'."
+            return "Error: Missing required parameter 'regex'."
 
         try:
-            abs_dir_path = _resolve_path(directory_str, agent_memory)
+            abs_dir_path = _resolve_path(path_str, agent_memory)
 
             if not abs_dir_path.exists():
                 return f"Error: Directory not found at {str(abs_dir_path)}"
@@ -319,7 +320,7 @@ class SearchFilesTool(Tool):
             try:
                 pattern = re.compile(regex_str)
             except re.error as e:
-                return f"Error: Invalid regex pattern '{regex_str}': {e}"
+                return f"Error: Invalid regex '{regex_str}': {e}"
 
             matches: List[Dict[str, Any]] = []
             for dirpath_str, _, filenames in os.walk(abs_dir_path):
@@ -348,7 +349,7 @@ class SearchFilesTool(Tool):
 
             return json.dumps(matches)
         except Exception as e:
-            return f"Error searching files in {directory_str}: {e}"
+            return f"Error searching files in {path_str}: {e}"
 
 # --- Wrapper functions for old tests ---
 # Ensure json is imported if not already (it is used by ListFilesTool and SearchFilesTool's execute, but wrappers parse it)
@@ -374,14 +375,9 @@ def write_to_file(path: str, content: str, agent_memory: Any = None) -> None:
 def replace_in_file(path: str, diff_blocks: str, agent_memory: Any = None) -> None:
     tool = ReplaceInFileTool()
     # The test 'test_replace_in_file' uses a diff format "------- SEARCH...+++++++ REPLACE"
-    # The tool's _parse_diff_blocks method expects "<<<<<<< SEARCH...>>>>>>> REPLACE"
-    # This wrapper will adapt the test's format to the tool's expected format.
-    # Note: The test's actual diff string is "------- SEARCH\nfoo\n=======\nbar\n+++++++ REPLACE"
-    # The tool's internal parser is strict. The adaptation below handles this.
-    adapted_diff = diff_blocks.replace("------- SEARCH", "<<<<<<< SEARCH") \
-                              .replace("+++++++ REPLACE", ">>>>>>> REPLACE")
-
-    result = tool.execute({"path": path, "diff_blocks": adapted_diff}, agent_memory=agent_memory)
+    # The tool's _parse_diff_blocks method now expects "------- SEARCH...+++++++ REPLACE"
+    # The wrapper will now pass the diff_blocks directly.
+    result = tool.execute({"path": path, "diff_blocks": diff_blocks}, agent_memory=agent_memory)
 
     # The test 'test_replace_in_file_not_found' expects ValueError if search block not found.
     # The tool's execute method returns a string like "Error: Search block ... not found..."
@@ -400,9 +396,9 @@ def list_files(path: str, recursive: bool = False, agent_memory: Any = None) -> 
     loaded_json = json.loads(result_str)
     return loaded_json
 
-def search_files(directory: str, regex_pattern: str, file_pattern: str = "*", agent_memory: Any = None) -> List[Dict[str, Any]]:
+def search_files(path: str, regex: str, file_pattern: str = "*", agent_memory: Any = None) -> List[Dict[str, Any]]:
     tool = SearchFilesTool()
-    params = {"directory": directory, "regex_pattern": regex_pattern}
+    params = {"path": path, "regex": regex}
     # The tool's execute method defaults file_pattern to '*' internally if not provided.
     # So, only add file_pattern to params if it's not the default "*" to avoid redundancy.
     if file_pattern != "*": # This check ensures we don't override the tool's internal default unless specified.
