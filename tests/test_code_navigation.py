@@ -14,8 +14,8 @@ def test_list_code_definition_names(tmp_path: Path):
     lines = result.splitlines()
     assert lines[0] == "module.py"
     assert "|----" in lines[1]
-    assert any("class Foo" in l for l in lines)
-    assert any("def bar" in l for l in lines)
+    assert any("class Foo" in line for line in lines)
+    assert any("def bar" in line for line in lines)
     assert lines[-1] == "|----"
 
 
