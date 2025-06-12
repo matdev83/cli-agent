@@ -99,3 +99,103 @@ def test_cli_llm_timeout_with_mock_model(tmp_path, capsys):
         mock_openrouter_constructor.assert_not_called()
         mock_mockllm_constructor.from_file.assert_called_once_with(str(resp_file))
         # We don't check MockLLM's __init__ params regarding timeout, as it doesn't take one.
+
+# --- Tests for new auto-approval flags ---
+
+APPROVAL_ARGS_FLAGS = [
+    "allow_read_files",
+    "allow_edit_files",
+    "allow_execute_safe_commands",
+    "allow_execute_all_commands",
+    "allow_use_browser",
+    "allow_use_mcp",
+]
+
+@patch('src.cli.run_agent')
+def test_cli_approval_flags_defaults(mock_run_agent, tmp_path):
+    """Test that new approval flags default to False."""
+    # Need to provide a minimal responses file for mock model
+    resp_file = tmp_path / "responses.json"
+    resp_file.write_text(json.dumps(["<attempt_completion><result>done</result></attempt_completion>"]), encoding="utf-8")
+
+    main([
+        "sample_task",
+        "--model", "mock",
+        "--responses-file", str(resp_file), # Added responses file for mock
+        "--cwd", str(tmp_path)
+    ])
+
+    mock_run_agent.assert_called_once()
+    # Args are passed as keyword arguments from main to run_agent
+    called_kwargs = mock_run_agent.call_args[1]
+
+    for arg_name in APPROVAL_ARGS_FLAGS:
+        assert not called_kwargs.get(arg_name), f"Expected {arg_name} to default to False"
+    # Also check the legacy auto_approve, though it's not in APPROVAL_ARGS_FLAGS
+    assert not called_kwargs.get("auto_approve"), "Expected auto_approve to default to False"
+
+
+@patch('src.cli.run_agent')
+def test_cli_approval_flags_set(mock_run_agent, tmp_path):
+    """Test that new approval flags can be set to True one by one."""
+    resp_file = tmp_path / "responses.json"
+    resp_file.write_text(json.dumps(["<attempt_completion><result>done</result></attempt_completion>"]), encoding="utf-8")
+
+    base_cli_args = [
+        "sample_task",
+        "--model", "mock",
+        "--responses-file", str(resp_file),
+        "--cwd", str(tmp_path)
+    ]
+
+    for flag_to_set_true in APPROVAL_ARGS_FLAGS:
+        # Construct CLI arguments for this specific test run
+        current_cli_args = base_cli_args + [f"--{flag_to_set_true.replace('_', '-')}"]
+
+        mock_run_agent.reset_mock() # Reset mock for each specific flag test
+
+        main(current_cli_args)
+
+        mock_run_agent.assert_called_once()
+        called_kwargs = mock_run_agent.call_args[1]
+
+        # Check that the current flag is True
+        assert called_kwargs.get(flag_to_set_true), f"Expected {flag_to_set_true} to be True"
+
+        # Check that all other new approval flags are False
+        for other_flag in APPROVAL_ARGS_FLAGS:
+            if other_flag != flag_to_set_true:
+                assert not called_kwargs.get(other_flag), \
+                    f"Expected {other_flag} to be False when {flag_to_set_true} is set"
+
+        # Ensure legacy auto_approve is not affected unless explicitly set
+        assert not called_kwargs.get("auto_approve"), \
+            f"Expected auto_approve to be False when only {flag_to_set_true} is set"
+
+@patch('src.cli.run_agent')
+def test_cli_legacy_auto_approve_with_new_flags(mock_run_agent, tmp_path):
+    """Test legacy --auto-approve in conjunction with a new flag."""
+    resp_file = tmp_path / "responses.json"
+    resp_file.write_text(json.dumps(["<attempt_completion><result>done</result></attempt_completion>"]), encoding="utf-8")
+
+    cli_args_to_test = [
+        "sample_task",
+        "--model", "mock",
+        "--responses-file", str(resp_file),
+        "--cwd", str(tmp_path),
+        "--auto-approve", # Legacy flag
+        "--allow-read-files" # A new specific flag
+    ]
+
+    main(cli_args_to_test)
+
+    mock_run_agent.assert_called_once()
+    called_kwargs = mock_run_agent.call_args[1]
+
+    assert called_kwargs.get("auto_approve"), "Expected auto_approve to be True"
+    assert called_kwargs.get("allow_read_files"), "Expected allow_read_files to be True"
+
+    # Check other new flags are False
+    for flag_name in APPROVAL_ARGS_FLAGS:
+        if flag_name != "allow_read_files":
+            assert not called_kwargs.get(flag_name), f"Expected {flag_name} to be False"

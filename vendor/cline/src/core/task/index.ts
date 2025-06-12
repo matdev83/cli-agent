@@ -172,6 +172,7 @@ export class Task {
 	// Metadata tracking
 	private fileContextTracker: FileContextTracker
 	private modelContextTracker: ModelContextTracker
+	private isCli: boolean;
 
 	// streaming
 	isWaitingForFirstChunk = false
@@ -208,9 +209,11 @@ export class Task {
 		images?: string[],
 		files?: string[],
 		historyItem?: HistoryItem,
+		isCli: boolean = false, // Added isCli parameter with a default value
 	) {
 		this.context = context
 		this.mcpHub = mcpHub
+		this.isCli = isCli; // Assign isCli
 		this.workspaceTracker = workspaceTracker
 		this.updateTaskHistory = updateTaskHistory
 		this.postStateToWebview = postStateToWebview
@@ -1536,37 +1539,71 @@ export class Task {
 	// Returns bool for most tools, and tuple for tools with nested settings
 	shouldAutoApproveTool(toolName: ToolUseName): boolean | [boolean, boolean] {
 		if (this.autoApprovalSettings.enabled) {
-			switch (toolName) {
-				case "read_file":
-				case "list_files":
-				case "list_code_definition_names":
-				case "search_files":
-					return [
-						this.autoApprovalSettings.actions.readFiles,
-						this.autoApprovalSettings.actions.readFilesExternally ?? false,
-					]
-				case "new_rule":
-				case "write_to_file":
-				case "replace_in_file":
-					return [
-						this.autoApprovalSettings.actions.editFiles,
-						this.autoApprovalSettings.actions.editFilesExternally ?? false,
-					]
-				case "execute_command":
-					return [
-						this.autoApprovalSettings.actions.executeSafeCommands ?? false,
-						this.autoApprovalSettings.actions.executeAllCommands ?? false,
-					]
-				case "browser_action":
-					return this.autoApprovalSettings.actions.useBrowser
-				case "web_fetch":
-					return this.autoApprovalSettings.actions.useBrowser
-				case "access_mcp_resource":
-				case "use_mcp_tool":
-					return this.autoApprovalSettings.actions.useMcp
+			const actions = this.autoApprovalSettings.actions;
+			if (this.isCli) {
+				// CLI-specific auto-approval logic
+				switch (toolName) {
+					case "read_file":
+					case "list_files":
+					case "list_code_definition_names":
+					case "search_files":
+						return [
+							actions.cliAllowReadFiles,
+							actions.cliAllowReadFilesExternally ?? false,
+						];
+					case "new_rule":
+					case "write_to_file":
+					case "replace_in_file":
+						return [
+							actions.cliAllowEditFiles,
+							actions.cliAllowEditFilesExternally ?? false,
+						];
+					case "execute_command":
+						return [
+							actions.cliAllowExecuteSafeCommands ?? false,
+							actions.cliAllowExecuteAllCommands ?? false,
+						];
+					case "browser_action": // Assuming browser_action and web_fetch map to cliAllowUseBrowser
+					case "web_fetch":
+						return actions.cliAllowUseBrowser;
+					case "access_mcp_resource":
+					case "use_mcp_tool":
+						return actions.cliAllowUseMcp;
+				}
+			} else {
+				// Existing GUI-based auto-approval logic
+				switch (toolName) {
+					case "read_file":
+					case "list_files":
+					case "list_code_definition_names":
+					case "search_files":
+						return [
+							actions.readFiles,
+							actions.readFilesExternally ?? false,
+						];
+					case "new_rule":
+					case "write_to_file":
+					case "replace_in_file":
+						return [
+							actions.editFiles,
+							actions.editFilesExternally ?? false,
+						];
+					case "execute_command":
+						return [
+							actions.executeSafeCommands ?? false,
+							actions.executeAllCommands ?? false,
+						];
+					case "browser_action":
+						return actions.useBrowser;
+					case "web_fetch":
+						return actions.useBrowser; // Assuming web_fetch maps to useBrowser
+					case "access_mcp_resource":
+					case "use_mcp_tool":
+						return actions.useMcp;
+				}
 			}
 		}
-		return false
+		return false;
 	}
 
 	// Check if the tool should be auto-approved based on the settings
