@@ -6,6 +6,12 @@ from .file import (
     search_files,
 )
 from .command import execute_command
+from .code import (
+    list_code_definition_names,
+    browser_action,
+    use_mcp_tool,
+    access_mcp_resource,
+)
 
 __all__ = [
     "read_file",
@@ -14,4 +20,8 @@ __all__ = [
     "list_files",
     "search_files",
     "execute_command",
+    "list_code_definition_names",
+    "browser_action",
+    "use_mcp_tool",
+    "access_mcp_resource",
 ]
