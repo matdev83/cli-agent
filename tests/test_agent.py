@@ -564,3 +564,192 @@ def test_diff_failure_tracker_handles_relative_and_absolute_paths(tmp_path: Path
         assert expected_suggestion in result
 
     assert mock_replace_exec.call_count == 2
+
+
+# --- Tests for Agent Confirmation Logic ---
+APPROVAL_FLAG_PARAMS = [
+    ("allow_read_files", "read_file", {"path": "test.txt"}),
+    ("allow_edit_files", "write_to_file", {"path": "test.txt", "content": "c"}),
+    ("allow_edit_files", "replace_in_file", {"path": "test.txt", "diff_blocks": "d"}),
+    # execute_command has more complex logic, tested separately
+    ("allow_use_browser", "browser_action", {"action": "browse", "url": "u.com"}),
+    ("allow_use_mcp", "use_mcp_tool", {"tool_name": "mcp_t", "server_name": "s1"}),
+    ("allow_use_mcp", "access_mcp_resource", {"uri": "mcp://s1/res"}),
+]
+
+class TestAgentConfirmationLogic(unittest.TestCase):
+    def setUp(self):
+        self.mock_send_message = MagicMock()
+        self.cwd = Path(".") # Assuming tests run where a CWD makes sense, or use tmp_path
+
+        # Default args with all approval flags False
+        self.base_cli_args = argparse.Namespace(
+            auto_approve=False,
+            allow_read_files=False,
+            allow_edit_files=False,
+            allow_execute_safe_commands=False,
+            allow_execute_all_commands=False,
+            allow_use_browser=False,
+            allow_use_mcp=False
+        )
+
+    def _create_agent(self, cli_args_overrides=None):
+        current_args = argparse.Namespace(**vars(self.base_cli_args)) # Start with base defaults
+        if cli_args_overrides:
+            for k, v in cli_args_overrides.items():
+                setattr(current_args, k, v)
+        return DeveloperAgent(send_message=self.mock_send_message, cwd=str(self.cwd), cli_args=current_args)
+
+    @patch('src.agent.request_user_confirmation')
+    def test_tool_allowed_by_flag(self, mock_request_confirmation):
+        for flag_name, tool_name, params in APPROVAL_FLAG_PARAMS:
+            with self.subTest(tool=tool_name, flag=flag_name):
+                agent = self._create_agent(cli_args_overrides={flag_name: True})
+
+                # Mock the specific tool's execute method
+                tool_instance = agent.tools_map.get(tool_name)
+                assert tool_instance is not None, f"Tool {tool_name} not found in agent"
+
+                with patch.object(tool_instance, 'execute', return_value=f"Mocked {tool_name} result") as mock_tool_execute:
+                    tool_use = ToolUse(name=tool_name, params=params)
+                    agent._run_tool(tool_use)
+
+                    mock_request_confirmation.assert_not_called()
+                    mock_tool_execute.assert_called_once_with(params, agent_memory=agent)
+
+                mock_request_confirmation.reset_mock() # Reset for next subtest
+
+    @patch('src.agent.request_user_confirmation')
+    def test_tool_denied_by_flag_user_confirms(self, mock_request_confirmation):
+        mock_request_confirmation.return_value = True # User says 'yes'
+        for flag_name, tool_name, params in APPROVAL_FLAG_PARAMS:
+            with self.subTest(tool=tool_name, flag=flag_name):
+                agent = self._create_agent(cli_args_overrides={flag_name: False}) # Flag is OFF
+
+                tool_instance = agent.tools_map.get(tool_name)
+                assert tool_instance is not None
+
+                with patch.object(tool_instance, 'execute', return_value=f"Mocked {tool_name} result") as mock_tool_execute:
+                    tool_use = ToolUse(name=tool_name, params=params)
+                    agent._run_tool(tool_use)
+
+                    mock_request_confirmation.assert_called_once()
+                    mock_tool_execute.assert_called_once_with(params, agent_memory=agent)
+
+                mock_request_confirmation.reset_mock()
+
+    @patch('src.agent.request_user_confirmation')
+    def test_tool_denied_by_flag_user_denies(self, mock_request_confirmation):
+        mock_request_confirmation.return_value = False # User says 'no'
+        for flag_name, tool_name, params in APPROVAL_FLAG_PARAMS:
+            with self.subTest(tool=tool_name, flag=flag_name):
+                agent = self._create_agent(cli_args_overrides={flag_name: False}) # Flag is OFF
+
+                tool_instance = agent.tools_map.get(tool_name)
+                assert tool_instance is not None
+
+                with patch.object(tool_instance, 'execute', return_value=f"Mocked {tool_name} result") as mock_tool_execute:
+                    tool_use = ToolUse(name=tool_name, params=params)
+                    result = agent._run_tool(tool_use)
+
+                    mock_request_confirmation.assert_called_once()
+                    mock_tool_execute.assert_not_called()
+                    self.assertIn(f"User denied permission to {tool_name}", result)
+
+                mock_request_confirmation.reset_mock()
+
+    # Tests for execute_command
+    @patch('src.agent.request_user_confirmation')
+    @patch('src.tools.command.ExecuteCommandTool.execute', return_value='{"success": true, "output": "cmd output"}')
+    def test_execute_command_allow_all_commands_flag(self, mock_cmd_execute, mock_request_confirmation):
+        agent = self._create_agent(cli_args_overrides={"allow_execute_all_commands": True})
+        params = {"command": "some_command", "requires_approval": "true"} # LLM says it needs approval
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        agent._run_tool(tool_use)
+
+        mock_request_confirmation.assert_not_called()
+        mock_cmd_execute.assert_called_once()
+
+    @patch('src.agent.request_user_confirmation')
+    @patch('src.tools.command.ExecuteCommandTool.execute', return_value='{"success": true, "output": "cmd output"}')
+    def test_execute_command_allow_safe_commands_flag_llm_safe(self, mock_cmd_execute, mock_request_confirmation):
+        agent = self._create_agent(cli_args_overrides={"allow_execute_safe_commands": True})
+        # LLM says command is safe (requires_approval=false)
+        params = {"command": "safe_command", "requires_approval": "false"}
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        agent._run_tool(tool_use)
+
+        mock_request_confirmation.assert_not_called()
+        mock_cmd_execute.assert_called_once()
+
+    @patch('src.agent.request_user_confirmation', return_value=True) # User confirms
+    @patch('src.tools.command.ExecuteCommandTool.execute', return_value='{"success": true, "output": "cmd output"}')
+    def test_execute_command_allow_safe_commands_flag_llm_unsafe_user_confirms(self, mock_cmd_execute, mock_request_confirmation):
+        agent = self._create_agent(cli_args_overrides={"allow_execute_safe_commands": True})
+         # LLM says command is NOT safe (requires_approval=true)
+        params = {"command": "unsafe_command", "requires_approval": "true"}
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        agent._run_tool(tool_use)
+
+        mock_request_confirmation.assert_called_once() # Should ask because allow_safe_commands is not enough
+        mock_cmd_execute.assert_called_once()
+
+    @patch('src.agent.request_user_confirmation')
+    @patch('src.tools.command.ExecuteCommandTool.execute', return_value='{"success": true, "output": "cmd output"}')
+    def test_execute_command_legacy_auto_approve_llm_unsafe(self, mock_cmd_execute, mock_request_confirmation):
+        # Test legacy auto_approve when LLM says command is unsafe
+        agent = self._create_agent(cli_args_overrides={"auto_approve": True})
+        params = {"command": "unsafe_command_but_auto_approved", "requires_approval": "true"}
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        agent._run_tool(tool_use)
+
+        mock_request_confirmation.assert_not_called() # Legacy auto-approve handles it
+        mock_cmd_execute.assert_called_once()
+
+    @patch('src.agent.request_user_confirmation')
+    @patch('src.tools.command.ExecuteCommandTool.execute', return_value='{"success": true, "output": "cmd output"}')
+    def test_execute_command_legacy_auto_approve_llm_safe(self, mock_cmd_execute, mock_request_confirmation):
+        # Test legacy auto_approve when LLM says command is safe (should proceed without prompt)
+        agent = self._create_agent(cli_args_overrides={"auto_approve": True})
+        params = {"command": "safe_command_with_auto_approve", "requires_approval": "false"}
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        agent._run_tool(tool_use)
+
+        mock_request_confirmation.assert_not_called() # Safe by LLM, auto_approve doesn't make it prompt
+        mock_cmd_execute.assert_called_once()
+
+
+    @patch('src.agent.request_user_confirmation', return_value=False) # User denies
+    @patch('src.tools.command.ExecuteCommandTool.execute')
+    def test_execute_command_no_flags_llm_unsafe_user_denies(self, mock_cmd_execute, mock_request_confirmation):
+        agent = self._create_agent() # All flags False
+        params = {"command": "another_unsafe_command", "requires_approval": "true"}
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        result = agent._run_tool(tool_use)
+
+        mock_request_confirmation.assert_called_once()
+        mock_cmd_execute.assert_not_called()
+        self.assertIn("User denied permission to execute_command", result)
+
+    @patch('src.agent.request_user_confirmation', return_value=True) # User confirms
+    @patch('src.tools.command.ExecuteCommandTool.execute', return_value='{"success": true, "output": "cmd output"}')
+    def test_execute_command_no_flags_llm_safe_user_confirms(self, mock_cmd_execute, mock_request_confirmation):
+        # If no specific command flags, and LLM says safe, it should still ask if legacy auto_approve is also false.
+        agent = self._create_agent() # All flags False, including auto_approve
+        params = {"command": "supposedly_safe_command", "requires_approval": "false"}
+        tool_use = ToolUse(name="execute_command", params=params)
+
+        agent._run_tool(tool_use)
+
+        # The current logic: if not allow_all and not (allow_safe and not req_approve) and not (auto_approve and req_approve) -> prompt
+        # So, if req_approve is false:
+        # not allow_all (T) and not (allow_safe (F) and T (T)) (T) and not (auto_approve (F) and F (F)) (T) -> prompt
+        # Yes, it will prompt.
+        mock_request_confirmation.assert_called_once()
+        mock_cmd_execute.assert_called_once()

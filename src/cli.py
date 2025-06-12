@@ -29,6 +29,12 @@ def run_agent(
     return_history: bool = False,
     llm_timeout: Optional[float] = None,
     matching_strictness: int = 100,
+    allow_read_files: bool = False,
+    allow_edit_files: bool = False,
+    allow_execute_safe_commands: bool = False,
+    allow_execute_all_commands: bool = False,
+    allow_use_browser: bool = False,
+    allow_use_mcp: bool = False,
 ) -> str | tuple[str, list[dict[str, str]]]:
     if model == "mock":
         if not responses_file:
@@ -57,6 +63,13 @@ def run_agent(
         cwd=cwd,
         auto_approve=auto_approve,
         matching_strictness=matching_strictness,
+        # Pass new approval flags
+        allow_read_files=allow_read_files,
+        allow_edit_files=allow_edit_files,
+        allow_execute_safe_commands=allow_execute_safe_commands,
+        allow_execute_all_commands=allow_execute_all_commands,
+        allow_use_browser=allow_use_browser,
+        allow_use_mcp=allow_use_mcp,
     )
     result = agent.run_task(task)
     if return_history:
@@ -77,8 +90,44 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--responses-file",
         help="Path to JSON file with mock LLM responses (required for 'mock' model).",
     )
-    parser.add_argument("--auto-approve", action="store_true", help="Auto approve commands")
+    parser.add_argument("--auto-approve", action="store_true", help="Auto approve commands (legacy, granular flags take precedence)")
     parser.add_argument("--cwd", default=".", help="Working directory")
+    parser.add_argument(
+        "--allow-read-files",
+        action="store_true",
+        default=False,
+        help="Automatically approve file reads (includes listing files/directories).",
+    )
+    parser.add_argument(
+        "--allow-edit-files",
+        action="store_true",
+        default=False,
+        help="Automatically approve file edits (includes creating new files).",
+    )
+    parser.add_argument(
+        "--allow-execute-safe-commands",
+        action="store_true",
+        default=False,
+        help="Automatically approve commands marked as 'safe' by the LLM.",
+    )
+    parser.add_argument(
+        "--allow-execute-all-commands",
+        action="store_true",
+        default=False,
+        help="Automatically approve ALL commands, including those not marked as 'safe'. Implies --allow-execute-safe-commands.",
+    )
+    parser.add_argument(
+        "--allow-use-browser",
+        action="store_true",
+        default=False,
+        help="Automatically approve browser usage.",
+    )
+    parser.add_argument(
+        "--allow-use-mcp",
+        action="store_true",
+        default=False,
+        help="Automatically approve MCP (Multi-Capability Plugin) usage.",
+    )
     parser.add_argument(
         "--llm-timeout",
         type=float,
@@ -113,6 +162,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             model=args.model,
             llm_timeout=args.llm_timeout,
             matching_strictness=args.matching_strictness,
+            allow_read_files=args.allow_read_files,
+            allow_edit_files=args.allow_edit_files,
+            allow_execute_safe_commands=args.allow_execute_safe_commands,
+            allow_execute_all_commands=args.allow_execute_all_commands,
+            allow_use_browser=args.allow_use_browser,
+            allow_use_mcp=args.allow_use_mcp,
         )
         print(result) # Print result only on success
         logging.info("Agent completed successfully")

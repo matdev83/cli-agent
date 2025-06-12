@@ -3,12 +3,15 @@ from __future__ import annotations
 import os
 import json
 import traceback
-from typing import Callable, Dict, List, Any, Optional # Added Optional
+from typing import Callable, Dict, List, Any, Optional
+import argparse # For type hinting cli_args
 from pathlib import Path
 
 from .memory import Memory
 from .assistant_message import parse_assistant_message, ToolUse, TextContent
 from .prompts.system import get_system_prompt
+from .confirmations import request_user_confirmation # New import
+from src.utils import to_bool # For handling 'requires_approval'
 
 from src.tools import (
     Tool,
@@ -50,11 +53,10 @@ class DeveloperAgent:
 
     def __init__(
         self,
-        # Updated to reflect that send_message can return Optional[str] due to LLMWrapper protocol
         send_message: Callable[[List[Dict[str, str]]], Optional[str]],
         *,
         cwd: str = ".",
-        auto_approve: bool = False,
+        cli_args: Optional[argparse.Namespace] = None, # Changed auto_approve to cli_args
         supports_browser_use: bool = False,
         browser_settings: dict | None = None,
         mcp_servers_documentation: str = "(No MCP servers currently connected)",
@@ -62,8 +64,17 @@ class DeveloperAgent:
     ) -> None:
         self.send_message = send_message
         self.cwd: str = os.path.abspath(cwd)
-        self.auto_approve: bool = auto_approve
-        self.supports_browser_use: bool = supports_browser_use
+        self.cli_args = cli_args if cli_args is not None else argparse.Namespace() # Store cli_args
+        # Ensure default values for flags if cli_args is minimal or None
+        if not hasattr(self.cli_args, 'auto_approve'): self.cli_args.auto_approve = False
+        if not hasattr(self.cli_args, 'allow_read_files'): self.cli_args.allow_read_files = False
+        if not hasattr(self.cli_args, 'allow_edit_files'): self.cli_args.allow_edit_files = False
+        if not hasattr(self.cli_args, 'allow_execute_safe_commands'): self.cli_args.allow_execute_safe_commands = False
+        if not hasattr(self.cli_args, 'allow_execute_all_commands'): self.cli_args.allow_execute_all_commands = False
+        if not hasattr(self.cli_args, 'allow_use_browser'): self.cli_args.allow_use_browser = False
+        if not hasattr(self.cli_args, 'allow_use_mcp'): self.cli_args.allow_use_mcp = False
+
+        self.supports_browser_use: bool = supports_browser_use # Retain this for system prompt
         self.matching_strictness: int = matching_strictness
 
         self.memory = Memory()
@@ -103,8 +114,101 @@ class DeveloperAgent:
             self.consecutive_tool_errors += 1
             return f"Error: Unknown tool '{tool_name}'. Please choose from the available tools."
 
+        # --- New Confirmation Logic ---
+        user_denial_message = f"User denied permission to {tool_name}"
+        proceed_with_tool = False
+
+        if tool_name == "execute_command":
+            command_str = tool_params.get("command", "")
+            # Default to True if 'requires_approval' is not provided by LLM, for safety.
+            requires_approval_param = to_bool(tool_params.get("requires_approval", True))
+
+            if self.cli_args.allow_execute_all_commands:
+                proceed_with_tool = True
+            elif self.cli_args.allow_execute_safe_commands and not requires_approval_param:
+                proceed_with_tool = True
+            elif self.cli_args.auto_approve and requires_approval_param: # Legacy --auto-approve for commands
+                proceed_with_tool = True
+            else:
+                if request_user_confirmation(f"Allow executing command: '{command_str}'? (y/n)"):
+                    proceed_with_tool = True
+                else:
+                    return f"{user_denial_message}: {command_str}"
+
+        elif tool_name in ["write_to_file", "replace_in_file", "new_rule"]:
+            file_path = tool_params.get("path", "Unknown file")
+            if self.cli_args.allow_edit_files:
+                proceed_with_tool = True
+            else:
+                if request_user_confirmation(f"Allow editing file: '{file_path}'? (y/n)"):
+                    proceed_with_tool = True
+                else:
+                    return f"{user_denial_message}: {file_path}"
+
+        elif tool_name in ["read_file", "list_files", "search_files", "list_code_definition_names"]:
+            path_param = tool_params.get("path", "Unknown path")
+            prompt_verb = "reading/listing/searching"
+            if tool_name == "read_file": prompt_verb = "reading file"
+            elif tool_name == "list_files": prompt_verb = "listing directory"
+            elif tool_name == "search_files": prompt_verb = "searching files in"
+            elif tool_name == "list_code_definition_names": prompt_verb = "listing code definitions in"
+
+            if self.cli_args.allow_read_files:
+                proceed_with_tool = True
+            else:
+                if request_user_confirmation(f"Allow {prompt_verb}: '{path_param}'? (y/n)"):
+                    proceed_with_tool = True
+                else:
+                    return f"{user_denial_message}: {path_param}"
+
+        elif tool_name == "browser_action":
+            url_param = tool_params.get("url", "unknown URL")
+            if self.cli_args.allow_use_browser:
+                proceed_with_tool = True
+            else:
+                if request_user_confirmation(f"Allow using browser for '{tool_params.get('action','unknown action')}' on '{url_param}'? (y/n)"):
+                    proceed_with_tool = True
+                else:
+                    return f"{user_denial_message} for browser action."
+
+        elif tool_name in ["use_mcp_tool", "access_mcp_resource"]:
+            mcp_tool_name = tool_params.get("tool_name", tool_params.get("uri", "unknown MCP resource"))
+            if self.cli_args.allow_use_mcp:
+                proceed_with_tool = True
+            else:
+                if request_user_confirmation(f"Allow using MCP for '{mcp_tool_name}'? (y/n)"):
+                    proceed_with_tool = True
+                else:
+                    return f"{user_denial_message} for MCP action."
+
+        elif tool_name in ["new_task", "condense", "report_bug"]: # Typically internal/meta tools, might not need explicit flags yet
+            proceed_with_tool = True # Or add specific flags if needed later
+
+        else: # Default to allowing other tools not explicitly handled by flags yet
+            proceed_with_tool = True
+
+
+        if not proceed_with_tool:
+             # This case should ideally be caught by specific denials above,
+             # but as a fallback if a tool type was missed in confirmation logic.
+            return f"Action '{tool_name}' was not approved to proceed."
+
+        # --- End New Confirmation Logic ---
+
         try:
-            result_str = tool_to_execute.execute(tool_params, agent_memory=self)
+            # Pass self.cli_args.auto_approve to tools that might use it internally (like ExecuteCommandTool's legacy check)
+            # However, the primary decision is now made above. For ExecuteCommandTool, its internal auto_approve
+            # check will be redundant if we always pass params that reflect the agent's decision,
+            # or ensure it doesn't prompt again.
+            # For ExecuteCommandTool, if we reach here, it means it's approved.
+            # The tool expects 'requires_approval' from LLM, and agent_memory.auto_approve.
+            # We now use self.cli_args.auto_approve for the agent_memory part.
+
+            # For ExecuteCommandTool, if it was approved by a specific granular flag or interactive confirmation,
+            # its internal check for `requires_approval_bool and not auto_approved` should effectively pass
+            # because either auto_approved (from cli_args) will be true, or the command will have been
+            # interactively confirmed already. The tool itself does not prompt.
+            result_str = tool_to_execute.execute(tool_params, agent_memory=self) # agent_memory=self passes the agent instance
 
             if result_str.startswith("Error:"):
                 self.consecutive_tool_errors += 1
