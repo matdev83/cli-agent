@@ -629,8 +629,16 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
 5. The user may provide feedback, which you can use to make improvements and try again. But DO NOT continue in pointless back and forth conversations, i.e. don't end your responses with questions or offers for further assistance.
 """
 
-BROWSER_SECTION_PATTERN = re.compile(r"\$\{\s*supportsBrowserUse\s*\?\s*`(.*?)`\s*:\s*\"\"\s*\}", re.DOTALL)
-BROWSER_INLINE_PATTERN = re.compile(r"\$\{\s*supportsBrowserUse\s*\?\s*\"(.*?)\"\s*:\s*\"\"\s*\}")
+BROWSER_SECTION_PATTERN = re.compile(
+    r"\$\{\s*supportsBrowserUse\s*\?\s*(?P<q>[`\"])"
+    r"(?P<content>.*?)"
+    r"(?P=q)\s*:\s*\"\"\s*\}",
+    re.DOTALL,
+)
+BROWSER_INLINE_PATTERN = re.compile(
+    r"\$\{\s*supportsBrowserUse\s*\?\s*\"(.*?)\"\s*:\s*\"\"\s*\}",
+    re.DOTALL,
+)
 MCP_BLOCK_PATTERN = re.compile(r"\$\{\s*mcpHub\.getServers\(\).*?:\s*\"(No MCP servers currently connected)\"\s*\}", re.DOTALL)
 
 def get_system_prompt(cwd: str, supports_browser_use: bool = False, browser_settings: dict | None = None) -> str:
@@ -648,7 +656,7 @@ def get_system_prompt(cwd: str, supports_browser_use: bool = False, browser_sett
     prompt = prompt.replace("${browserSettings.viewport.width}", width)
     prompt = prompt.replace("${browserSettings.viewport.height}", height)
     if supports_browser_use:
-        prompt = BROWSER_SECTION_PATTERN.sub(lambda m: m.group(1), prompt)
+        prompt = BROWSER_SECTION_PATTERN.sub(lambda m: m.group("content"), prompt)
         prompt = BROWSER_INLINE_PATTERN.sub(lambda m: m.group(1), prompt)
     else:
         prompt = BROWSER_SECTION_PATTERN.sub("", prompt)
