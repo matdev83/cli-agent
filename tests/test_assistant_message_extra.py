@@ -12,7 +12,9 @@ def test_unknown_tag_ignored():
     # So, we expect three distinct TextContent objects.
     assert len(result) == 3
     assert result[0] == TextContent(content='test') # root.text.strip()
-    assert result[1] == TextContent(content='<unknown>data</unknown>') # ET.tostring of the unknown element
+    # The unknown tag part will now be prefixed with the error message.
+    expected_unknown_tag_content = "Error: Malformed tool use - Unrecognized or malformed tag: <unknown>data</unknown>"
+    assert result[1] == TextContent(content=expected_unknown_tag_content)
     assert result[2] == TextContent(content='end') # element.tail.strip()
 
 

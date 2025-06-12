@@ -451,7 +451,7 @@ def test_diff_failure_escalation_suggests_write_to_file(tmp_path: Path):
 
     # Specific error messages that should trigger the escalation
     search_block_error = "Error: Search block 1 (starting with 'old_text') not found..."
-    diff_format_error = "Error processing diff_blocks for test_file.txt: Some diff error"
+    diff_format_error = "Error processing diff_blocks" # Simplified
 
     responses = [
         f"<tool_use><tool_name>replace_in_file</tool_name><params><path>{file_to_edit}</path><diff_blocks>...</diff_blocks></params></tool_use>", # Fail 1
@@ -484,7 +484,16 @@ def test_diff_failure_escalation_suggests_write_to_file(tmp_path: Path):
 
     # Result of second failed replace_in_file, with suggestion
     expected_augmented_error = diff_format_error + REPLACE_SUGGESTION_MESSAGE_TEMPLATE.format(file_path=file_to_edit)
-    assert agent.history[5]["content"] == f"Result of replace_in_file:\n{expected_augmented_error}"
+
+    actual_content_in_history = agent.history[5]["content"]
+    # The content is "Result of replace_in_file:\n" + augmented_tool_output
+    # We want to compare the augmented_tool_output part.
+    prefix_in_history = "Result of replace_in_file:\n"
+    actual_augmented_output = actual_content_in_history.removeprefix(prefix_in_history)
+
+        print(f"ACTUAL ---{actual_augmented_output}---") # Raw print
+        print(f"EXPECTED ---{expected_augmented_error}---") # Raw print
+        assert actual_augmented_output == expected_augmented_error
 
     assert mock_replace_execute.call_count == 2
 

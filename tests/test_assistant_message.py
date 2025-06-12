@@ -98,18 +98,23 @@ def test_parse_whitespace_message():
 
 def test_parse_malformed_xml_unclosed_tool():
     message = "<read_file><path>file.txt</path>" # Unclosed read_file
-    # Current ET parser in assistant_message.py wraps in <root> and on ParseError returns the whole message as TextContent
-    expected = [TextContent(content="<read_file><path>file.txt</path>")]
+    expected_content = f"Error: Malformed tool use - Could not parse XML: {message}"
+    expected = [TextContent(content=expected_content)]
     assert parse_assistant_message(message) == expected
 
 def test_parse_malformed_xml_unclosed_outer_tag():
     message = "<read_file><path>file.txt</path></read_file" # Missing >
-    expected = [TextContent(content="<read_file><path>file.txt</path></read_file")]
+    # This will cause an ET.ParseError.
+    # The original message does not end with '>', so it's returned as is.
+    expected = [TextContent(content=message)]
     assert parse_assistant_message(message) == expected
 
 def test_parse_malformed_xml_no_closing_param_tag():
     message = "<write_to_file><path>file.txt<content>data</content></write_to_file>" # missing </path>
-    expected = [TextContent(content="<write_to_file><path>file.txt<content>data</content></write_to_file>")]
+    # This is tricky. If ET can't parse this due to <path> not being closed before <content>
+    # it will be a ParseError.
+    expected_content = f"Error: Malformed tool use - Could not parse XML: {message}"
+    expected = [TextContent(content=expected_content)]
     assert parse_assistant_message(message) == expected
 
 def test_parse_multiple_tool_calls():
@@ -190,9 +195,15 @@ def test_parse_tool_with_nested_tags_in_param_not_tool_tags():
     # which implies the current simpler parsing. So this test might be out of scope for *current* parser spec.
     # Let's adjust the expectation to current parser behavior for now.
     # Current parser behavior: content = "" because <content> has no direct text.
-    current_parser_expected_content = ""
+    current_parser_expected_content = "" # This should be the actual string including tags if parsed as such
+
+    # The current parser logic for params is: `(param_child.text or "").strip()`
+    # If <content> has <note> as a child, <content>'s .text is typically None or whitespace.
+    # So, the existing code should result in content="".
+    # If the goal is to capture inner XML, the parser needs a change.
+    # For now, testing against existing parser logic:
     expected_current_behavior = [
-         ToolUse(name="write_to_file", params={"path": "file.xml", "content": current_parser_expected_content})
+         ToolUse(name="write_to_file", params={"path": "file.xml", "content": ""}) # content is empty
     ]
     assert parse_assistant_message(message) == expected_current_behavior, \
         "Test current behavior for params with child XML. If this fails, parser's param handling for XML content is different."

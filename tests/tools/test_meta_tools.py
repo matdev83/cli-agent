@@ -25,9 +25,7 @@ def test_new_task_tool_stub_missing_context():
     tool = NewTaskTool()
     params = {} # Context is missing
     result = tool.execute(params)
-    assert "NewTaskTool called" in result
-    assert "Full implementation of new task creation is pending." in result
-    assert "context: 'No context provided.'" in result # As per stub's default
+    assert "Error: Missing required parameter 'context' for tool 'new_task'." in result
 
 def test_new_task_tool_stub_empty_context():
     tool = NewTaskTool()
@@ -50,9 +48,7 @@ def test_condense_tool_stub_missing_context():
     tool = CondenseTool()
     params = {}
     result = tool.execute(params)
-    assert "CondenseTool called" in result
-    assert "Full implementation of context condensation is pending." in result
-    assert "context: 'No context provided.'" in result
+    assert "Error: Missing required parameter 'context' for tool 'condense'." in result
 
 def test_report_bug_tool_stub():
     tool = ReportBugTool()
@@ -68,7 +64,9 @@ def test_report_bug_tool_stub():
     assert "Full implementation of bug reporting is pending." in result
     assert f"Title: '{params['title']}'" in result
     assert f"What Happened: '{params['what_happened']}'" in result
-    assert f"Received params: {str(params)}" in result # Stub includes all params
+    assert f"Steps: '{params['steps_to_reproduce']}'" in result
+    assert f"API Output: '{params['api_request_output']}'" in result
+    assert f"Additional: '{params['additional_context']}'" in result
 
 def test_report_bug_tool_stub_only_required_params():
     tool = ReportBugTool()
@@ -85,7 +83,9 @@ def test_report_bug_tool_stub_only_required_params():
     assert "Full implementation of bug reporting is pending." in result
     assert f"Title: '{params['title']}'" in result
     assert f"What Happened: '{params['what_happened']}'" in result
-    assert f"Received params: {str(expected_params_in_message)}" in result
+    assert f"Steps: '{params['steps_to_reproduce']}'" in result
+    assert "API Output: 'N/A'" in result
+    assert "Additional: 'N/A'" in result
 
 
 def test_new_rule_tool_stub():
@@ -108,20 +108,19 @@ def test_new_rule_tool_stub_missing_params():
     # Test with path missing
     params_no_path = {"content": "Some content"}
     result_no_path = tool.execute(params_no_path)
-    assert "Path: 'No path provided.'" in result_no_path
-    assert "Content (preview): 'Some content...'" in result_no_path # Preview of first 50 chars
+    assert "Error: Missing required parameters for 'new_rule': path." in result_no_path
 
     # Test with content missing
     params_no_content = {"path": "some/path.md"}
     result_no_content = tool.execute(params_no_content)
-    assert "Path: 'some/path.md'" in result_no_content
-    assert "Content (preview): 'No content provided....'" in result_no_content # .get default + preview logic
+    assert "Error: Missing required parameters for 'new_rule': content." in result_no_content
 
     # Test with both missing
     params_both_missing = {}
     result_both_missing = tool.execute(params_both_missing)
-    assert "Path: 'No path provided.'" in result_both_missing
-    assert "Content (preview): 'No content provided....'" in result_both_missing
+    # Order depends on dict iteration or how missing_required list is built
+    assert "Error: Missing required parameters for 'new_rule': path, content." in result_both_missing or \
+           "Error: Missing required parameters for 'new_rule': content, path." in result_both_missing
 
 
 # --- AskFollowupQuestionTool Tests ---
@@ -159,10 +158,7 @@ def test_ask_followup_question_tool_execute_missing_question():
     options_str = '["Yes", "No"]'
     params = {"options": options_str} # Question is missing
     result = tool.execute(params)
-    assert "Success: AskFollowupQuestionTool called." in result
-    assert "Question: 'No question provided.'" in result # Default from stub
-    assert f"Options: '{options_str}'" in result
-    assert "Full implementation pending." in result
+    assert "Error: Missing required parameter 'question' for tool 'ask_followup_question'." in result
 
 # --- AttemptCompletionTool Tests ---
 def test_attempt_completion_tool_instantiation():
@@ -199,10 +195,7 @@ def test_attempt_completion_tool_execute_missing_result():
     command_str = "git commit -am 'fix'"
     params = {"command": command_str} # Result is missing
     result_msg = tool.execute(params)
-    assert "Success: AttemptCompletionTool called." in result_msg
-    assert "Result: 'No result provided.'" in result_msg # Default from stub
-    assert f"Command: '{command_str}'" in result_msg
-    assert "Full implementation pending." in result_msg
+    assert "Error: Missing required parameter 'result' for tool 'attempt_completion'." in result_msg
 
 # --- PlanModeRespondTool Tests ---
 def test_plan_mode_respond_tool_instantiation():
@@ -225,9 +218,7 @@ def test_plan_mode_respond_tool_execute_missing_response():
     tool = PlanModeRespondTool()
     params = {} # Response is missing
     result_msg = tool.execute(params)
-    assert "Success: PlanModeRespondTool called." in result_msg
-    assert "Response: 'No response provided.'" in result_msg # Default from stub
-    assert "Full implementation pending." in result_msg
+    assert "Error: Missing required parameter 'response' for tool 'plan_mode_respond'." in result_msg
 
 # --- LoadMcpDocumentationTool Tests ---
 def test_load_mcp_documentation_tool_instantiation():
