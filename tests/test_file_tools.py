@@ -56,3 +56,10 @@ def test_search_files(tmp_path: Path):
     assert len(results) == 1
     assert results[0]["file"] == "a.txt"
     assert results[0]["line"] == 1
+
+
+def test_write_to_file_creates_directories(tmp_path: Path):
+    nested = tmp_path / "dir1" / "dir2" / "file.txt"
+    write_to_file(str(nested), "data")
+    assert nested.exists()
+    assert read_file(str(nested)) == "data"
