@@ -1,4 +1,8 @@
-SYSTEM_PROMPT = """
+import os
+import platform
+import re
+
+_SYSTEM_PROMPT_TEMPLATE = """
 You are Cline, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.
 
 ====
@@ -624,3 +628,30 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
 4. Once you've completed the user's task, you must use the attempt_completion tool to present the result of the task to the user. You may also provide a CLI command to showcase the result of your task; this can be particularly useful for web development tasks, where you can run e.g. \`open index.html\` to show the website you've built.
 5. The user may provide feedback, which you can use to make improvements and try again. But DO NOT continue in pointless back and forth conversations, i.e. don't end your responses with questions or offers for further assistance.
 """
+
+BROWSER_SECTION_PATTERN = re.compile(r"\$\{\s*supportsBrowserUse\s*\?\s*`(.*?)`\s*:\s*\"\"\s*\}", re.DOTALL)
+BROWSER_INLINE_PATTERN = re.compile(r"\$\{\s*supportsBrowserUse\s*\?\s*\"(.*?)\"\s*:\s*\"\"\s*\}")
+MCP_BLOCK_PATTERN = re.compile(r"\$\{\s*mcpHub\.getServers\(\).*?:\s*\"(No MCP servers currently connected)\"\s*\}", re.DOTALL)
+
+def get_system_prompt(cwd: str, supports_browser_use: bool = False, browser_settings: dict | None = None) -> str:
+    """Return the system prompt customized for the runtime options."""
+    prompt = _SYSTEM_PROMPT_TEMPLATE
+    prompt = prompt.replace("${cwd.toPosix()}", cwd)
+    prompt = prompt.replace("${osName()}", platform.system())
+    prompt = prompt.replace("${getShell()}", os.environ.get("SHELL", "sh"))
+    prompt = prompt.replace("${os.homedir().toPosix()}", os.path.expanduser("~"))
+    if browser_settings:
+        width = str(browser_settings.get("viewport", {}).get("width", ""))
+        height = str(browser_settings.get("viewport", {}).get("height", ""))
+    else:
+        width = height = ""
+    prompt = prompt.replace("${browserSettings.viewport.width}", width)
+    prompt = prompt.replace("${browserSettings.viewport.height}", height)
+    if supports_browser_use:
+        prompt = BROWSER_SECTION_PATTERN.sub(lambda m: m.group(1), prompt)
+        prompt = BROWSER_INLINE_PATTERN.sub(lambda m: m.group(1), prompt)
+    else:
+        prompt = BROWSER_SECTION_PATTERN.sub("", prompt)
+        prompt = BROWSER_INLINE_PATTERN.sub("", prompt)
+    prompt = MCP_BLOCK_PATTERN.sub("(No MCP servers currently connected)", prompt)
+    return prompt
