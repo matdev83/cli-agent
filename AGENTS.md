@@ -118,3 +118,111 @@ The current MVP provides a solid foundation. Potential areas for future developm
 *   **Improved Error Handling**: Refine error handling mechanisms between tools, the agent, and the LLM, providing clearer feedback and potentially enabling automated recovery strategies.
 *   **User Interface**: While currently CLI-based, future iterations could explore richer terminal interfaces (e.g., using libraries like `Textualize`) or even web UIs.
 *   **Testing Framework**: Establish a comprehensive automated testing suite (`pytest`) covering unit, integration, and potentially end-to-end tests.
+
+## 7. Directory Overview
+
+The project is organized as follows (top-level folders only for brevity):
+
+```
+.
+├── =1.0.0
+├── =1.30
+├── =3.0
+├── =7.0
+├── AGENTS.md
+├── README.md
+├── dev/
+│   └── app1/
+│       └── tictactoe.py
+├── docs/
+├── poetry.lock
+├── pyproject.toml
+├── requirements.txt
+├── src/
+│   ├── agent.py
+│   ├── assistant_message.py
+│   ├── cli.py
+│   ├── llm.py
+│   ├── llm_protocol.py
+│   ├── memory.py
+│   ├── prompts/
+│   │   ├── commands.py
+│   │   └── system.py
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   ├── browser.py
+│   │   ├── code.py
+│   │   ├── command.py
+│   │   ├── file.py
+│   │   ├── mcp.py
+│   │   ├── meta_tools.py
+│   │   └── tool_protocol.py
+│   └── utils.py
+├── temp_agent_work/
+├── temp_run_openrouter_test.py
+├── tests/
+│   ├── prompts/
+│   │   └── test_system_prompt.py
+│   ├── tools/
+│   │   ├── test_browser_tools.py
+│   │   ├── test_code_tools.py
+│   │   ├── test_command_tools.py
+│   │   ├── test_file_tools.py
+│   │   ├── test_mcp_tools.py
+│   │   └── test_meta_tools.py
+│   ├── test_agent.py
+│   ├── test_agent_loop.py
+│   ├── test_assistant_message.py
+│   ├── test_assistant_message_extra.py
+│   ├── test_cli.py
+│   ├── test_code_navigation.py
+│   ├── test_command_tool.py
+│   ├── test_file_tools.py
+│   ├── test_llm.py
+│   ├── test_memory.py
+│   ├── test_openrouter_integration.py
+│   ├── test_parse_assistant_message.py
+│   └── test_system_prompt.py
+└── vendor/
+    ├── cline/        # VSCode extension sources and docs
+    └── crewAI/       # Third-party library with its own docs and tests
+```
+
+The `vendor` directory contains many additional files and is largely third-party
+code. It has been collapsed in this overview.
+
+## 8. Class Overview
+
+Below is a short description of the key classes defined in this repository:
+
+- **src/agent.py** – `DeveloperAgent` orchestrates LLM interaction, tool execution,
+  and memory management for task loops.
+- **src/assistant_message.py** – `TextContent` and `ToolUse` are dataclasses
+  representing parsed pieces of an assistant reply.
+- **src/llm_protocol.py** – `LLMWrapper` protocol defines the interface for LLM
+  implementations.
+- **src/llm.py** – `MockLLM` returns canned responses for testing; `OpenRouterLLM`
+  connects to the OpenRouter API with retry logic.
+- **src/memory.py** – `Memory` stores conversation history and remembered file
+  content.
+- **src/tools/tool_protocol.py** – `Tool` protocol describing an executable tool
+  with metadata.
+- **src/tools/file.py** – implements `ReadFileTool`, `WriteToFileTool`,
+  `ReplaceInFileTool`, `ListFilesTool`, and `SearchFilesTool` for filesystem
+  operations.
+- **src/tools/command.py** – `ExecuteCommandTool` executes shell commands with
+  optional approval and timeout handling.
+- **src/tools/code.py** – `ListCodeDefinitionNamesTool` extracts top-level Python
+  definitions from source files.
+- **src/tools/browser.py** – `BrowserActionTool` (partial) controls a browser via
+  Playwright for web interactions.
+- **src/tools/mcp.py** – `UseMCPTool` and `AccessMCPResourceTool` are stubs for
+  interacting with external Model Context Protocol servers.
+- **src/tools/meta_tools.py** – meta-level tools such as `NewTaskTool`,
+  `AskFollowupQuestionTool`, `AttemptCompletionTool`, `PlanModeRespondTool`,
+  `LoadMcpDocumentationTool`, `CondenseTool`, `ReportBugTool`, and `NewRuleTool`.
+- **tests/** – test modules define simple helper classes like `MockTool`,
+  `MockAgentMemory`, and `MockPromptTool` used for unit tests.
+
+These descriptions are intended to provide a quick map of where functionality is
+implemented so additional agents can navigate the codebase effectively.
