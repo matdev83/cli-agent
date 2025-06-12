@@ -176,40 +176,41 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
 """
 
 # The _format_parameter and generate_tools_documentation functions remain the same
-def _format_parameter(param: Dict[str, Any]) -> str:
+def _format_parameter(param: Dict[str, Any], cwd: str) -> str:
     """Formats a single tool parameter for display."""
     name = param.get("name", "unknown_param")
     ptype = param.get("type", "string")
-    desc = param.get("description", "No description.")
+    raw_desc = param.get("description", "No description.")
+    # Replace ${cwd} and ${cwd.toPosix()} placeholders first
+    processed_desc = raw_desc.replace("${cwd}", cwd).replace("${cwd.toPosix()}", cwd)
+    # Then render as Jinja template
+    desc_template = Template(processed_desc)
+    desc = desc_template.render(cwd=cwd)
     required = param.get("required", False)
     req_str = "(required)" if required else "(optional)"
-    # Jinja templating in the main prompt string will handle CWD, so direct replacement here is less critical
-    # but can be kept for consistency if generate_tools_documentation is used elsewhere.
-    # For now, assuming CWD replacement is primarily for the main prompt context.
     return f"- {name}: ({ptype}, {req_str}) {desc}"
 
 def generate_tools_documentation(tools_list: Iterable[Tool], cwd: str) -> str:
     """Generates the # Tools section documentation from a list of Tool instances."""
     doc_parts = []
     for tool in tools_list:
-        # Tool descriptions might contain {{ cwd }} or similar if they are also Jinja templates,
-        # or we ensure they are formatted correctly before this stage.
-        # For now, assume tool.description and param.description are plain strings,
-        # or already processed if they needed CWD.
-        # The main template replaces {{ cwd }} globally.
-        description = tool.description # No direct cwd replacement here, handled by main template if {{cwd}} is used in desc
+        # First, replace ${cwd} style placeholders
+        raw_tool_description = tool.description.replace("${cwd}", cwd).replace("${cwd.toPosix()}", cwd)
+        # Then, render the tool description as a Jinja template
+        tool_description_template = Template(raw_tool_description)
+        description = tool_description_template.render(cwd=cwd)
 
         doc_parts.append(f"## {tool.name}")
         doc_parts.append(f"Description: {description}")
         if tool.parameters:
             doc_parts.append("Parameters:")
             for param_def in tool.parameters:
-                # param_def["description"] already plain string
-                doc_parts.append(_format_parameter(param_def))
+                # param_def["description"] already plain string after _format_parameter handles it
+                doc_parts.append(_format_parameter(param_def, cwd)) # Pass cwd
         else:
             doc_parts.append("Parameters: None")
 
-        usage_params = "\n".join(f"<{p['name']}>{p.get('type', 'value')}</{p['name']}>" for p in tool.parameters) if tool.parameters else ""
+        usage_params = "\n".join(f"<{p['name']}>{p.get('type', 'string')}</{p['name']}>" for p in tool.parameters) if tool.parameters else "" # Default to 'string'
         doc_parts.append("Usage:")
         doc_parts.append(f"<{tool.name}>\n{usage_params}\n</{tool.name}>")
         doc_parts.append("")

@@ -204,4 +204,3 @@ if __name__ == '__main__':
         try: Path("src").rmdir()
         except OSError: print("Note: src directory may not be empty or other tests use it.")
         pass
-```

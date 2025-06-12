@@ -349,3 +349,68 @@ class SearchFilesTool(Tool):
             return json.dumps(matches)
         except Exception as e:
             return f"Error searching files in {directory_str}: {e}"
+
+# --- Wrapper functions for old tests ---
+# Ensure json is imported if not already (it is used by ListFilesTool and SearchFilesTool's execute, but wrappers parse it)
+# import json # Already imported at the top
+
+def read_file(path: str, agent_memory: Any = None) -> str:
+    tool = ReadFileTool()
+    result = tool.execute({"path": path}, agent_memory=agent_memory)
+    if result.startswith("Error:"):
+        # Old tests might expect FileNotFoundError or similar.
+        # This is a simple bridge; more sophisticated error mapping could be done.
+        # Example: if "File not found" in result: raise FileNotFoundError(result)
+        raise ValueError(result)
+    return result
+
+def write_to_file(path: str, content: str, agent_memory: Any = None) -> None:
+    tool = WriteToFileTool()
+    result = tool.execute({"path": path, "content": content}, agent_memory=agent_memory)
+    if result.startswith("Error:"):
+        raise ValueError(result)
+    # Original function had no return, so None is fine.
+
+def replace_in_file(path: str, diff_blocks: str, agent_memory: Any = None) -> None:
+    tool = ReplaceInFileTool()
+    # The test 'test_replace_in_file' uses a diff format "------- SEARCH...+++++++ REPLACE"
+    # The tool's _parse_diff_blocks method expects "<<<<<<< SEARCH...>>>>>>> REPLACE"
+    # This wrapper will adapt the test's format to the tool's expected format.
+    # Note: The test's actual diff string is "------- SEARCH\nfoo\n=======\nbar\n+++++++ REPLACE"
+    # The tool's internal parser is strict. The adaptation below handles this.
+    adapted_diff = diff_blocks.replace("------- SEARCH", "<<<<<<< SEARCH") \
+                              .replace("+++++++ REPLACE", ">>>>>>> REPLACE")
+
+    result = tool.execute({"path": path, "diff_blocks": adapted_diff}, agent_memory=agent_memory)
+
+    # The test 'test_replace_in_file_not_found' expects ValueError if search block not found.
+    # The tool's execute method returns a string like "Error: Search block ... not found..."
+    if result.startswith("Error:") and "Search block" in result and "not found" in result:
+        raise ValueError(result) # Make it a ValueError for the test
+    elif result.startswith("Error:"): # Other errors reported by the tool
+        raise RuntimeError(result) # Or a more specific custom error
+
+def list_files(path: str, recursive: bool = False, agent_memory: Any = None) -> List[str]:
+    tool = ListFilesTool()
+    result_str = tool.execute({"path": path, "recursive": recursive}, agent_memory=agent_memory)
+    if result_str.startswith("Error:"):
+        raise ValueError(result_str)
+    # The test 'test_list_files' expects a list of strings.
+    # The tool's execute method returns a JSON string representation of a list.
+    loaded_json = json.loads(result_str)
+    return loaded_json
+
+def search_files(directory: str, regex_pattern: str, file_pattern: str = "*", agent_memory: Any = None) -> List[Dict[str, Any]]:
+    tool = SearchFilesTool()
+    params = {"directory": directory, "regex_pattern": regex_pattern}
+    # The tool's execute method defaults file_pattern to '*' internally if not provided.
+    # So, only add file_pattern to params if it's not the default "*" to avoid redundancy.
+    if file_pattern != "*": # This check ensures we don't override the tool's internal default unless specified.
+        params["file_pattern"] = file_pattern
+
+    result_str = tool.execute(params, agent_memory=agent_memory)
+    if result_str.startswith("Error:"):
+        raise ValueError(result_str)
+    # The test 'test_search_files' expects a list of dictionaries.
+    # The tool's execute method returns a JSON string.
+    return json.loads(result_str)

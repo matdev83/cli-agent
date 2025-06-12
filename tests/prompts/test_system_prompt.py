@@ -134,4 +134,3 @@ def test_get_system_prompt_with_multiple_tools():
     assert "## tool_beta" in prompt
     assert f"Beta tool with param {test_cwd}." in prompt # Jinja replacement for {{ cwd }}
     assert "- p1: (str, (required)) P1" in prompt
-```

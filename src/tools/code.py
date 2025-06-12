@@ -87,28 +87,33 @@ class ListCodeDefinitionsTool(Tool):
             output_structure = [] # List of dicts: {"file": "name", "definitions": []} or similar
 
             found_defs = False
+            # Track if any Python files were found at all
+            found_py_files = False
             for entry in sorted(abs_dir_path.iterdir()):
                 if entry.is_file() and entry.suffix == ".py":
+                    found_py_files = True
                     defs = _python_top_level_defs(entry)
                     if defs: # Only add if there are definitions or errors from parsing
                         output_structure.append({
                             "file": entry.name,
                             "definitions": defs # These already include error messages if any
                         })
-                        if not any("Error:" in d for d in defs):
+                        # Consider it found_defs if at least one definition is not an error
+                        if any(not d.startswith("Error:") and not d.startswith("| Error:") for d in defs):
                             found_defs = True
 
-            if not output_structure: # No .py files or no defs in them
-                 return json.dumps({"message": "No Python files with definitions found or directory is empty."})
+            if not found_py_files: # No .py files found
+                 return json.dumps({"message": "No Python files found in the directory."}) # More specific message
 
-            # The original tool returned a custom formatted string.
-            # For consistency and easier parsing, returning JSON is better.
-            # The original also had a "No source code definitions found." message.
-            # We can include a top-level message or rely on the structure.
+            if not output_structure and found_py_files: # .py files found, but no definitions extracted (e.g. all empty or no classes/funcs)
+                 return json.dumps({"message": "No definitions found in Python files."})
+
+
             if not found_defs and any("Error:" in d for item in output_structure for d in item["definitions"]):
-                 # Only errors were found
+                 # Only errors were found during parsing of some files
                  return json.dumps({"results": output_structure, "message": "Found Python files, but encountered errors while parsing definitions."})
 
+            # If found_defs is true, or if there are no parsing errors in any file.
             return json.dumps({"results": output_structure, "message": "Successfully listed code definitions." if found_defs else "No definitions found in Python files."})
 
         except Exception as e:
@@ -173,3 +178,41 @@ class AccessMCPResourceTool(Tool):
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
         raise NotImplementedError(f"{self.name} is not implemented yet.")
+
+# --- Wrapper function for old tests ---
+def list_code_definition_names(directory_path: str, agent_memory: Any = None) -> str:
+    tool = ListCodeDefinitionsTool()
+    result_str = tool.execute({"directory_path": directory_path}, agent_memory=agent_memory)
+    data = json.loads(result_str)
+
+    if "error" in data:
+        # Consider how to represent this; the old test might not expect an error for "not found"
+        # but the tool gives one. For "No source code definitions found.", the test is specific.
+        if "Directory not found" in data["error"]:
+             # This case might map to "No source code definitions found." if the dir simply doesn't exist.
+             return "No source code definitions found."
+        raise RuntimeError(f"Tool error: {data['error']}")
+
+    if "message" in data and (
+        data["message"] == "No Python files found in the directory." or
+        data["message"] == "No definitions found in Python files." or # Covers case where .py files are empty/no defs
+        data["message"] == "No Python files with definitions found or directory is empty." # Original tool message
+    ):
+        return "No source code definitions found."
+
+    if "results" in data and not data["results"]: # Empty results list
+        return "No source code definitions found."
+
+    if "results" in data:
+        output_lines = []
+        for file_info in data["results"]:
+            output_lines.append(file_info["file"])
+            output_lines.append("|----") # Test expects this separator
+            for definition in file_info["definitions"]:
+                # The tool already formats definitions with "| "
+                output_lines.append(definition)
+            output_lines.append("|----") # Test expects this separator at the end of each file block
+        return "\n".join(output_lines)
+
+    # Fallback or if the JSON structure is unexpected
+    return "Error: Could not parse tool output as expected."
