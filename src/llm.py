@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import List, Dict
 
+from openai import OpenAI
+
 
 class MockLLM:
     """Simple mock LLM that returns predefined responses."""
@@ -25,3 +27,25 @@ class MockLLM:
         resp = self._responses[self._index]
         self._index += 1
         return resp
+
+
+class OpenRouterLLM:
+    """LLM client using OpenRouter.ai API via the OpenAI SDK."""
+
+    def __init__(self, model: str, api_key: str):
+        self.model = model
+        self._client = OpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://cline.bot",
+                "X-Title": "CLI Agent",
+            },
+        )
+
+    def send_message(self, history: List[Dict[str, str]]) -> str:
+        response = self._client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": m["role"], "content": m["content"]} for m in history],
+        )
+        return response.choices[0].message.content
