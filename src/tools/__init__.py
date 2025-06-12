@@ -1,27 +1,39 @@
+from .tool_protocol import Tool
 from .file import (
-    read_file,
-    write_to_file,
-    replace_in_file,
-    list_files,
-    search_files,
+    ReadFileTool,
+    WriteToFileTool,
+    ReplaceInFileTool,
+    ListFilesTool,
+    SearchFilesTool,
 )
-from .command import execute_command
+from .command import ExecuteCommandTool
 from .code import (
-    list_code_definition_names,
-    browser_action,
-    use_mcp_tool,
-    access_mcp_resource,
+    ListCodeDefinitionsTool,
+    BrowserActionTool,
+    UseMCPTool,
+    AccessMCPResourceTool,
+)
+from .meta_tools import ( # Added import for meta_tools
+    NewTaskTool,
+    CondenseTool,
+    ReportBugTool,
+    NewRuleTool,
 )
 
 __all__ = [
-    "read_file",
-    "write_to_file",
-    "replace_in_file",
-    "list_files",
-    "search_files",
-    "execute_command",
-    "list_code_definition_names",
-    "browser_action",
-    "use_mcp_tool",
-    "access_mcp_resource",
+    "Tool",
+    "ReadFileTool",
+    "WriteToFileTool",
+    "ReplaceInFileTool",
+    "ListFilesTool",
+    "SearchFilesTool",
+    "ExecuteCommandTool",
+    "ListCodeDefinitionsTool",
+    "BrowserActionTool",
+    "UseMCPTool",
+    "AccessMCPResourceTool",
+    "NewTaskTool", # Added to __all__
+    "CondenseTool",    # Added to __all__
+    "ReportBugTool", # Added to __all__
+    "NewRuleTool",   # Added to __all__
 ]
