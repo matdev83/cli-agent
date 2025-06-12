@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from typing import Callable, Dict, List
 
+from .memory import Memory
+
 from .assistant_message import parse_assistant_message, ToolUse, TextContent
 from .prompts.system import get_system_prompt
 from . import tools
@@ -23,7 +25,8 @@ class DeveloperAgent:
         self.cwd = cwd
         self.auto_approve = auto_approve
         self.supports_browser_use = supports_browser_use
-        self.history: List[Dict[str, str]] = []
+        self.memory = Memory()
+        self.history: List[Dict[str, str]] = self.memory.history
         self.tools: Dict[str, Callable[..., object]] = {
             "execute_command": tools.execute_command,
             "read_file": tools.read_file,
@@ -39,7 +42,7 @@ class DeveloperAgent:
 
         os.chdir(cwd)
         system_prompt = get_system_prompt(cwd, supports_browser_use=supports_browser_use)
-        self.history.append({"role": "system", "content": system_prompt})
+        self.memory.add_message("system", system_prompt)
 
     # Utility to convert bool-like strings
     @staticmethod
@@ -74,7 +77,10 @@ class DeveloperAgent:
             func(params.get("path", ""), params.get("content", ""))
             return ""
         if name == "read_file":
-            return func(params.get("path", ""))
+            path = params.get("path", "")
+            content = func(path)
+            self.memory.add_file_context(os.path.join(self.cwd, path), content)
+            return content
         if name == "list_files":
             recursive = self._to_bool(params.get("recursive"))
             return "\n".join(func(params.get("path", ""), recursive))
@@ -89,10 +95,10 @@ class DeveloperAgent:
     def run_task(self, user_input: str, max_steps: int = 20) -> str:
         """Run the agent loop until attempt_completion or step limit reached."""
 
-        self.history.append({"role": "user", "content": user_input})
+        self.memory.add_message("user", user_input)
         for _ in range(max_steps):
             assistant_reply = self.send_message(self.history)
-            self.history.append({"role": "assistant", "content": assistant_reply})
+            self.memory.add_message("assistant", assistant_reply)
             parsed = parse_assistant_message(assistant_reply)
             tool_uses = [p for p in parsed if isinstance(p, ToolUse)]
             if not tool_uses:
@@ -105,7 +111,6 @@ class DeveloperAgent:
             if tool.name == "attempt_completion":
                 return tool.params.get("result", "")
             result_text = self._run_tool(tool)
-            self.history.append(
-                {"role": "user", "content": f"Result of {tool.name}:\n{result_text}"}
-            )
+            self.memory.add_message("user", f"Result of {tool.name}:\n{result_text}")
         raise RuntimeError("Max steps reached without completion")
+
