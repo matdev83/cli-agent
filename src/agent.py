@@ -18,7 +18,7 @@ from src.tools import (
     ListFilesTool,
     SearchFilesTool,
     ExecuteCommandTool,
-    ListCodeDefinitionsTool,
+    ListCodeDefinitionNamesTool, # Renamed
     BrowserActionTool,
     UseMCPTool,
     AccessMCPResourceTool,
@@ -52,7 +52,7 @@ class DeveloperAgent:
 
         tool_instances: List[Tool] = [
             ReadFileTool(), WriteToFileTool(), ReplaceInFileTool(), ListFilesTool(),
-            SearchFilesTool(), ExecuteCommandTool(), ListCodeDefinitionsTool(),
+            SearchFilesTool(), ExecuteCommandTool(), ListCodeDefinitionNamesTool(), # Renamed
             BrowserActionTool(), UseMCPTool(), AccessMCPResourceTool(), NewTaskTool(),
             CondenseTool(), ReportBugTool(), NewRuleTool()
         ]

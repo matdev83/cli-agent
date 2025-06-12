@@ -81,7 +81,7 @@ def test_execute_command_timeout_expired(mock_run, tmp_path):
     result_str = tool.execute(params, agent_memory=mock_memory)
     result = json.loads(result_str)
 
-    assert result == {"success": False, "output": "Error: Command 'sleep 5' timed out after 1 seconds."}
+    assert result == {"success": False, "output": "Error: Command 'sleep 5' timed out after 1.0 seconds."}
 
 @patch('subprocess.run')
 def test_execute_command_requires_approval_true_string_not_auto_approved(mock_run, tmp_path):
@@ -203,7 +203,7 @@ def test_execute_command_invalid_timeout_type(tmp_path):
     params = {"command": "echo test", "timeout": "not-an-int"}
     result_str = tool.execute(params, agent_memory=mock_memory)
     result = json.loads(result_str)
-    assert result == {"success": False, "output": "Error: Invalid value for 'timeout', must be an integer: 'not-an-int'."}
+    assert result == {"success": False, "output": "Error: Invalid value for 'timeout', must be a number: 'not-an-int'."}
 
 def test_execute_command_negative_timeout_value(tmp_path):
     mock_memory = MockAgentMemory(cwd=str(tmp_path))
@@ -211,7 +211,7 @@ def test_execute_command_negative_timeout_value(tmp_path):
     params = {"command": "echo test", "timeout": -5}
     result_str = tool.execute(params, agent_memory=mock_memory)
     result = json.loads(result_str)
-    assert result == {"success": False, "output": "Error: 'timeout' must be a positive integer."}
+    assert result == {"success": False, "output": "Error: 'timeout' must be a positive number."}
 
 @patch('subprocess.run')
 def test_execute_command_filenotfound_error(mock_run, tmp_path):

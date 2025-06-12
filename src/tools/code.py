@@ -50,21 +50,22 @@ def _python_top_level_defs(file_path: Path) -> List[str]:
                  defs.append(f"| Error: Could not retrieve line for a definition in {file_path.name}")
     return defs
 
-class ListCodeDefinitionsTool(Tool):
+class ListCodeDefinitionNamesTool(Tool):
+    """A tool to list top-level definitions (functions and classes) from Python files in a directory."""
     @property
     def name(self) -> str:
-        return "list_code_definitions"
+        return "list_code_definition_names"
 
     @property
     def description(self) -> str:
-        return ("Lists top-level function and class definition lines from Python files "
-                "within a specified directory. Returns a JSON string list.")
+        return ("Lists top-level function and class definition lines from Python source code files "
+                "in the specified directory. Returns a JSON string detailing definitions per file.")
 
     @property
     def parameters(self) -> List[Dict[str, str]]:
         return [
             {
-                "name": "directory_path",
+                "name": "path",
                 "description": "The relative or absolute path to the directory to scan for Python files.",
                 "type": "string",
                 "required": True
@@ -72,12 +73,13 @@ class ListCodeDefinitionsTool(Tool):
         ]
 
     def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        dir_path_str = params.get("directory_path")
-        if not dir_path_str:
-            return json.dumps({"error": "Missing required parameter 'directory_path'."})
+        """Executes the tool to find Python definitions. Expects 'path' in params."""
+        path_str = params.get("path")
+        if not path_str:
+            return json.dumps({"error": "Missing required parameter 'path'."})
 
         try:
-            abs_dir_path = _resolve_path(dir_path_str, agent_memory)
+            abs_dir_path = _resolve_path(path_str, agent_memory)
 
             if not abs_dir_path.exists():
                 return json.dumps({"error": f"Directory not found at {str(abs_dir_path)}"})
@@ -117,72 +119,12 @@ class ListCodeDefinitionsTool(Tool):
             return json.dumps({"results": output_structure, "message": "Successfully listed code definitions." if found_defs else "No definitions found in Python files."})
 
         except Exception as e:
-            return json.dumps({"error": f"Error listing code definitions in {dir_path_str}: {e}"})
-
-
-class BrowserActionTool(Tool):
-    @property
-    def name(self) -> str:
-        return "browser_action"
-
-    @property
-    def description(self) -> str:
-        return "STUB - Performs an action in a web browser. (Not Implemented)"
-
-    @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {"name": "action", "description": "The browser action to perform (e.g., 'open_url', 'search').", "type": "string", "required": True},
-            {"name": "action_params", "description": "Parameters for the specified browser action.", "type": "dict", "required": False}
-        ]
-
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        raise NotImplementedError(f"{self.name} is not implemented yet.")
-
-
-class UseMCPTool(Tool):
-    @property
-    def name(self) -> str:
-        return "use_mcp_tool"
-
-    @property
-    def description(self) -> str:
-        return "STUB - Interacts with an MCP tool. (Not Implemented)"
-
-    @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {"name": "tool_name", "description": "The name of the MCP tool to use.", "type": "string", "required": True},
-            {"name": "tool_inputs", "description": "Inputs for the MCP tool.", "type": "dict", "required": False}
-        ]
-
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        raise NotImplementedError(f"{self.name} is not implemented yet.")
-
-
-class AccessMCPResourceTool(Tool):
-    @property
-    def name(self) -> str:
-        return "access_mcp_resource"
-
-    @property
-    def description(self) -> str:
-        return "STUB - Accesses an MCP resource. (Not Implemented)"
-
-    @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {"name": "resource_id", "description": "The ID of the MCP resource to access.", "type": "string", "required": True},
-            {"name": "access_params", "description": "Parameters for accessing the resource.", "type": "dict", "required": False}
-        ]
-
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        raise NotImplementedError(f"{self.name} is not implemented yet.")
+            return json.dumps({"error": f"Error listing code definitions in {path_str}: {e}"})
 
 # --- Wrapper function for old tests ---
 def list_code_definition_names(directory_path: str, agent_memory: Any = None) -> str:
-    tool = ListCodeDefinitionsTool()
-    result_str = tool.execute({"directory_path": directory_path}, agent_memory=agent_memory)
+    tool = ListCodeDefinitionNamesTool()
+    result_str = tool.execute({"path": directory_path}, agent_memory=agent_memory)
     data = json.loads(result_str)
 
     if "error" in data:

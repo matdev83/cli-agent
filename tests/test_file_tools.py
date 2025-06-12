@@ -44,9 +44,9 @@ def test_list_files(tmp_path: Path):
     (tmp_path / "dir").mkdir()
     (tmp_path / "dir" / "b.txt").write_text("y")
     top = list_files(str(tmp_path))
-    assert set(top) == {"a", "dir"}
+    assert set(top) == {"a", "dir/"} # Added trailing slash for directory
     rec = list_files(str(tmp_path), recursive=True)
-    assert "a" in rec and "dir/b.txt" in rec
+    assert "a" in rec and "dir/b.txt" in rec # Recursive listing should still be fine
 
 
 def test_search_files(tmp_path: Path):

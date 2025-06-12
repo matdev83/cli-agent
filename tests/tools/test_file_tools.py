@@ -103,7 +103,7 @@ def test_replace_in_file_tool_success(tmp_path: Path):
     test_file_abs_path = tmp_path / test_file_rel_path
     test_file_abs_path.write_text("Hello world, how are you world?")
 
-    diff = "<<<<<<< SEARCH\nworld\n=======\nthere\n>>>>>>> REPLACE"
+    diff = "------- SEARCH\nworld\n=======\nthere\n+++++++ REPLACE"
     result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_memory=mock_memory)
     assert "modified successfully with 1 block(s)" in result
     assert test_file_abs_path.read_text() == "Hello there, how are you world?"
@@ -113,7 +113,7 @@ def test_replace_in_file_tool_search_not_found(tmp_path: Path):
     tool = ReplaceInFileTool()
     test_file_rel_path = "search_fail.txt"
     (tmp_path / test_file_rel_path).write_text("Hello world")
-    diff = "<<<<<<< SEARCH\nbanana\n=======\napple\n>>>>>>> REPLACE"
+    diff = "------- SEARCH\nbanana\n=======\napple\n+++++++ REPLACE"
     result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_memory=mock_memory)
     assert "Error: Search block 1" in result and "not found" in result
 
@@ -125,7 +125,8 @@ def test_replace_in_file_tool_invalid_diff_format(tmp_path: Path):
     diff = "this is not a valid diff" # This will trigger the ValueError in _parse_diff_blocks
     result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_memory=mock_memory)
     assert "Error processing diff_blocks" in result
-    assert "No valid diff blocks found" in result # Specific error from _parse_diff_blocks
+    # Specific error from _parse_diff_blocks, updated to the new format
+    assert "No valid diff blocks found. Ensure the format is: ------- SEARCH...=======...+++++++ REPLACE" in result
 
 def test_replace_in_file_tool_empty_diff(tmp_path: Path):
     mock_memory = MockAgentMemory(cwd=str(tmp_path))
@@ -140,7 +141,7 @@ def test_replace_in_file_tool_empty_diff(tmp_path: Path):
 def test_replace_in_file_tool_file_not_found(tmp_path: Path):
     mock_memory = MockAgentMemory(cwd=str(tmp_path))
     tool = ReplaceInFileTool()
-    diff = "<<<<<<< SEARCH\nworld\n=======\nthere\n>>>>>>> REPLACE"
+    diff = "------- SEARCH\nworld\n=======\nthere\n+++++++ REPLACE"
     result = tool.execute({"path": "nonexistent.txt", "diff_blocks": diff}, agent_memory=mock_memory)
     assert "Error: File not found" in result
 
@@ -209,7 +210,7 @@ def test_search_files_tool_found_matches(tmp_path: Path):
     sub_dir.mkdir()
     (sub_dir / "fileC.txt").write_text("world in subdir")
 
-    result_str = tool.execute({"directory": ".", "regex_pattern": "world"}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": ".", "regex": "world"}, agent_memory=mock_memory)
     result = json.loads(result_str)
 
     assert len(result) == 3 # "hello world", "world again", "world in subdir"
@@ -230,7 +231,7 @@ def test_search_files_tool_no_matches(tmp_path: Path):
     mock_memory = MockAgentMemory(cwd=str(tmp_path))
     tool = SearchFilesTool()
     (tmp_path / "fileA.txt").write_text("hello there\nsearch me please")
-    result_str = tool.execute({"directory": ".", "regex_pattern": "world"}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": ".", "regex": "world"}, agent_memory=mock_memory)
     result = json.loads(result_str)
     assert len(result) == 0
 
@@ -242,7 +243,7 @@ def test_search_files_tool_with_file_pattern(tmp_path: Path):
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "readme.txt").write_text("another world in txt")
 
-    result_str = tool.execute({"directory": ".", "regex_pattern": "world", "file_pattern": "*.txt"}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": ".", "regex": "world", "file_pattern": "*.txt"}, agent_memory=mock_memory)
     result = json.loads(result_str)
     assert len(result) == 2
     files_found = {item['file'] for item in result}
@@ -253,11 +254,21 @@ def test_search_files_tool_invalid_regex(tmp_path: Path):
     mock_memory = MockAgentMemory(cwd=str(tmp_path))
     tool = SearchFilesTool()
     # Test with an invalid regex pattern like an unclosed bracket
-    result = tool.execute({"directory": ".", "regex_pattern": "["}, agent_memory=mock_memory)
-    assert "Error: Invalid regex pattern" in result
+    result = tool.execute({"path": ".", "regex": "["}, agent_memory=mock_memory)
+    assert "Error: Invalid regex" in result
 
-def test_search_files_tool_dir_not_found(tmp_path: Path):
+def test_search_files_tool_dir_not_found(tmp_path: Path): # Renaming to path_not_found would be more consistent but problem asks for dir_not_found
     mock_memory = MockAgentMemory(cwd=str(tmp_path))
     tool = SearchFilesTool()
-    result = tool.execute({"directory": "nonexistent", "regex_pattern": "test"}, agent_memory=mock_memory)
+    result = tool.execute({"path": "nonexistent", "regex": "test"}, agent_memory=mock_memory)
     assert "Error: Directory not found" in result
+
+def test_search_files_tool_missing_params(tmp_path: Path):
+    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    tool = SearchFilesTool()
+    # Test missing 'path'
+    result_no_path = tool.execute({"regex": "test"}, agent_memory=mock_memory)
+    assert "Error: Missing required parameter 'path'" in result_no_path
+    # Test missing 'regex'
+    result_no_regex = tool.execute({"path": "."}, agent_memory=mock_memory)
+    assert "Error: Missing required parameter 'regex'" in result_no_regex
