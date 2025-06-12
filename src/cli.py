@@ -51,7 +51,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--model",
         default="mock",
-        help="Model name to use (only 'mock' supported)",
+        help="Model name to use ('mock' or OpenRouter model name)",
     )
     parser.add_argument(
         "--responses-file",

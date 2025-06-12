@@ -4,7 +4,17 @@ import json
 from pathlib import Path
 from typing import List, Dict
 
+from typing import Protocol
+
 from openai import OpenAI
+
+
+class LLMWrapper(Protocol):
+    """Interface for language model backends."""
+
+    def send_message(self, history: List[Dict[str, str]]) -> str:
+        """Return an assistant reply for the given message history."""
+        ...
 
 
 class MockLLM:

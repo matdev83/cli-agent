@@ -47,49 +47,80 @@ class DeveloperAgent:
     # Utility to convert bool-like strings
     @staticmethod
     def _to_bool(value: str | bool | None) -> bool:
+        """Convert assistant-provided boolean strings to bool."""
         if isinstance(value, bool):
             return value
         if value is None:
             return False
-        return value.lower() in {"true", "1", "yes", "y"}
+        return str(value).strip().lower() == "true"
 
     def _run_tool(self, tool_use: ToolUse) -> str:
-        name = tool_use.name
-        func = self.tools.get(name)
-        if func is None:
-            raise ValueError(f"Unknown tool: {name}")
+        """Dispatch a tool call using registered handler methods."""
+
+        handlers: Dict[str, Callable[[dict], str]] = {
+            "execute_command": self._handle_execute_command,
+            "read_file": self._handle_read_file,
+            "write_to_file": self._handle_write_to_file,
+            "replace_in_file": self._handle_replace_in_file,
+            "search_files": self._handle_search_files,
+            "list_files": self._handle_list_files,
+            "list_code_definition_names": self._handle_list_code_defs,
+            "browser_action": self._handle_simple_tool,
+            "use_mcp_tool": self._handle_simple_tool,
+            "access_mcp_resource": self._handle_simple_tool,
+        }
+
+        handler = handlers.get(tool_use.name)
+        if handler is None:
+            raise ValueError(f"Unknown tool: {tool_use.name}")
         params = {k: v for k, v in tool_use.params.items() if v is not None}
-        if name == "execute_command":
-            cmd = params.get("command", "")
-            req = self._to_bool(params.get("requires_approval"))
-            success, output = func(cmd, req, auto_approve=self.auto_approve)
-            return output
-        if name in {"browser_action", "use_mcp_tool", "access_mcp_resource"}:
-            try:
-                result = func(**params)
-            except NotImplementedError as exc:  # pragma: no cover - not implemented
-                return str(exc)
-            return str(result)
-        if name == "replace_in_file":
-            func(params.get("path", ""), params.get("diff", ""))
-            return ""
-        if name == "write_to_file":
-            func(params.get("path", ""), params.get("content", ""))
-            return ""
-        if name == "read_file":
-            path = params.get("path", "")
-            content = func(path)
-            self.memory.add_file_context(os.path.join(self.cwd, path), content)
-            return content
-        if name == "list_files":
-            recursive = self._to_bool(params.get("recursive"))
-            return "\n".join(func(params.get("path", ""), recursive))
-        if name == "search_files":
-            matches = func(params.get("path", ""), params.get("regex", ""), params.get("file_pattern"))
-            return "\n".join(f"{m['file']}:{m['line']}:{m['content']}" for m in matches)
-        if name == "list_code_definition_names":
-            return func(params.get("path", ""))
-        result = func(**params)
+        return handler({**params, "tool_name": tool_use.name})
+
+    # individual tool handlers
+    def _handle_execute_command(self, params: Dict[str, str]) -> str:
+        cmd = params.get("command", "")
+        req = self._to_bool(params.get("requires_approval"))
+        success, output = self.tools["execute_command"](
+            cmd, req, auto_approve=self.auto_approve
+        )
+        return output
+
+    def _handle_read_file(self, params: Dict[str, str]) -> str:
+        path = params.get("path", "")
+        content = self.tools["read_file"](path)
+        self.memory.add_file_context(os.path.join(self.cwd, path), content)
+        return content
+
+    def _handle_write_to_file(self, params: Dict[str, str]) -> str:
+        self.tools["write_to_file"](params.get("path", ""), params.get("content", ""))
+        return ""
+
+    def _handle_replace_in_file(self, params: Dict[str, str]) -> str:
+        self.tools["replace_in_file"](params.get("path", ""), params.get("diff", ""))
+        return ""
+
+    def _handle_list_files(self, params: Dict[str, str]) -> str:
+        recursive = self._to_bool(params.get("recursive"))
+        files = self.tools["list_files"](params.get("path", ""), recursive)
+        return "\n".join(files)
+
+    def _handle_search_files(self, params: Dict[str, str]) -> str:
+        matches = self.tools["search_files"](
+            params.get("path", ""),
+            params.get("regex", ""),
+            params.get("file_pattern"),
+        )
+        return "\n".join(f"{m['file']}:{m['line']}:{m['content']}" for m in matches)
+
+    def _handle_list_code_defs(self, params: Dict[str, str]) -> str:
+        return self.tools["list_code_definition_names"](params.get("path", ""))
+
+    def _handle_simple_tool(self, params: Dict[str, str]) -> str:
+        name = params.pop("tool_name")
+        try:
+            result = self.tools[name](**params)
+        except NotImplementedError as exc:  # pragma: no cover - not implemented
+            return str(exc)
         return str(result)
 
     def run_task(self, user_input: str, max_steps: int = 20) -> str:
