@@ -261,4 +261,3 @@ def test_search_files_tool_dir_not_found(tmp_path: Path):
     tool = SearchFilesTool()
     result = tool.execute({"directory": "nonexistent", "regex_pattern": "test"}, agent_memory=mock_memory)
     assert "Error: Directory not found" in result
-```

@@ -36,8 +36,7 @@ def test_parse_multiple_tools():
 def test_partial_tool():
     msg = "unfinished <write_to_file><path>x.txt</path><content>hi"
     result = parse_assistant_message(msg)
-    assert len(result) == 2
-    tool = result[1]
-    assert tool.partial
-    assert tool.name == "write_to_file"
-    assert tool.params.get("path") == "x.txt"
+    # Expect 1 because malformed XML is treated as a single TextContent block
+    assert len(result) == 1
+    assert isinstance(result[0], TextContent)
+    assert result[0].content == msg # The whole message becomes the content

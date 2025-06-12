@@ -238,4 +238,3 @@ def test_execute_command_invalid_requires_approval_string(mock_run, tmp_path):
     assert result["success"] is False
     assert "Error: Invalid boolean value for 'requires_approval': 'blah'" in result["output"]
     assert "Expected 'true' or 'false'" in result["output"]
-```

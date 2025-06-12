@@ -119,4 +119,3 @@ def test_new_rule_tool_stub_missing_params():
     assert "Path: 'No path provided.'" in result_both_missing
     assert "Content (preview): 'No content provided....'" in result_both_missing
 
-```

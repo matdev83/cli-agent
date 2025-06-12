@@ -138,4 +138,3 @@ def test_agent_handles_execute_command_approval_json(tmp_path: Path):
     assert f"Result of execute_command:" in tool_result_message_content
     assert '"success": false' in tool_result_message_content
     assert f"Error: Command '{command_to_run}' requires approval" in tool_result_message_content
-```

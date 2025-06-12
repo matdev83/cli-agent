@@ -54,11 +54,27 @@ def test_list_code_definitions_no_python_files(tmp_path: Path):
     result_str = tool.execute({"directory_path": "."}, agent_memory=mock_memory)
     result = json.loads(result_str)
 
-    # Check for the specific message when no .py files with definitions are found or directory is empty of .py files
-    assert "No Python files with definitions found or directory is empty." in result.get("message", "") or \
-           "No definitions found in Python files." in result.get("message", "")
-    assert "results" in result # results might be an empty list
-    assert result.get("results") == []
+    # Check for the specific message
+    # Case 1: No .py files found at all.
+    # Case 2: .py files found, but they contain no definitions.
+    message = result.get("message", "")
+    assert message == "No Python files found in the directory." or \
+           message == "No definitions found in Python files."
+
+    if message == "No Python files found in the directory.":
+        assert "results" not in result # Or assert result.get("results") is None
+    elif message == "No definitions found in Python files.":
+        assert "results" in result # Should have a results key, possibly with empty definition lists per file
+        # Ensure that if files are listed in results, their definitions lists are empty or contain only errors
+        # This part was a bit complex and might need adjustment based on precise tool output for this case.
+        # For now, let's assume results could be an empty list if no files make it to output_structure
+        # or files with no actual definitions (e.g. only comments or errors).
+        # The original tool logic:
+        #   if not output_structure and found_py_files: -> "No definitions found in Python files."
+        #   in this case output_structure is empty, so result["results"] would be empty.
+        assert result.get("results") == [] # If no defs found, results array itself is empty from the tool
+    else: # Should not happen based on the first assertion
+        pytest.fail(f"Unexpected message: {message}")
 
 
 def test_list_code_definitions_empty_directory(tmp_path: Path):
@@ -71,8 +87,9 @@ def test_list_code_definitions_empty_directory(tmp_path: Path):
 
     result_str = tool.execute({"directory_path": str(empty_dir)}, agent_memory=mock_memory)
     result = json.loads(result_str)
-    assert "No Python files with definitions found or directory is empty." in result.get("message", "")
-    assert result.get("results") == []
+    # If the directory is empty, no .py files will be found.
+    assert result.get("message", "") == "No Python files found in the directory."
+    assert "results" not in result # Or assert result.get("results") is None
 
 
 def test_list_code_definitions_python_file_with_syntax_error(tmp_path: Path):
@@ -133,4 +150,3 @@ def test_access_mcp_resource_tool_stub():
     with pytest.raises(NotImplementedError, match="access_mcp_resource is not implemented yet."):
         tool.execute({"resource_id": "some_resource", "access_params": {}})
 
-```

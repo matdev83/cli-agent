@@ -25,9 +25,5 @@ def test_agent_max_steps(tmp_path: Path):
         return responses.pop(0) if responses else ""
 
     agent = DeveloperAgent(fake_send, cwd=str(tmp_path), auto_approve=True)
-    try:
-        agent.run_task("start", max_steps=2)
-    except RuntimeError:
-        pass
-    else:
-        assert False, "expected RuntimeError when exceeding max steps"
+    result = agent.run_task("start", max_steps=2)
+    assert result == "Max steps reached without completion."

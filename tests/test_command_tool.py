@@ -10,10 +10,11 @@ def test_execute_command_success():
 
 
 def test_execute_command_rejected(monkeypatch):
-    monkeypatch.setattr("builtins.input", lambda _: "n")
-    success, output = execute_command("echo hi", requires_approval=True)
+    # monkeypatch.setattr("builtins.input", lambda _: "n") # Old interactive approval
+    success, output = execute_command("echo hi", requires_approval=True) # auto_approve is False by default in agent / not set in wrapper
     assert not success
-    assert "rejected" in output.lower()
+    assert "error: command 'echo hi' requires approval" in output.lower()
+    assert "auto-approve is not enabled" in output.lower()
 
 
 def test_execute_command_timeout():
