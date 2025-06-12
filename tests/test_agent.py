@@ -491,9 +491,7 @@ def test_diff_failure_escalation_suggests_write_to_file(tmp_path: Path):
     prefix_in_history = "Result of replace_in_file:\n"
     actual_augmented_output = actual_content_in_history.removeprefix(prefix_in_history)
 
-        print(f"ACTUAL ---{actual_augmented_output}---") # Raw print
-        print(f"EXPECTED ---{expected_augmented_error}---") # Raw print
-        assert actual_augmented_output == expected_augmented_error
+    assert actual_augmented_output == expected_augmented_error
 
     assert mock_replace_execute.call_count == 2
 
