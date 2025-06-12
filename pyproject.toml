@@ -12,6 +12,17 @@ dependencies = [
     "openai>=1.0.0",
 ]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.4.0",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
