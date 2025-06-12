@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import List, Dict, Optional # Added Optional
+import time # Added for retry delays
 
-from openai import OpenAI
+from openai import OpenAI, APIStatusError, APIConnectionError, RateLimitError # Added specific exceptions
 
 from src.llm_protocol import LLMWrapper # Import the protocol
 
@@ -39,8 +40,9 @@ class MockLLM(LLMWrapper): # Indicate conformance to the protocol
 class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
     """LLM client using OpenRouter.ai API via the OpenAI SDK."""
 
-    def __init__(self, model: str, api_key: str):
+    def __init__(self, model: str, api_key: str, timeout: Optional[float] = None):
         self.model = model
+        self.timeout = timeout
         self._client = OpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
@@ -69,14 +71,64 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
         if max_tokens != 1024: # Or some other way to check
             request_params["max_tokens"] = max_tokens
 
-        try:
-            response = self._client.chat.completions.create(**request_params)
+        max_retries = 3
+        base_delay = 1.0  # seconds
 
-            if response.choices and response.choices[0].message:
-                content = response.choices[0].message.content
-                return content # content can be string or None
-            return None # No response or empty choice
-        except Exception as e:
-            # Log error e
-            print(f"Error calling OpenRouter API: {e}") # Simple error logging
-            return None # Return None on API error
+        for attempt in range(max_retries):
+            try:
+                response = self._client.chat.completions.create(**request_params, timeout=self.timeout)
+
+                if response.choices and response.choices[0].message:
+                    content = response.choices[0].message.content
+                    return content # content can be string or None
+                # If response is valid but no choices/message, consider it a success with no content
+                print("OpenRouter API returned a response with no content.")
+                return None
+            except RateLimitError as e:
+                print(f"Rate limit error on attempt {attempt + 1}/{max_retries}: {e}")
+                if attempt + 1 >= max_retries:
+                    print("Max retries reached for rate limit error. Failing.")
+                    return None
+
+                retry_after_header = e.response.headers.get("Retry-After")
+                delay = base_delay * (2 ** attempt) # Default exponential backoff
+                if retry_after_header:
+                    try:
+                        delay = float(retry_after_header)
+                    except ValueError:
+                        print(f"Could not parse Retry-After header value: {retry_after_header}. Using exponential backoff.")
+
+                delay = min(delay, 60) # Cap delay at 60 seconds
+                print(f"Waiting {delay:.2f} seconds before retrying.")
+                time.sleep(delay)
+            except APIStatusError as e:
+                print(f"API status error on attempt {attempt + 1}/{max_retries}: {e.status_code} - {e.message}")
+                if e.status_code >= 500 or e.status_code == 429: # Server-side errors or (redundant) rate limit
+                    if attempt + 1 >= max_retries:
+                        print(f"Max retries reached for API status error {e.status_code}. Failing.")
+                        return None
+                    delay = min(base_delay * (2 ** attempt), 60)
+                    print(f"Waiting {delay:.2f} seconds before retrying for status {e.status_code}.")
+                    time.sleep(delay)
+                else: # Client-side errors (4xx other than 429)
+                    print(f"Client-side API error {e.status_code}. Failing without further retries.")
+                    return None # Do not retry for client errors like 401, 403, 400
+            except APIConnectionError as e:
+                print(f"API connection error on attempt {attempt + 1}/{max_retries}: {e}")
+                if attempt + 1 >= max_retries:
+                    print("Max retries reached for API connection error. Failing.")
+                    return None
+                delay = min(base_delay * (2 ** attempt), 60)
+                print(f"Waiting {delay:.2f} seconds before retrying for connection error.")
+                time.sleep(delay)
+            except Exception as e: # Catch-all for other unexpected errors during the API call
+                print(f"Unexpected error calling OpenRouter API on attempt {attempt + 1}/{max_retries}: {e}")
+                if attempt + 1 >= max_retries:
+                    print("Max retries reached for unexpected error. Failing.")
+                    return None
+                delay = min(base_delay * (2 ** attempt), 30) # Shorter cap for general errors
+                print(f"Waiting {delay:.2f} seconds before retrying for unexpected error.")
+                time.sleep(delay)
+
+        print("All retries failed after multiple attempts.")
+        return None # Return None if all retries fail

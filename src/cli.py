@@ -27,6 +27,7 @@ def run_agent(
     cwd: str = ".",
     model: str = "mock",
     return_history: bool = False,
+    llm_timeout: Optional[float] = None,
 ) -> str | tuple[str, list[dict[str, str]]]:
     if model == "mock":
         if not responses_file:
@@ -39,7 +40,7 @@ def run_agent(
             # Raising RuntimeError here, which will be caught by the generic Exception in main.
             # Could be a custom error or handled more specifically if desired.
             raise RuntimeError("OPENROUTER_API_KEY environment variable not set, required for non-mock models.")
-        llm = OpenRouterLLM(model=model, api_key=api_key)
+        llm = OpenRouterLLM(model=model, api_key=api_key, timeout=llm_timeout)
 
     # The LLMWrapper protocol expects send_message to take temperature and max_tokens.
     # The DeveloperAgent's __init__ expects a send_message callable that matches
@@ -72,6 +73,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument("--auto-approve", action="store_true", help="Auto approve commands")
     parser.add_argument("--cwd", default=".", help="Working directory")
+    parser.add_argument(
+        "--llm-timeout",
+        type=float,
+        default=120.0,
+        help="Timeout in seconds for LLM API calls.",
+    )
     args = parser.parse_args(argv)
 
     setup_logging()
@@ -89,6 +96,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             auto_approve=args.auto_approve,
             cwd=args.cwd,
             model=args.model,
+            llm_timeout=args.llm_timeout,
         )
         print(result) # Print result only on success
         logging.info("Agent completed successfully")
