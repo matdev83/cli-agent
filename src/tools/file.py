@@ -4,7 +4,7 @@ import os
 import re
 import fnmatch
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Any
 
 
 def read_file(path: str) -> str:
@@ -55,19 +55,19 @@ def list_files(path: str, recursive: bool = False) -> List[str]:
     results: List[str] = []
     for root, dirs, files in os.walk(p):
         for name in files:
-            rel = str(Path(root, name).relative_to(p))
+            rel = str(Path(root, name).relative_to(p)).replace("\\", "/")
             results.append(rel)
         for name in dirs:
-            rel = str(Path(root, name).relative_to(p))
+            rel = str(Path(root, name).relative_to(p)).replace("\\", "/")
             results.append(rel + "/")
     return sorted(results)
 
 
-def search_files(path: str, regex: str, file_pattern: str | None = None) -> List[Dict[str, str]]:
+def search_files(path: str, regex: str, file_pattern: str | None = None) -> List[Dict[str, Any]]:
     pattern = re.compile(regex)
     root = Path(path)
     file_glob = file_pattern or "*"
-    matches: List[Dict[str, str]] = []
+    matches: List[Dict[str, Any]] = []
     for dirpath, _, filenames in os.walk(root):
         for filename in filenames:
             if not fnmatch.fnmatch(filename, file_glob):

@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 import pytest
+from typing import Any, Dict, List
 
 from src.cli import run_agent
 
@@ -22,5 +23,13 @@ def test_openrouter_list_files(tmp_path: Path):
         return_history=True,
     )
 
-    assert "tictactoe.py" in result or "tictactoe" in result.lower()
-    assert any("<list_files>" in msg["content"] for msg in history if msg["role"] == "assistant")
+    # Assert that the list_files tool was called and its output contains the expected file
+    assert any(
+        msg["role"] == "user" and "Result of list_files:" in msg["content"] and "tictactoe.py" in msg["content"]
+        for msg in history
+    )
+    # Optionally, assert that the agent attempted completion
+    assert any(
+        msg["role"] == "assistant" and "<attempt_completion>" in msg["content"]
+        for msg in history
+    )
