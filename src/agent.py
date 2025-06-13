@@ -64,6 +64,7 @@ class DeveloperAgent:
         browser_settings: dict | None = None,
         mcp_servers_documentation: str = "(No MCP servers currently connected)",
         matching_strictness: int = 100,
+        mode: str = "act",
     ) -> None:
         self.send_message = send_message
         self.cwd: str = os.path.abspath(cwd)
@@ -79,6 +80,7 @@ class DeveloperAgent:
 
         self.supports_browser_use: bool = supports_browser_use # Retain this for system prompt
         self.matching_strictness: int = matching_strictness
+        self.mode = mode.lower()
 
         self.memory = Memory()
         self.history: List[Dict[str, str]] = self.memory.history
@@ -105,12 +107,26 @@ class DeveloperAgent:
         )
         self.memory.add_message("system", system_prompt_str)
 
+    def set_mode(self, mode: str) -> None:
+        """Set the agent's operational mode."""
+        if mode.lower() not in {"act", "plan"}:
+            raise ValueError("mode must be 'act' or 'plan'")
+        self.mode = mode.lower()
+
+    def get_mode(self) -> str:
+        """Return the current operational mode."""
+        return self.mode
+
     def _run_tool(self, tool_use: ToolUse) -> str:
         tool_name = tool_use.name
         tool_params = tool_use.params
 
         if tool_name == "attempt_completion":
             return tool_params.get("result", "Task considered complete by the assistant.")
+
+        if tool_name == "plan_mode_respond" and self.mode != "plan":
+            self.consecutive_tool_errors += 1
+            return "Error: plan_mode_respond can only be used in PLAN MODE."
 
         tool_to_execute = self.tools_map.get(tool_name)
 
