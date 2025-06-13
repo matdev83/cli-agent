@@ -145,7 +145,7 @@ class DeveloperAgent:
 
         elif tool_name in ["write_to_file", "replace_in_file", "new_rule"]:
             file_path = tool_params.get("path", "Unknown file")
-            if self.cli_args.allow_edit_files:
+            if self.cli_args.allow_edit_files or self.cli_args.auto_approve:
                 proceed_with_tool = True
             else:
                 if request_user_confirmation(f"Allow editing file: '{file_path}'? (y/n)"):
@@ -161,7 +161,7 @@ class DeveloperAgent:
             elif tool_name == "search_files": prompt_verb = "searching files in"
             elif tool_name == "list_code_definition_names": prompt_verb = "listing code definitions in"
 
-            if self.cli_args.allow_read_files:
+            if self.cli_args.allow_read_files or self.cli_args.auto_approve:
                 proceed_with_tool = True
             else:
                 if request_user_confirmation(f"Allow {prompt_verb}: '{path_param}'? (y/n)"):
@@ -171,7 +171,7 @@ class DeveloperAgent:
 
         elif tool_name == "browser_action":
             url_param = tool_params.get("url", "unknown URL")
-            if self.cli_args.allow_use_browser:
+            if self.cli_args.allow_use_browser or self.cli_args.auto_approve:
                 proceed_with_tool = True
             else:
                 if request_user_confirmation(f"Allow using browser for '{tool_params.get('action','unknown action')}' on '{url_param}'? (y/n)"):
@@ -181,7 +181,7 @@ class DeveloperAgent:
 
         elif tool_name in ["use_mcp_tool", "access_mcp_resource"]:
             mcp_tool_name = tool_params.get("tool_name", tool_params.get("uri", "unknown MCP resource"))
-            if self.cli_args.allow_use_mcp:
+            if self.cli_args.allow_use_mcp or self.cli_args.auto_approve:
                 proceed_with_tool = True
             else:
                 if request_user_confirmation(f"Allow using MCP for '{mcp_tool_name}'? (y/n)"):

@@ -18,9 +18,8 @@ def test_list_code_definitions_tool_properties():
     assert tool.name == "list_code_definition_names"
     assert isinstance(tool.description, str)
     assert tool.parameters_schema == {
-        "path": "The relative or absolute path to the directory to scan for Python files."
+        "path": "The relative or absolute path to the directory to scan for source files."
     }
-
 def test_list_code_definitions_success(tmp_path: Path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
@@ -51,6 +50,31 @@ async def my_async_function():
     assert "| async def my_async_function():" in result["results"][0]["definitions"]
     assert "Successfully listed code definitions." in result.get("message", "")
 
+def test_list_code_definitions_js_file(tmp_path: Path):
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
+    tool = ListCodeDefinitionNamesTool()
+
+    js_content = """
+export function foo() {
+  return 1;
+}
+
+class Bar {
+  constructor() {}
+}
+"""
+    (tmp_path / "example.js").write_text(js_content)
+
+    result_str = tool.execute({"path": "."}, agent_tools_instance=mock_agent_tools_instance)
+    result = json.loads(result_str)
+
+    assert "results" in result
+    assert len(result["results"]) == 1
+    assert result["results"][0]["file"] == "example.js"
+    defs = result["results"][0]["definitions"]
+    assert any("function foo" in d for d in defs)
+    assert any("class Bar" in d for d in defs)
+
 def test_list_code_definitions_no_python_files(tmp_path: Path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
@@ -64,23 +88,15 @@ def test_list_code_definitions_no_python_files(tmp_path: Path):
     # Case 1: No .py files found at all.
     # Case 2: .py files found, but they contain no definitions.
     message = result.get("message", "")
-    assert message == "No Python files found in the directory." or \
-           message == "No definitions found in Python files."
+    assert message in (
+        "No supported source files found in the directory.",
+        "No definitions found in source files."
+    )
 
-    if message == "No Python files found in the directory.":
-        assert "results" not in result # Or assert result.get("results") is None
-    elif message == "No definitions found in Python files.":
-        assert "results" in result # Should have a results key, possibly with empty definition lists per file
-        # Ensure that if files are listed in results, their definitions lists are empty or contain only errors
-        # This part was a bit complex and might need adjustment based on precise tool output for this case.
-        # For now, let's assume results could be an empty list if no files make it to output_structure
-        # or files with no actual definitions (e.g. only comments or errors).
-        # The original tool logic:
-        #   if not output_structure and found_py_files: -> "No definitions found in Python files."
-        #   in this case output_structure is empty, so result["results"] would be empty.
-        assert result.get("results") == [] # If no defs found, results array itself is empty from the tool
-    else: # Should not happen based on the first assertion
-        pytest.fail(f"Unexpected message: {message}")
+    if message == "No supported source files found in the directory.":
+        assert "results" not in result
+    elif message == "No definitions found in source files.":
+        assert result.get("results") == []
 
 
 def test_list_code_definitions_empty_directory(tmp_path: Path):
@@ -94,7 +110,7 @@ def test_list_code_definitions_empty_directory(tmp_path: Path):
     result_str = tool.execute({"path": str(empty_dir)}, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
     # If the directory is empty, no .py files will be found.
-    assert result.get("message", "") == "No Python files found in the directory."
+    assert result.get("message", "") == "No supported source files found in the directory."
     assert "results" not in result # Or assert result.get("results") is None
 
 
@@ -111,7 +127,7 @@ def test_list_code_definitions_python_file_with_syntax_error(tmp_path: Path):
     assert result["results"][0]["file"] == "broken.py"
     assert len(result["results"][0]["definitions"]) > 0 # Should contain the error message
     assert any("Error: Syntax error" in d for d in result["results"][0]["definitions"])
-    assert "Found Python files, but encountered errors while parsing definitions." in result.get("message", "")
+    assert "Found source files, but encountered errors while parsing definitions." in result.get("message", "")
 
 def test_list_code_definitions_non_existent_directory(tmp_path: Path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
