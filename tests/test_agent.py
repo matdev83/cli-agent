@@ -5,6 +5,9 @@ import argparse # Added import
 from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from typing import List, Dict, Any
+import subprocess # For git_repo fixture and direct git calls
+import shutil # For git_repo fixture
+import os # For git_repo fixture
 
 from src.agent import DeveloperAgent
 from src.llm import MockLLM
@@ -1077,3 +1080,191 @@ def test_run_task_known_tool_execution_returns_error(tmp_path: Path):
 
     assert final_result == "LLM giving up after multiple errors.", \
         "Final result did not match the LLM's third response."
+
+
+# --- Tests for Git-related attributes ---
+
+@pytest.fixture
+def minimal_git_repo(tmp_path: Path) -> Path:
+    """
+    Creates a temporary directory, initializes a git repository in it,
+    and creates an initial commit. Simplified version for agent tests.
+    """
+    repo_dir = tmp_path / "agent_test_repo"
+    repo_dir.mkdir()
+
+    try:
+        subprocess.run(["git", "init"], cwd=repo_dir, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test Agent User"], cwd=repo_dir, check=True)
+        subprocess.run(["git", "config", "user.email", "test-agent@example.com"], cwd=repo_dir, check=True)
+        (repo_dir / "initial_file.txt").write_text("Initial content.")
+        subprocess.run(["git", "add", "initial_file.txt"], cwd=repo_dir, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Initial agent test commit"], cwd=repo_dir, check=True, capture_output=True)
+        yield repo_dir
+    except subprocess.CalledProcessError as e:
+        # Provide more context if git commands fail during setup
+        print(f"Git setup failed in fixture: {e.cmd}")
+        print(f"Stdout: {e.stdout.decode() if e.stdout else 'N/A'}")
+        print(f"Stderr: {e.stderr.decode() if e.stderr else 'N/A'}")
+        raise
+    finally:
+        # tmp_path fixture handles cleanup of repo_dir contents
+        pass
+
+def _get_head_hash(repo_path: Path) -> str | None:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_path, text=True).strip()
+    except subprocess.CalledProcessError:
+        return None
+
+def test_agent_initialization_git_attributes_real_repo(minimal_git_repo: Path):
+    expected_hash = _get_head_hash(minimal_git_repo)
+    assert expected_hash is not None, "Failed to get HEAD hash from fixture repo"
+
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(minimal_git_repo))
+
+    assert agent.initial_session_head_commit_hash == expected_hash
+    assert agent.session_commit_history == []
+
+def test_agent_initialization_git_attributes_non_git_dir(tmp_path: Path):
+    # tmp_path itself is not a git repo
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path))
+    assert agent.initial_session_head_commit_hash is None
+    assert agent.session_commit_history == []
+
+@patch('src.agent.subprocess.check_output')
+def test_agent_initialization_git_attributes_mocked_subprocess(mock_check_output, tmp_path: Path):
+    # Test successful git rev-parse mock
+    mock_check_output.return_value.strip.return_value = "mocked_successful_hash"
+    # Need to ensure .git directory exists for the subprocess call to be attempted by agent
+    git_dir_for_mock = tmp_path / ".git"
+    git_dir_for_mock.mkdir() # Make it look like a git repo to pass initial Path(cwd / ".git").exists() check
+
+    agent_success = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path))
+    assert agent_success.initial_session_head_commit_hash == "mocked_successful_hash"
+    mock_check_output.assert_called_once_with(["git", "rev-parse", "HEAD"], cwd=str(tmp_path), text=True, stderr=subprocess.PIPE)
+
+    # Test git rev-parse failure (e.g., no commits yet, or other git error)
+    mock_check_output.reset_mock()
+    mock_check_output.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="git error: no commits")
+
+    agent_failure = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path))
+    assert agent_failure.initial_session_head_commit_hash is None
+
+    # Test FileNotFoundError (git not installed)
+    mock_check_output.reset_mock()
+    mock_check_output.side_effect = FileNotFoundError("git not found")
+
+    agent_not_found = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path))
+    assert agent_not_found.initial_session_head_commit_hash is None
+
+
+@patch('src.agent.request_user_confirmation', return_value=True) # Auto-confirm any tool use prompts
+def test_agent_auto_commit_updates_session_history(mock_user_confirm, minimal_git_repo: Path):
+    file_to_write = "test_file.txt"
+    file_path_in_repo = minimal_git_repo / file_to_write
+
+    # Ensure cli_args allows file edits for _auto_commit to trigger
+    cli_args_allow_edits = argparse.Namespace(
+        auto_approve=True, # General auto-approve
+        allow_read_files=True, allow_edit_files=True, # Specific edit flag
+        allow_execute_safe_commands=True, allow_execute_all_commands=True,
+        allow_use_browser=True, allow_use_mcp=True,
+        disable_git_auto_commits=False # Ensure auto-commits are enabled
+    )
+
+    # LLM responses: 1. write file1, 2. write file2, 3. final text response
+    mock_llm_responses = [
+        f"<tool_use><tool_name>write_to_file</tool_name><params><path>{file_to_write}</path><content>Content for first commit</content></params></tool_use>",
+        f"<tool_use><tool_name>write_to_file</tool_name><params><path>{file_to_write}</path><content>Content for second commit</content></params></tool_use>",
+        "<text_content>Two files written.</text_content>"
+    ]
+    agent = DeveloperAgent(
+        send_message=MockLLM(mock_llm_responses).send_message,
+        cwd=str(minimal_git_repo),
+        cli_args=cli_args_allow_edits
+    )
+
+    initial_repo_hash = _get_head_hash(minimal_git_repo) # Hash before any agent actions
+
+    # Run the agent task
+    agent.run_task("Write two versions of a file.")
+
+    assert len(agent.session_commit_history) == 2, \
+        f"Expected 2 commits in session history, got {len(agent.session_commit_history)}. History: {agent.session_commit_history}"
+
+    # Verify commit 1
+    commit1_hash_agent = agent.session_commit_history[0]
+    assert commit1_hash_agent is not None
+    assert commit1_hash_agent != initial_repo_hash
+
+    # Verify commit 2
+    commit2_hash_agent = agent.session_commit_history[1]
+    assert commit2_hash_agent is not None
+    assert commit2_hash_agent != commit1_hash_agent
+
+    # Verify that the current HEAD of the repo is the last commit made by the agent
+    current_repo_head = _get_head_hash(minimal_git_repo)
+    assert current_repo_head == commit2_hash_agent
+
+    # Check that the file content matches the last commit
+    assert file_path_in_repo.read_text() == "Content for second commit"
+
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_auto_commit_no_changes_no_history_update(mock_user_confirm, minimal_git_repo: Path):
+    cli_args_allow_edits = argparse.Namespace(
+        auto_approve=True, allow_edit_files=True, disable_git_auto_commits=False,
+        # Add other flags DeveloperAgent expects to avoid AttributeError on missing ones
+        allow_read_files=True, allow_execute_safe_commands=True, allow_execute_all_commands=True,
+        allow_use_browser=True, allow_use_mcp=True
+    )
+
+    # LLM response: attempt to write the same content that's already there from initial commit.
+    # This assumes 'commit_all_changes' is smart enough to return None if no diff.
+    # The initial file in minimal_git_repo is 'initial_file.txt' with 'Initial content.'
+    existing_file = "initial_file.txt"
+    existing_content = "Initial content."
+
+    mock_llm_responses = [
+        f"<tool_use><tool_name>write_to_file</tool_name><params><path>{existing_file}</path><content>{existing_content}</content></params></tool_use>",
+        "<text_content>Attempted to write same content.</text_content>"
+    ]
+    agent = DeveloperAgent(
+        send_message=MockLLM(mock_llm_responses).send_message,
+        cwd=str(minimal_git_repo),
+        cli_args=cli_args_allow_edits
+    )
+
+    agent.run_task("Write existing content to a file.")
+
+    # No new commit should be made, so session_commit_history should be empty.
+    assert len(agent.session_commit_history) == 0, \
+        f"Expected 0 commits in session history if no changes, got {len(agent.session_commit_history)}"
+
+@patch('src.agent.commit_all_changes') # Mock commit_all_changes directly for _auto_commit test
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_auto_commit_handles_commit_all_changes_returning_none(mock_user_confirm, mock_commit_all, minimal_git_repo: Path):
+    mock_commit_all.return_value = None # Simulate no commit being made
+
+    cli_args_allow_edits = argparse.Namespace(
+        auto_approve=True, allow_edit_files=True, disable_git_auto_commits=False,
+        allow_read_files=True, allow_execute_safe_commands=True, allow_execute_all_commands=True,
+        allow_use_browser=True, allow_use_mcp=True
+    )
+    agent = DeveloperAgent(
+        send_message=MagicMock(), # LLM not involved, directly calling _auto_commit indirectly
+        cwd=str(minimal_git_repo),
+        cli_args=cli_args_allow_edits
+    )
+
+    # Manually trigger _auto_commit by calling a tool that would invoke it
+    # This requires the tool's execute method to be part of the test, or a simpler way is needed.
+    # For this test, we'll assume _auto_commit is called after write_to_file.
+    # We can mock write_to_file's actual file writing part and just check _auto_commit.
+    write_tool_instance = agent.tools_map["write_to_file"]
+    with patch.object(write_tool_instance, 'execute', return_value="File write simulated (not really written)."):
+         tool_use = ToolUse(name="write_to_file", params={"path": "dummy.txt", "content": "dummy"})
+         agent._run_tool(tool_use) # This will call _auto_commit internally after tool execution
+
+    mock_commit_all.assert_called_once_with(str(minimal_git_repo))
+    assert len(agent.session_commit_history) == 0

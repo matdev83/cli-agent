@@ -7,6 +7,7 @@ import logging # Added import
 from typing import Callable, Dict, List, Any, Optional
 import argparse # For type hinting cli_args
 from pathlib import Path
+import subprocess # Added for initial commit hash
 
 from .memory import Memory
 from .assistant_message import parse_assistant_message, ToolUse, TextContent
@@ -92,6 +93,8 @@ class DeveloperAgent:
         self.history: List[Dict[str, str]] = self.memory.history
         self.consecutive_tool_errors: int = 0 # For LLM error counting
         self.diff_failure_tracker: Dict[str, int] = {} # For diff-to-full-write escalation
+        self.session_commit_history: List[str] = []
+        self.initial_session_head_commit_hash: Optional[str] = None
 
         tool_instances: List[Tool] = [
             ReadFileTool(), WriteToFileTool(), ReplaceInFileTool(), ListFilesTool(),
@@ -103,6 +106,30 @@ class DeveloperAgent:
         self.tools_map: Dict[str, Tool] = {tool.name: tool for tool in tool_instances}
 
         os.chdir(self.cwd)
+        try:
+            # Get the initial HEAD commit hash for the session
+            git_path = Path(self.cwd) / ".git"
+            if git_path.exists() and git_path.is_dir(): # Check if it's a git repo
+                self.initial_session_head_commit_hash = subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=self.cwd,
+                    text=True, # universal_newlines=True is deprecated, use text=True
+                    stderr=subprocess.PIPE # To capture errors if any
+                ).strip()
+                logging.info(f"Initial session HEAD commit hash: {self.initial_session_head_commit_hash}")
+            else:
+                logging.info("Not a git repository or .git is not a directory. Initial HEAD commit hash not set.")
+        except subprocess.CalledProcessError as e:
+            # This can happen if it's a git repo but has no commits yet, or other git errors
+            logging.warning(f"Failed to get initial HEAD commit hash in {self.cwd}: {e.stderr}")
+            self.initial_session_head_commit_hash = None
+        except FileNotFoundError:
+            # This can happen if git is not installed
+            logging.warning("git command not found. Failed to get initial HEAD commit hash.")
+            self.initial_session_head_commit_hash = None
+        except Exception as e:
+            logging.error(f"An unexpected error occurred while getting initial HEAD commit hash: {e}")
+            self.initial_session_head_commit_hash = None
 
         system_prompt_str = get_system_prompt(
             tools=self.tools_map.values(),
@@ -126,7 +153,12 @@ class DeveloperAgent:
     def _auto_commit(self) -> None:
         if self.disable_git_auto_commits:
             return
-        commit_all_changes(self.cwd)
+        commit_hash = commit_all_changes(self.cwd)
+        if commit_hash:
+            self.session_commit_history.append(commit_hash)
+            logging.info(f"Auto-commit successful. New commit: {commit_hash}. History length: {len(self.session_commit_history)}")
+        else:
+            logging.info("Auto-commit: No changes to commit or an error occurred.")
 
     def _run_tool(self, tool_use: ToolUse) -> str:
         tool_name = tool_use.name
