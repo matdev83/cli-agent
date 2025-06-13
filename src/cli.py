@@ -24,6 +24,7 @@ from prompt_toolkit.styles import Style
 
 from .agent import DeveloperAgent
 from .llm import MockLLM, OpenRouterLLM
+from .llm_protocol import LLMResponse, LLMUsageInfo # Added imports
 from .slash_commands import (
     SlashCommandRegistry, ModelCommand, SetTimeoutCommand,
     PlanModeCommand, ActModeCommand, HelpCommand, AgentCliContext,
@@ -102,6 +103,29 @@ def run_agent_and_update_display(
     Runs the agent in a separate thread and updates the display control.
     """
 
+    def _cli_llm_response_callback(response: LLMResponse, model_name: str, session_cost: float):
+        if response.usage:
+            prompt_tokens_str = str(response.usage.prompt_tokens) if response.usage.prompt_tokens is not None else "N/A"
+            completion_tokens_str = str(response.usage.completion_tokens) if response.usage.completion_tokens is not None else "N/A"
+            cost_str = f"${response.usage.cost:.6f}" if response.usage.cost is not None else "N/A"
+
+            stats_str = (
+                f"STATS: Model: {model_name}, "
+                f"Prompt: {prompt_tokens_str}, "
+                f"Completion: {completion_tokens_str}, "
+                f"Cost: {cost_str}, "
+                f"Session Cost: ${session_cost:.6f}"
+            )
+        else:
+            stats_str = (
+                f"STATS: Model: {model_name}, "
+                f"Prompt: N/A, "
+                f"Completion: N/A, "
+                f"Cost: N/A, "
+                f"Session Cost: ${session_cost:.6f}"
+            )
+        update_display_text_safely(stats_str, app_ref, dc_ref)
+
     def _update_ui(message: str):
         # Ensures UI updates happen on the main event loop
         update_display_text_safely(message, app_ref, dc_ref)
@@ -124,9 +148,8 @@ def run_agent_and_update_display(
         # A true cooperative stop would require run_agent to take stop_event.
         result = run_agent(
             task=task,
-            # responses_file=args.responses_file, # This will now come from current_cli_args
-            # ... other direct args from original args if they are not meant to be dynamic
-            cli_args=current_cli_args # Pass the potentially modified cli_args
+            cli_args=current_cli_args, # Pass the potentially modified cli_args
+            on_llm_response_callback=_cli_llm_response_callback # Pass the callback
         )
 
         sys.stdout = original_stdout # Restore stdout
@@ -169,7 +192,8 @@ def run_agent(
     return_history: bool = False,
     # llm_timeout: Optional[float] = None, # Will come from cli_args
     # matching_strictness: int = 100, # From cli_args
-    cli_args: Optional[argparse.Namespace] = None
+    cli_args: Optional[argparse.Namespace] = None,
+    on_llm_response_callback: Optional[Callable[[LLMResponse, str, float], None]] = None # New parameter
 ) -> str | tuple[str, list[dict[str, str]]]:
 
     if cli_args is None:
@@ -213,6 +237,7 @@ def run_agent(
         llm.send_message,
         cwd=current_cwd, # Use cwd from cli_args
         cli_args=cli_args, # Pass the whole namespace
+        on_llm_response_callback=on_llm_response_callback # Pass callback to agent
         # matching_strictness and disable_git_auto_commits are already correctly sourced from cli_args if present
         # in the original code, so no change needed there.
     )

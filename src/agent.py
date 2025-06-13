@@ -14,6 +14,7 @@ from .assistant_message import parse_assistant_message, ToolUse, TextContent
 from .prompts.system import get_system_prompt
 from .confirmations import request_user_confirmation # New import
 from src.utils import to_bool, commit_all_changes # For handling 'requires_approval' and auto commits
+from src.llm_protocol import LLMResponse, LLMUsageInfo # Added import
 
 from src.tools import (
     Tool,
@@ -58,7 +59,7 @@ class DeveloperAgent:
 
     def __init__(
         self,
-        send_message: Callable[[List[Dict[str, str]]], Optional[str]],
+        send_message: Callable[[List[Dict[str, str]]], Optional[LLMResponse]], # Signature updated
         *,
         cwd: str = ".",
         cli_args: Optional[argparse.Namespace] = None, # Changed auto_approve to cli_args
@@ -68,10 +69,13 @@ class DeveloperAgent:
         matching_strictness: int = 100,
         mode: str = "act",
         disable_git_auto_commits: bool = False,
+        on_llm_response_callback: Optional[Callable[[LLMResponse, str, float], None]] = None, # New callback
     ) -> None:
         self.send_message = send_message
         self.cwd: str = os.path.abspath(cwd)
         self.cli_args = cli_args if cli_args is not None else argparse.Namespace() # Store cli_args
+        self.model_name: str = self.cli_args.model if hasattr(self.cli_args, 'model') and self.cli_args.model else "unknown_model"
+        self.on_llm_response_callback = on_llm_response_callback # Store callback
         # Ensure default values for flags if cli_args is minimal or None
         if not hasattr(self.cli_args, 'auto_approve'): self.cli_args.auto_approve = False
         if not hasattr(self.cli_args, 'allow_read_files'): self.cli_args.allow_read_files = False
@@ -95,6 +99,7 @@ class DeveloperAgent:
         self.diff_failure_tracker: Dict[str, int] = {} # For diff-to-full-write escalation
         self.session_commit_history: List[str] = []
         self.initial_session_head_commit_hash: Optional[str] = None
+        self.current_session_cost: float = 0.0 # Added for cost tracking
 
         tool_instances: List[Tool] = [
             ReadFileTool(), WriteToFileTool(), ReplaceInFileTool(), ListFilesTool(),
@@ -344,23 +349,42 @@ class DeveloperAgent:
                 self.memory.add_message("system", ADMONISHMENT_MESSAGE)
                 self.consecutive_tool_errors = 0 # Reset after admonishing
 
-            assistant_reply = self.send_message(self.history)
+            llm_response_obj: Optional[LLMResponse] = self.send_message(self.history)
 
-            if assistant_reply is None:
+            if llm_response_obj is None:
                 # This is an LLM failure, not a tool error from the LLM's perspective.
-                # Decide if this should count towards consecutive_tool_errors.
-                # For now, not counting it as a "tool error" from the LLM.
                 no_reply_message = "LLM did not provide a response. Ending task."
-                # Add a system message to history for context, or perhaps 'assistant' role
-                # to indicate the assistant (LLM) failed to respond.
+                # Add a system message to history for context
                 self.memory.add_message("system", no_reply_message)
+                # Consider if last message was user, add assistant error message (as per original thought)
+                # if self.history and self.history[-1]["role"] == "user":
+                #    self.history.append({"role": "assistant", "content": "Error: LLM did not provide a response object."})
                 return no_reply_message
 
-            self.memory.add_message("assistant", assistant_reply)
+            # Accumulate cost if usage information is available
+            if llm_response_obj.usage:
+                self.current_session_cost += llm_response_obj.usage.cost
 
-            # parse_assistant_message expects a string. If assistant_reply could be None,
-            # this was a potential point of failure. Now guarded by the None check above.
-            parsed_responses = parse_assistant_message(assistant_reply)
+            # Call the callback HERE, after cost update and before content processing
+            if self.on_llm_response_callback and llm_response_obj: # Ensure llm_response_obj is not None
+                self.on_llm_response_callback(llm_response_obj, self.model_name, self.current_session_cost)
+
+            assistant_response_content: Optional[str] = llm_response_obj.content
+
+            if assistant_response_content is None:
+                # LLM responded, but with no actual text content.
+                # This could be due to filters, or an error state represented by the LLM.
+                # Or it could be a valid case if only tool use was intended and it produced no text.
+                logging.info("LLM responded with no content. Cost was accumulated if provided.")
+                # For history and parsing, ensure it's a string.
+                # If tools are expected, parse_assistant_message should handle empty string if no tools.
+                # If a text response was expected, this will appear as an empty response.
+                assistant_response_content = "" # Ensure string type for parser and history
+
+            self.memory.add_message("assistant", assistant_response_content)
+
+            # Parse the assistant's message content for tool calls
+            parsed_responses = parse_assistant_message(assistant_response_content, self.tools_map, self.cli_args)
 
             text_content_parts = []
             malformed_tool_error_this_turn = False
@@ -425,7 +449,7 @@ class DeveloperAgent:
 if __name__ == '__main__':
     from src.llm import MockLLM # For the example
 
-    def mock_send_message_for_agent_constructor(history: List[Dict[str, str]]) -> Optional[str]:
+    def mock_send_message_for_agent_constructor(history: List[Dict[str, str]]) -> Optional[LLMResponse]:
         # This is the function that will be wrapped by MockLLM instance's send_message
         # For the DeveloperAgent constructor, we pass the method of an LLM instance.
         # This __main__ block is for conceptual testing of DeveloperAgent.
@@ -438,9 +462,13 @@ if __name__ == '__main__':
         # It's just to satisfy the callable type for the example.
         # Actual tests use MockLLM instance.
         last_user_message_content = history[-1]['content'] if history and history[-1]['role'] == 'user' else ""
+
+        # Dummy usage for the mock LLMResponse
+        dummy_usage = LLMUsageInfo(prompt_tokens=5, completion_tokens=5, cost=0.0)
+
         if "list files in src" in last_user_message_content:
-            return "<tool_use><tool_name>list_files</tool_name><params><path>src</path></params></tool_use>"
-        return "<text_content>Default mock response for __main__.</text_content>"
+            return LLMResponse(content="<tool_use><tool_name>list_files</tool_name><params><path>src</path></params></tool_use>", usage=dummy_usage)
+        return LLMResponse(content="<text_content>Default mock response for __main__.</text_content>", usage=dummy_usage)
 
     # This example needs a proper MockLLM instance for send_message
     # to test exhaustion.
@@ -451,8 +479,13 @@ if __name__ == '__main__':
     (Path("src") / "agent.py").write_text("class DeveloperAgent:\n  pass # Dummy for tests")
 
     logging.info("--- Testing Agent with Response Exhaustion ---")
-    exhausted_responses = ["<tool_use><tool_name>read_file</tool_name><params><path>src/agent.py</path></params></tool_use>"]
-    exhausted_llm = MockLLM(exhausted_responses)
+    # For the example, MockLLM.send_message now returns Optional[LLMResponse]
+    # The DeveloperAgent expects a callable that returns Optional[LLMResponse].
+    # So, exhausted_llm.send_message is already of the correct type.
+    exhausted_responses_content = ["<tool_use><tool_name>read_file</tool_name><params><path>src/agent.py</path></params></tool_use>"]
+    # Note: MockLLM itself was updated to produce LLMResponse objects.
+    # So its send_message method is already compliant with the new signature.
+    exhausted_llm = MockLLM(exhausted_responses_content)
     agent_exhaustion_test = DeveloperAgent(send_message=exhausted_llm.send_message, cwd=".")
 
     try:
@@ -465,10 +498,37 @@ if __name__ == '__main__':
         # 2. Assistant: (tool_call read_file) - uses the response
         # 3. User: (tool_result)
         # (Loop 2 of 2)
-        # 4. Assistant: send_message() -> MockLLM returns None
-        #    run_task should catch this and return "LLM did not provide a response..."
-        assert result1 == "LLM did not provide a response. Ending task."
-        assert agent_exhaustion_test.history[-1]["content"] == "LLM did not provide a response. Ending task."
+        # 4. Assistant: send_message() -> MockLLM returns LLMResponse(content=None, usage=...)
+        #    The agent's run_task should catch `llm_response_obj.content is None` (becomes empty string)
+        #    If MockLLM itself returned None (catastrophic failure simulation), then "LLM did not provide a response object"
+        #    Given MockLLM was updated to return LLMResponse(content=None, usage=dummy_usage) on exhaustion:
+        #    - llm_response_obj will NOT be None.
+        #    - llm_response_obj.content will be None.
+        #    - assistant_response_content will become "".
+        #    - parse_assistant_message("") will likely return no tool_uses and empty text.
+        #    - So, the agent should return "No further action taken." or similar based on empty parsed response.
+        #    Let's re-check `run_task` logic for this:
+        #    If `parsed_responses` is empty or only TextContent(""), `tool_uses` is empty.
+        #    It returns `final_text_response` (which is "") or "No further action taken.".
+        #    So, `result1` should be "No further action taken." if `max_steps` allows this path.
+        #    If MockLLM can return `None` directly (e.g. if it wasn't updated, or for a different error type),
+        #    then the original assert would be correct.
+        #    Since MockLLM was updated to return LLMResponse(content=None, usage=...) for exhaustion,
+        #    the `llm_response_obj is None` branch in agent will NOT be taken for simple exhaustion.
+        #    Instead, `llm_response_obj.content` will be `None`.
+        #    The agent converts this to `assistant_response_content = ""`.
+        #    `parse_assistant_message("")` results in `parsed_responses` being `[TextContent(content='')]`.
+        #    `final_text_response` becomes `""`. `tool_uses` is empty.
+        #    The agent returns `final_text_response` which is `""`.
+        #    The history for assistant will be `""`.
+        #    This seems to be the new expected behavior.
+        #    The original "LLM did not provide a response. Ending task." is for when `send_message` *itself* returns `None`.
+        assert result1 == "" # Based on current logic for exhausted MockLLM returning LLMResponse(content=None)
+        assert agent_exhaustion_test.history[-1]["role"] == "user" # Last message added by agent is user tool result
+        assert agent_exhaustion_test.history[-2]["role"] == "assistant"
+        assert agent_exhaustion_test.history[-2]["content"] == "" # Assistant's empty response
+
+    except Exception as e:
         assert agent_exhaustion_test.history[-1]["role"] == "system"
 
     except Exception as e:
