@@ -110,6 +110,7 @@ APPROVAL_ARGS_FLAGS = [
     "allow_use_browser",
     "allow_use_mcp",
 ]
+OTHER_FLAGS = ["disable_git_auto_commits"]
 
 @patch('src.cli.run_agent')
 def test_cli_approval_flags_defaults(mock_run_agent, tmp_path):
@@ -133,6 +134,8 @@ def test_cli_approval_flags_defaults(mock_run_agent, tmp_path):
         assert not called_kwargs.get(arg_name), f"Expected {arg_name} to default to False"
     # Also check the legacy auto_approve, though it's not in APPROVAL_ARGS_FLAGS
     assert not called_kwargs.get("auto_approve"), "Expected auto_approve to default to False"
+    for flag in OTHER_FLAGS:
+        assert not called_kwargs.get(flag), f"Expected {flag} to default to False"
 
 
 @patch('src.cli.run_agent')
@@ -171,6 +174,8 @@ def test_cli_approval_flags_set(mock_run_agent, tmp_path):
         # Ensure legacy auto_approve is not affected unless explicitly set
         assert not called_kwargs.get("auto_approve"), \
             f"Expected auto_approve to be False when only {flag_to_set_true} is set"
+        for flag in OTHER_FLAGS:
+            assert not called_kwargs.get(flag), f"Expected {flag} to remain False"
 
 @patch('src.cli.run_agent')
 def test_cli_legacy_auto_approve_with_new_flags(mock_run_agent, tmp_path):
@@ -199,3 +204,20 @@ def test_cli_legacy_auto_approve_with_new_flags(mock_run_agent, tmp_path):
     for flag_name in APPROVAL_ARGS_FLAGS:
         if flag_name != "allow_read_files":
             assert not called_kwargs.get(flag_name), f"Expected {flag_name} to be False"
+    for flag in OTHER_FLAGS:
+        assert not called_kwargs.get(flag), f"Expected {flag} to remain False"
+
+
+@patch('src.cli.run_agent')
+def test_cli_disable_git_auto_commits_flag(mock_run_agent, tmp_path):
+    resp_file = tmp_path / "responses.json"
+    resp_file.write_text(json.dumps(["<attempt_completion><result>done</result></attempt_completion>"]), encoding="utf-8")
+
+    main([
+        "task", "--model", "mock", "--responses-file", str(resp_file), "--cwd", str(tmp_path),
+        "--disable-git-auto-commits"
+    ])
+
+    mock_run_agent.assert_called_once()
+    called_kwargs = mock_run_agent.call_args[1]
+    assert called_kwargs.get("disable_git_auto_commits")

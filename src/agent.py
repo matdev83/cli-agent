@@ -11,7 +11,7 @@ from .memory import Memory
 from .assistant_message import parse_assistant_message, ToolUse, TextContent
 from .prompts.system import get_system_prompt
 from .confirmations import request_user_confirmation # New import
-from src.utils import to_bool # For handling 'requires_approval'
+from src.utils import to_bool, commit_all_changes # For handling 'requires_approval' and auto commits
 
 from src.tools import (
     Tool,
@@ -65,6 +65,7 @@ class DeveloperAgent:
         mcp_servers_documentation: str = "(No MCP servers currently connected)",
         matching_strictness: int = 100,
         mode: str = "act",
+        disable_git_auto_commits: bool = False,
     ) -> None:
         self.send_message = send_message
         self.cwd: str = os.path.abspath(cwd)
@@ -77,6 +78,10 @@ class DeveloperAgent:
         if not hasattr(self.cli_args, 'allow_execute_all_commands'): self.cli_args.allow_execute_all_commands = False
         if not hasattr(self.cli_args, 'allow_use_browser'): self.cli_args.allow_use_browser = False
         if not hasattr(self.cli_args, 'allow_use_mcp'): self.cli_args.allow_use_mcp = False
+        if not hasattr(self.cli_args, 'disable_git_auto_commits'):
+            self.cli_args.disable_git_auto_commits = disable_git_auto_commits
+
+        self.disable_git_auto_commits = self.cli_args.disable_git_auto_commits
 
         self.supports_browser_use: bool = supports_browser_use # Retain this for system prompt
         self.matching_strictness: int = matching_strictness
@@ -116,6 +121,11 @@ class DeveloperAgent:
     def get_mode(self) -> str:
         """Return the current operational mode."""
         return self.mode
+
+    def _auto_commit(self) -> None:
+        if self.disable_git_auto_commits:
+            return
+        commit_all_changes(self.cwd)
 
     def _run_tool(self, tool_use: ToolUse) -> str:
         tool_name = tool_use.name
@@ -266,6 +276,8 @@ class DeveloperAgent:
                         abs_file_path_str = str((Path(self.cwd) / file_path_param).resolve())
                         if abs_file_path_str in self.diff_failure_tracker:
                             self.diff_failure_tracker[abs_file_path_str] = 0
+                if tool_name in ["write_to_file", "replace_in_file"]:
+                    self._auto_commit()
 
             # Specific handling for read_file success (remains unchanged)
             if tool_name == "read_file" and not result_str.startswith("Error:"):
