@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 class SlashCommand(abc.ABC):
     """
@@ -12,6 +12,18 @@ class SlashCommand(abc.ABC):
     @abc.abstractmethod
     def name(self) -> str:
         """The name of the slash command (e.g., 'model', 'set-timeout')."""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def description(self) -> str:
+        """A brief description of what the command does."""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def usage_examples(self) -> List[str]:
+        """A list of usage examples for the command."""
         pass
 
     @abc.abstractmethod
@@ -44,6 +56,14 @@ class ModelCommand(SlashCommand):
     @property
     def name(self) -> str:
         return "model"
+
+    @property
+    def description(self) -> str:
+        return "Sets the language model to be used by the agent."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/model anthropic/claude-3-opus", "/model mock"]
 
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
         if not args:
@@ -84,6 +104,14 @@ class SetTimeoutCommand(SlashCommand):
     def name(self) -> str:
         return "set-timeout"
 
+    @property
+    def description(self) -> str:
+        return "Sets the timeout in seconds for LLM API calls."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/set-timeout 60", "/set-timeout 120.5"]
+
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
         if not args:
             return "Error: Missing timeout value. Usage: /set-timeout <seconds>"
@@ -110,6 +138,14 @@ class PlanModeCommand(SlashCommand):
     def name(self) -> str:
         return "plan"
 
+    @property
+    def description(self) -> str:
+        return "Activates PLAN MODE for the agent, where it focuses on planning."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/plan"]
+
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
         # Placeholder for actual mode switching logic
         # This will likely involve setting a flag in agent_context or DeveloperAgent
@@ -128,6 +164,14 @@ class ActModeCommand(SlashCommand):
     @property
     def name(self) -> str:
         return "act"
+
+    @property
+    def description(self) -> str:
+        return "Activates ACT MODE for the agent, where it focuses on executing tasks."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/act"]
 
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
         # Placeholder for actual mode switching logic
@@ -222,3 +266,41 @@ class SlashCommandRegistry:
     def get_all_commands(self) -> List[SlashCommand]:
         """Returns a list of all registered command objects."""
         return list(self._commands.values())
+
+
+class HelpCommand(SlashCommand):
+    """
+    Displays help information for available slash commands.
+    """
+    def __init__(self, registry: SlashCommandRegistry):
+        self._registry = registry
+
+    @property
+    def name(self) -> str:
+        return "help"
+
+    @property
+    def description(self) -> str:
+        return "Displays help information for all available slash commands."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/help"]
+
+    def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
+        commands = self._registry.get_all_commands()
+        if not commands:
+            return "No commands available."
+
+        # Sort commands alphabetically by name
+        commands.sort(key=lambda cmd: cmd.name)
+
+        help_lines = ["Available commands:\n"]
+        for command in commands:
+            help_lines.append(f"  /{command.name}\n")
+            help_lines.append(f"    Description: {command.description}\n")
+            if command.usage_examples:
+                help_lines.append(f"    Examples:\n")
+                for example in command.usage_examples:
+                    help_lines.append(f"      {example}\n")
+        return "".join(help_lines)

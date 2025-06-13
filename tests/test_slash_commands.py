@@ -9,8 +9,40 @@ from src.slash_commands import (
     SetTimeoutCommand,
     PlanModeCommand,
     ActModeCommand,
+    HelpCommand,
     AgentCliContext
 )
+
+
+# --- Mock Commands for HelpCommand Tests ---
+class MockCmdA(SlashCommand):
+    @property
+    def name(self) -> str: return "a_mock"
+    @property
+    def description(self) -> str: return "Mock A description."
+    @property
+    def usage_examples(self) -> List[str]: return ["/a_mock example1", "/a_mock example2"]
+    def execute(self, args: List[str], agent_context: Any=None) -> Optional[str]: return "Executed A"
+
+class MockCmdB(SlashCommand):
+    @property
+    def name(self) -> str: return "b_mock"
+    @property
+    def description(self) -> str: return "Mock B description."
+    @property
+    def usage_examples(self) -> List[str]: return ["/b_mock example"]
+    def execute(self, args: List[str], agent_context: Any=None) -> Optional[str]: return "Executed B"
+
+class MockCmdCNoExamples(SlashCommand):
+    @property
+    def name(self) -> str: return "c_no_examples"
+    @property
+    def description(self) -> str: return "Mock C description (no examples)."
+    @property
+    def usage_examples(self) -> List[str]: return [] # Or None
+    def execute(self, args: List[str], agent_context: Any=None) -> Optional[str]: return "Executed C"
+
+# --- End Mock Commands ---
 
 # Mock display update function for context
 def mock_display_update_func(message: str):
@@ -55,6 +87,10 @@ class TestSlashCommandRegistry:
         class EmptyNameCommand(SlashCommand):
             @property
             def name(self) -> str: return ""
+            @property
+            def description(self) -> str: return "Test description"
+            @property
+            def usage_examples(self) -> List[str]: return ["/test"]
             def execute(self, args: List[str], agent_context: Any=None) -> Optional[str]: return None
 
         with pytest.raises(ValueError, match="Command name cannot be empty."):
@@ -65,6 +101,10 @@ class TestSlashCommandRegistry:
         class SpaceNameCommand(SlashCommand):
             @property
             def name(self) -> str: return "cmd with space"
+            @property
+            def description(self) -> str: return "Test description"
+            @property
+            def usage_examples(self) -> List[str]: return ["/test"]
             def execute(self, args: List[str], agent_context: Any=None) -> Optional[str]: return None
 
         with pytest.raises(ValueError, match="Command name cannot contain spaces."):
@@ -211,3 +251,158 @@ def test_registry_executes_model_command():
     result = registry.execute_command("model", ["new_model"], context)
     assert result == "Model set to: new_model"
     assert context.cli_args.model == "new_model"
+
+
+class TestHelpCommand:
+    def test_help_command_registered_and_displays_self(self):
+        registry = SlashCommandRegistry()
+        help_cmd = HelpCommand(registry)
+        registry.register(help_cmd)
+
+        context = create_default_context()
+        # result = help_cmd.execute([], context) # Direct execution
+        result = registry.execute_command("help", [], context) # Execution via registry
+
+        assert result is not None
+        assert "Available commands:" in result
+        assert "/help" in result
+        assert "Displays help information for all available slash commands." in result
+        assert "/help" in result # Example for /help itself
+
+    def test_help_command_empty_registry(self):
+        empty_registry = SlashCommandRegistry()
+        help_cmd = HelpCommand(empty_registry)
+        # Note: HelpCommand itself is not added to this "empty" registry
+        # for the purpose of this specific test of its behavior with no *other* commands.
+        # If HelpCommand is always pre-registered, this test might need adjustment
+        # or interpretation (e.g., it shows only itself).
+        # However, the HelpCommand's execute logic fetches from the registry it's given.
+        # If it's registered, it will find itself. If we want to test what it says
+        # when the registry it *knows about* has no *other* commands, that's fine.
+        # The prompt implies testing HelpCommand's output given a truly empty registry.
+        # So, we pass an empty one to its constructor, but don't register HelpCommand itself *into that specific registry instance*.
+
+        # If the test means "what if help is the *only* command registered":
+        # registry = SlashCommandRegistry()
+        # help_cmd_instance = HelpCommand(registry)
+        # registry.register(help_cmd_instance)
+        # result = help_cmd_instance.execute([])
+        # This would show help for "help".
+
+        # Per prompt: "Execute the help_command" with an empty registry.
+        # This implies the HelpCommand instance operates on a registry that has no commands.
+        result = help_cmd.execute([], None) # AgentContext not used by HelpCommand
+        assert result == "No commands available."
+
+    def test_help_command_lists_commands_alphabetically_with_details(self):
+        registry = SlashCommandRegistry()
+        cmd_b = MockCmdB()
+        cmd_a = MockCmdA()
+        help_cmd = HelpCommand(registry) # help command itself
+
+        registry.register(cmd_b) # Register b first
+        registry.register(cmd_a) # Register a second
+        registry.register(help_cmd) # Register help
+
+        context = create_default_context()
+        result = registry.execute_command("help", [], context)
+
+        assert result is not None
+        # Check order and content
+        # Expected order: a_mock, b_mock, help
+        a_mock_pos = result.find("/a_mock")
+        b_mock_pos = result.find("/b_mock")
+        help_pos = result.find("/help") # help command itself
+
+        assert all(pos != -1 for pos in [a_mock_pos, b_mock_pos, help_pos]), "All commands should be listed"
+        assert a_mock_pos < b_mock_pos < help_pos, "Commands should be in alphabetical order"
+
+        # Check details for a_mock
+        assert "  /a_mock\n" in result
+        assert "    Description: Mock A description.\n" in result
+        assert "    Examples:\n" in result
+        assert "      /a_mock example1\n" in result
+        assert "      /a_mock example2\n" in result
+
+        # Check details for b_mock
+        assert "  /b_mock\n" in result
+        assert "    Description: Mock B description.\n" in result
+        assert "    Examples:\n" in result
+        assert "      /b_mock example\n" in result
+
+        # Check details for help
+        assert "  /help\n" in result
+        assert "    Description: Displays help information for all available slash commands.\n" in result
+        assert "    Examples:\n" in result
+        assert "      /help\n" in result # Usage example for /help itself
+
+    def test_help_command_with_no_usage_examples(self):
+        registry = SlashCommandRegistry()
+        cmd_c_no_ex = MockCmdCNoExamples()
+        help_cmd = HelpCommand(registry)
+
+        registry.register(cmd_c_no_ex)
+        registry.register(help_cmd)
+
+        context = create_default_context()
+        result = registry.execute_command("help", [], context)
+
+        assert result is not None
+        assert "/c_no_examples" in result
+        assert "Mock C description (no examples)." in result
+        assert "      /c_no_examples example" not in result # Ensure no example line is printed if list is empty
+        assert "    Examples:\n" not in result[result.find("/c_no_examples") : result.find("/help")] # Check specific section
+        # A more robust check for "Examples:" section for c_no_examples:
+        c_section_start = result.find("/c_no_examples")
+        help_section_start = result.find("/help") # Assuming help is next due to alphabetical or it's the only other one
+
+        c_section_text = ""
+        if c_section_start != -1 and help_section_start != -1 and help_section_start > c_section_start:
+            c_section_text = result[c_section_start:help_section_start]
+        elif c_section_start != -1: # c_no_examples is the last command
+            c_section_text = result[c_section_start:]
+
+        assert "    Examples:" not in c_section_text
+        assert "    Description: Mock C description (no examples).\n" in c_section_text # Ensure description is there
+
+
+# --- Test for command properties ---
+concrete_command_classes = [
+    ModelCommand,
+    SetTimeoutCommand,
+    PlanModeCommand,
+    ActModeCommand,
+    # HelpCommand needs a registry, so we instantiate it directly in parametrize
+]
+
+@pytest.mark.parametrize("command_instance", [
+    ModelCommand(),
+    SetTimeoutCommand(),
+    PlanModeCommand(),
+    ActModeCommand(),
+    HelpCommand(SlashCommandRegistry()) # Pass a dummy registry
+])
+def test_all_commands_have_valid_description_and_usage_examples(command_instance: SlashCommand):
+    """
+    Tests that all concrete SlashCommand instances have valid description
+    and usage_examples properties.
+    """
+    command = command_instance
+
+    # Test description
+    assert isinstance(command.description, str), \
+        f"Command /{command.name} description should be a string, got {type(command.description)}"
+    assert len(command.description) > 0, \
+        f"Command /{command.name} description should not be empty"
+
+    # Test usage_examples
+    assert isinstance(command.usage_examples, list), \
+        f"Command /{command.name} usage_examples should be a list, got {type(command.usage_examples)}"
+    assert len(command.usage_examples) > 0, \
+        f"Command /{command.name} usage_examples should not be empty"
+
+    for example in command.usage_examples:
+        assert isinstance(example, str), \
+            f"Command /{command.name} usage_example item '{example}' should be a string, got {type(example)}"
+        assert len(example) > 0, \
+            f"Command /{command.name} usage_example item '{example}' should not be empty"

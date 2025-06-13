@@ -24,7 +24,7 @@ from prompt_toolkit.styles import Style
 
 from .agent import DeveloperAgent
 from .llm import MockLLM, OpenRouterLLM
-from .slash_commands import SlashCommandRegistry, ModelCommand, SetTimeoutCommand, PlanModeCommand, ActModeCommand, AgentCliContext
+from .slash_commands import SlashCommandRegistry, ModelCommand, SetTimeoutCommand, PlanModeCommand, ActModeCommand, HelpCommand, AgentCliContext
 
 # Global list to store display messages for FormattedTextControl
 # Global list to store display messages for FormattedTextControl
@@ -302,10 +302,9 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
         slash_command_registry.register(SetTimeoutCommand())
         slash_command_registry.register(PlanModeCommand())
         slash_command_registry.register(ActModeCommand())
-        # Add a /help command
-        # (Help command not yet defined, this is a placeholder for where it would go)
-        # from .slash_commands import HelpCommand
-        # slash_command_registry.register(HelpCommand(slash_command_registry))
+        # Register HelpCommand
+        help_command = HelpCommand(slash_command_registry)
+        slash_command_registry.register(help_command)
 
     except ValueError as e:
         # This is early in startup, so print to stderr and exit.
