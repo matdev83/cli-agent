@@ -18,7 +18,7 @@ def test_list_code_definitions_tool_properties():
     assert tool.name == "list_code_definition_names"
     assert isinstance(tool.description, str)
     assert tool.parameters_schema == {
-        "path": "The relative or absolute path to the directory to scan for source files."
+        "path": "The path of the directory to list top level source code definitions for."
     }
 def test_list_code_definitions_success(tmp_path: Path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))

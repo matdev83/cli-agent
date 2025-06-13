@@ -20,10 +20,10 @@ def test_browser_action_tool_instantiation():
     assert "Perform an action in a web browser" in tool.description
     # Check parameters_schema
     expected_schema = {
-        "action": "The browser action to perform. Options: launch, click, type, scroll_down, scroll_up, close.",
-        "url": "The URL to navigate to (required for 'launch' action).",
-        "coordinate": "The x,y coordinate for 'click' action (e.g., '640,512').",
-        "text": "The text to type for 'type' action."
+        "action": "Action to perform (e.g., launch, click, type, scroll_down, scroll_up, close)",
+        "url": "URL for the 'launch' action (optional)",
+        "coordinate": "x,y coordinates for 'click' (optional)",
+        "text": "Text for 'type' (optional)"
     }
     assert tool.parameters_schema == expected_schema
 

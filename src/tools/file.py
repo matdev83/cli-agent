@@ -132,17 +132,17 @@ class ReplaceInFileTool(Tool):
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "path": "The relative or absolute path to the file to be modified.",
-            "diff_blocks": "A string containing one or more diff blocks in the specified format."
+            "diff": "A string containing one or more diff blocks in the specified format."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         file_path_str = params.get("path")
-        diff_str = params.get("diff_blocks")
+        diff_str = params.get("diff")
 
         if not file_path_str:
             return "Error: Missing required parameter 'path'."
-        if diff_str is None: # diff_blocks can be an empty string (no-op)
-            return "Error: Missing required parameter 'diff_blocks'."
+        if diff_str is None: # diff can be an empty string (no-op)
+            return "Error: Missing required parameter 'diff'."
 
         try:
             abs_file_path = _resolve_path(file_path_str, agent_tools_instance)
@@ -154,8 +154,8 @@ class ReplaceInFileTool(Tool):
 
             original_text = abs_file_path.read_text(encoding="utf-8")
 
-            if not diff_str.strip(): # If diff_blocks is empty or whitespace, it's a no-op
-                return f"Warning: 'diff_blocks' was empty. No changes made to file {str(abs_file_path)}."
+            if not diff_str.strip(): # If diff is empty or whitespace, it's a no-op
+                return f"Warning: 'diff' was empty. No changes made to file {str(abs_file_path)}."
 
             blocks = _parse_diff_blocks(diff_str) # Helper function handles format errors
 
@@ -189,7 +189,7 @@ class ReplaceInFileTool(Tool):
             abs_file_path.write_text(modified_text, encoding="utf-8")
             return f"File {str(abs_file_path)} modified successfully with {len(blocks)} block(s)."
         except ValueError as ve: # Catch errors from _parse_diff_blocks
-            return f"Error processing diff_blocks for {file_path_str}: {ve}"
+            return f"Error processing diff for {file_path_str}: {ve}"
         except Exception as e:
             return f"Error replacing in file {file_path_str}: {e}"
 
@@ -352,7 +352,7 @@ def replace_in_file(path: str, diff_blocks: str, agent_tools_instance: Any = Non
     # The test 'test_replace_in_file' uses a diff format "------- SEARCH...+++++++ REPLACE"
     # The tool's _parse_diff_blocks method now expects "------- SEARCH...+++++++ REPLACE"
     # The wrapper will now pass the diff_blocks directly.
-    result = tool.execute({"path": path, "diff_blocks": diff_blocks}, agent_tools_instance=agent_tools_instance)
+    result = tool.execute({"path": path, "diff": diff_blocks}, agent_tools_instance=agent_tools_instance)
 
     # The test 'test_replace_in_file_not_found' expects ValueError if search block not found.
     # The tool's execute method returns a string like "Error: Search block ... not found..."

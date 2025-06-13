@@ -57,6 +57,144 @@ def test_parse_mixed_content_text_tool_text():
     ]
     assert parse_assistant_message(message) == expected
 
+# --- Tests for Wrapped Tool Calls (Valid) ---
+
+def test_parse_wrapped_tool_call_valid_simple():
+    message = "<tool_use><tool_name>read_file</tool_name><params><path>test.txt</path></params></tool_use>"
+    expected = [ToolUse(name="read_file", params={"path": "test.txt"})]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_wrapped_tool_call_multiple_valid():
+    message = (
+        "<tool_use><tool_name>read_file</tool_name><params><path>one.txt</path></params></tool_use>"
+        "<tool_use><tool_name>write_to_file</tool_name><params><path>two.txt</path><content>data</content></params></tool_use>"
+    )
+    expected = [
+        ToolUse(name="read_file", params={"path": "one.txt"}),
+        ToolUse(name="write_to_file", params={"path": "two.txt", "content": "data"})
+    ]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_wrapped_tool_call_mixed_with_text():
+    message = "Text before <tool_use><tool_name>read_file</tool_name><params><path>test.txt</path></params></tool_use> Text after."
+    expected = [
+        TextContent(content="Text before"),
+        ToolUse(name="read_file", params={"path": "test.txt"}),
+        TextContent(content="Text after.")
+    ]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_wrapped_tool_call_no_params_tag():
+    # load_mcp_documentation is a valid tool name that takes no parameters
+    message = "<tool_use><tool_name>load_mcp_documentation</tool_name></tool_use>"
+    expected = [ToolUse(name="load_mcp_documentation", params={})]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_wrapped_tool_call_empty_params_tag():
+    message = "<tool_use><tool_name>load_mcp_documentation</tool_name><params/></tool_use>"
+    expected = [ToolUse(name="load_mcp_documentation", params={})]
+    assert parse_assistant_message(message) == expected
+
+# --- Tests for Malformed Wrapped Tool Calls ---
+
+def test_parse_wrapped_tool_call_missing_tool_name():
+    message = "<tool_use><params><path>test.txt</path></params></tool_use>"
+    # The parser should return a TextContent with MALFORMED_TOOL_PREFIX
+    # and the original XML snippet of the malformed <tool_use> block.
+    parsed_result = parse_assistant_message(message)
+    assert len(parsed_result) == 1
+    assert isinstance(parsed_result[0], TextContent)
+    assert parsed_result[0].content.startswith("Error: Malformed tool use - Missing <tool_name> in <tool_use> block:")
+    assert message in parsed_result[0].content # Original snippet should be there
+
+def test_parse_wrapped_tool_call_unknown_tool_name_is_parsed():
+    # Current parser does not validate tool_name from wrapped calls against TOOL_USE_NAMES
+    message = "<tool_use><tool_name>unknown_custom_tool</tool_name><params><arg>val</arg></params></tool_use>"
+    expected = [ToolUse(name="unknown_custom_tool", params={"arg": "val"})]
+    assert parse_assistant_message(message) == expected
+
+# --- Tests for Explicit thinking and explanation Tags ---
+
+def test_parse_thinking_tag():
+    message = "<thinking>Some thoughts here.</thinking>"
+    # Expected to be TextContent including the tags themselves
+    expected = [TextContent(content="<thinking>Some thoughts here.</thinking>")]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_explanation_tag():
+    message = "<explanation>This is an explanation.</explanation>"
+    expected = [TextContent(content="<explanation>This is an explanation.</explanation>")]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_mixed_thinking_explanation_text_and_tool():
+    message = (
+        "Leading text. "
+        "<thinking>Pondering...</thinking> "
+        "Intermediary text. "
+        "<tool_use><tool_name>read_file</tool_name><params><path>doc.txt</path></params></tool_use> "
+        "<explanation>Explaining the next step.</explanation> "
+        "Trailing text."
+    )
+    expected = [
+        TextContent(content="Leading text."),
+        TextContent(content="<thinking>Pondering...</thinking>"),
+        TextContent(content="Intermediary text."),
+        ToolUse(name="read_file", params={"path": "doc.txt"}),
+        TextContent(content="<explanation>Explaining the next step.</explanation>"),
+        TextContent(content="Trailing text.")
+    ]
+    assert parse_assistant_message(message) == expected
+
+# --- More Malformed XML / Edge Cases ---
+
+def test_parse_attribute_on_tool_name_tag():
+    # This is not a valid tool call format the parser is designed for.
+    # <read_file param="value">text</read_file>
+    # `read_file` is in TOOL_USE_NAMES. Params are expected as children.
+    # Attributes on the tool tag itself are ignored. Text content inside is also ignored for params.
+    message = '<read_file param="value">text_content_ignored_for_params</read_file>'
+    expected = [ToolUse(name="read_file", params={})] # Attributes and text content are ignored
+    assert parse_assistant_message(message) == expected
+
+def test_parse_incomplete_xml_fragment_value_unclosed():
+    message = "Text <read_file><path>incomplete_pa"
+    # This will cause an ET.ParseError.
+    # Because the message doesn't end with '>', it is not treated as malformed XML by the initial check.
+    # The fromstring will fail.
+    # Update: The heuristic for MALFORMED_TOOL_PREFIX is `startswith("<") and endswith(">")`.
+    # This message does not start with "<", so it's returned as plain text.
+    expected = [TextContent(content="Text <read_file><path>incomplete_pa")]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_text_that_looks_like_tag_but_is_not():
+    message = "This is not a <tag but just text."
+    # This is not valid XML, ET.fromstring will raise ParseError.
+    # Since it doesn't start with '<' and end with '>', it's treated as plain text.
+    expected = [TextContent(content="This is not a <tag but just text.")]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_text_that_looks_like_tag_but_is_not_wrapped():
+    message = "A<B C>D" # Not valid XML for ET
+    expected = [TextContent(content="A<B C>D")]
+    assert parse_assistant_message(message) == expected
+
+# --- Text Content with Special XML Characters ---
+
+def test_parse_text_with_special_xml_chars():
+    message = "Important info: A < B && C > D. Also 'single quotes' and \"double quotes\"."
+    # This is plain text because it doesn't form a valid root XML structure for ET.fromstring
+    # after being wrapped.
+    expected = [TextContent(content="Important info: A < B && C > D. Also 'single quotes' and \"double quotes\".")]
+    assert parse_assistant_message(message) == expected
+
+def test_parse_text_with_special_xml_chars_as_root_text():
+    # If the whole message is just text, even with < and >, if it's not valid XML, it's text.
+    # The parser wraps it in <root_message_wrapper>. If ET.fromstring fails, it's text.
+    # If ET.fromstring succeeds, then root.text is used.
+    message = "A < B && C > D"
+    expected = [TextContent(content="A < B && C > D")]
+    assert parse_assistant_message(message) == expected
+
 def test_parse_mixed_content_tool_text_tool():
     message = "<read_file><path>file.txt</path></read_file> Middle text. <write_to_file><path>out.txt</path><content>Data</content></write_to_file>"
     expected = [

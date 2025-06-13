@@ -121,7 +121,7 @@ def test_replace_in_file_tool_properties():
     assert isinstance(tool.description, str)
     assert tool.parameters_schema == {
         "path": "The relative or absolute path to the file to be modified.",
-        "diff_blocks": "A string containing one or more diff blocks in the specified format."
+        "diff": "A string containing one or more diff blocks in the specified format."
     }
 
 def test_replace_in_file_tool_success(tmp_path: Path):
@@ -132,7 +132,7 @@ def test_replace_in_file_tool_success(tmp_path: Path):
     test_file_abs_path.write_text("Hello world, how are you world?")
 
     diff = "------- SEARCH\nworld\n=======\nthere\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "modified successfully with 1 block(s)" in result
     assert test_file_abs_path.read_text() == "Hello there, how are you world?"
 
@@ -142,7 +142,7 @@ def test_replace_in_file_tool_search_not_found(tmp_path: Path):
     test_file_rel_path = "search_fail.txt"
     (tmp_path / test_file_rel_path).write_text("Hello world")
     diff = "------- SEARCH\nbanana\n=======\napple\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "Error: Search block 1" in result and "not found" in result
 
 def test_replace_in_file_tool_invalid_diff_format(tmp_path: Path):
@@ -151,8 +151,8 @@ def test_replace_in_file_tool_invalid_diff_format(tmp_path: Path):
     test_file_rel_path = "format_fail.txt"
     (tmp_path / test_file_rel_path).write_text("Hello world")
     diff = "this is not a valid diff" # This will trigger the ValueError in _parse_diff_blocks
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
-    assert "Error processing diff_blocks" in result
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
+    assert "Error processing diff" in result
     # Specific error from _parse_diff_blocks, updated to the new format
     assert "No valid diff blocks found. Ensure the format is: ------- SEARCH...=======...+++++++ REPLACE" in result
 
@@ -162,15 +162,15 @@ def test_replace_in_file_tool_empty_diff(tmp_path: Path):
     test_file_rel_path = "empty_diff.txt"
     original_content = "No change"
     (tmp_path / test_file_rel_path).write_text(original_content)
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": "  "}, agent_tools_instance=mock_agent_tools_instance) # Whitespace only
-    assert "Warning: 'diff_blocks' was empty" in result
+    result = tool.execute({"path": test_file_rel_path, "diff": "  "}, agent_tools_instance=mock_agent_tools_instance) # Whitespace only
+    assert "Warning: 'diff' was empty" in result
     assert (tmp_path / test_file_rel_path).read_text() == original_content
 
 def test_replace_in_file_tool_file_not_found(tmp_path: Path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ReplaceInFileTool()
     diff = "------- SEARCH\nworld\n=======\nthere\n+++++++ REPLACE"
-    result = tool.execute({"path": "nonexistent.txt", "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": "nonexistent.txt", "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "Error: File not found" in result
 
 # --- ReplaceInFileTool Matching Strictness Tests ---
@@ -182,7 +182,7 @@ def test_replace_in_file_exact_match_strictness_100(tmp_path: Path):
     test_file_abs_path.write_text("Hello World, this is a test.")
 
     diff = "------- SEARCH\nWorld\n=======\nUniverse\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "modified successfully with 1 block(s)" in result
     assert test_file_abs_path.read_text() == "Hello Universe, this is a test."
 
@@ -195,7 +195,7 @@ def test_replace_in_file_exact_match_fails_due_to_case_strictness_100(tmp_path: 
     test_file_abs_path.write_text(initial_content)
 
     diff = "------- SEARCH\nWorld\n=======\nUniverse\n+++++++ REPLACE" # "World" vs "world"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "Error: Search block 1" in result
     assert "(exact match)" in result
     assert "not found" in result
@@ -209,7 +209,7 @@ def test_replace_in_file_lenient_match_strictness_50_success(tmp_path: Path):
     test_file_abs_path.write_text("Hello world, this is a test.") # content is "world"
 
     diff = "------- SEARCH\nWorld\n=======\nUniverse\n+++++++ REPLACE" # search is "World"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "modified successfully with 1 block(s)" in result
     assert test_file_abs_path.read_text() == "Hello Universe, this is a test."
 
@@ -222,7 +222,7 @@ def test_replace_in_file_lenient_match_different_casing_in_block_success(tmp_pat
 
     # Search block has mixed casing "hElLo wOrLd"
     diff = "------- SEARCH\nhElLo wOrLd\n=======\nGoodbye Universe\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "modified successfully with 1 block(s)" in result
     assert test_file_abs_path.read_text() == "Goodbye Universe"
 
@@ -235,7 +235,7 @@ def test_replace_in_file_default_strictness_behaves_as_100_exact_match(tmp_path:
     test_file_abs_path.write_text("Hello Default World.")
 
     diff = "------- SEARCH\nDefault World\n=======\nNew World\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "modified successfully with 1 block(s)" in result
     assert test_file_abs_path.read_text() == "Hello New World."
 
@@ -248,7 +248,7 @@ def test_replace_in_file_default_strictness_fails_due_to_case(tmp_path: Path):
     test_file_abs_path.write_text(initial_content)
 
     diff = "------- SEARCH\nDefault World\n=======\nNew World\n+++++++ REPLACE" # "Default World" vs "default world"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "Error: Search block 1" in result
     assert "(exact match)" in result # Default should be exact
     assert "not found" in result
@@ -263,7 +263,7 @@ def test_replace_in_file_lenient_match_search_not_found_strictness_50(tmp_path: 
     test_file_abs_path.write_text(initial_content)
 
     diff = "------- SEARCH\nNonExistentPattern\n=======\nReplacement\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "Error: Search block 1" in result
     assert "(case-insensitive match)" in result
     assert "not found" in result
@@ -279,9 +279,60 @@ def test_replace_in_file_lenient_match_invalid_regex_pattern(tmp_path: Path):
 
     # Invalid regex: unclosed parenthesis in search block
     diff = "------- SEARCH\nHello (World\n=======\nReplacement\n+++++++ REPLACE"
-    result = tool.execute({"path": test_file_rel_path, "diff_blocks": diff}, agent_tools_instance=mock_agent_tools_instance)
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
     assert "Error compiling regex for search block 1" in result
     assert test_file_abs_path.read_text() == initial_content
+
+def test_replace_in_file_tool_delete_block(tmp_path: Path):
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
+    tool = ReplaceInFileTool()
+    test_file_rel_path = "delete_me.txt"
+    test_file_abs_path = tmp_path / test_file_rel_path
+    test_file_abs_path.write_text("Line one\ntext to delete\nLine three")
+
+    diff = "------- SEARCH\ntext to delete\n=======\n\n+++++++ REPLACE" # Empty replace part
+    result = tool.execute({"path": test_file_rel_path, "diff": diff}, agent_tools_instance=mock_agent_tools_instance)
+    assert "modified successfully with 1 block(s)" in result
+    assert test_file_abs_path.read_text() == "Line one\n\nLine three" # "text to delete" is replaced by empty string
+
+def test_replace_in_file_tool_default_exact_matching(tmp_path: Path):
+    # This test verifies default behavior is exact (strictness 100)
+    # 1. Agent instance without matching_strictness explicitly set (should default to 100 in MockAgentToolsInstance)
+    mock_agent_default = MockAgentToolsInstance(cwd=str(tmp_path))
+    # 2. Agent instance with matching_strictness explicitly set to 100
+    mock_agent_strict_100 = MockAgentToolsInstance(cwd=str(tmp_path), matching_strictness=100)
+
+    tool = ReplaceInFileTool()
+    test_file_rel_path = "default_exact_match_test.txt"
+    test_file_abs_path = tmp_path / test_file_rel_path
+
+    initial_content_exact = "Hello World, this is a test."
+    diff_exact_match = "------- SEARCH\nWorld\n=======\nUniverse\n+++++++ REPLACE"
+    diff_case_mismatch = "------- SEARCH\nworld\n=======\nUniverse\n+++++++ REPLACE"
+
+    # Test with agent where matching_strictness defaults to 100
+    test_file_abs_path.write_text(initial_content_exact)
+    result_default_exact = tool.execute({"path": test_file_rel_path, "diff": diff_exact_match}, agent_tools_instance=mock_agent_default)
+    assert "modified successfully with 1 block(s)" in result_default_exact
+    assert test_file_abs_path.read_text() == "Hello Universe, this is a test."
+
+    test_file_abs_path.write_text(initial_content_exact) # Reset content
+    result_default_case_fail = tool.execute({"path": test_file_rel_path, "diff": diff_case_mismatch}, agent_tools_instance=mock_agent_default)
+    assert "Error: Search block 1" in result_default_case_fail
+    assert "(exact match)" in result_default_case_fail
+    assert test_file_abs_path.read_text() == initial_content_exact # Should be unchanged
+
+    # Test with agent where matching_strictness is explicitly 100
+    test_file_abs_path.write_text(initial_content_exact) # Reset content
+    result_strict_100_exact = tool.execute({"path": test_file_rel_path, "diff": diff_exact_match}, agent_tools_instance=mock_agent_strict_100)
+    assert "modified successfully with 1 block(s)" in result_strict_100_exact
+    assert test_file_abs_path.read_text() == "Hello Universe, this is a test."
+
+    test_file_abs_path.write_text(initial_content_exact) # Reset content
+    result_strict_100_case_fail = tool.execute({"path": test_file_rel_path, "diff": diff_case_mismatch}, agent_tools_instance=mock_agent_strict_100)
+    assert "Error: Search block 1" in result_strict_100_case_fail
+    assert "(exact match)" in result_strict_100_case_fail
+    assert test_file_abs_path.read_text() == initial_content_exact # Should be unchanged
 
 # --- ListFilesTool Tests ---
 def test_list_files_tool_properties():
