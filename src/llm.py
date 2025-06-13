@@ -32,7 +32,7 @@ class MockLLM(LLMWrapper): # Indicate conformance to the protocol
     ) -> Optional[LLMResponse]: # Return type changed
         # temperature and max_tokens are ignored in this mock implementation
 
-        dummy_usage = LLMUsageInfo(prompt_tokens=10, completion_tokens=20, cost=0.0)
+        dummy_usage = LLMUsageInfo(prompt_tokens=10, completion_tokens=20, cost=0.00123)
 
         if self._index >= len(self._responses):
             # Consistent with OpenRouterLLM's error return, provide a default structure
@@ -92,10 +92,21 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
                     content = response.choices[0].message.content
 
                 if hasattr(response, 'usage') and response.usage:
+                    parsed_cost = 0.0
+                    if hasattr(response.usage, 'cost'): # Check if 'cost' attribute exists
+                        if response.usage.cost is not None:
+                            parsed_cost = float(response.usage.cost)
+                    elif hasattr(response.usage, 'total_cost'): # Check for 'total_cost'
+                        if response.usage.total_cost is not None:
+                            parsed_cost = float(response.usage.total_cost)
+                    # As a fallback, check if the cost is directly on the response object (less common for OpenAI SDK)
+                    elif hasattr(response, 'cost') and response.cost is not None:
+                        parsed_cost = float(response.cost)
+
                     usage_info = LLMUsageInfo(
                         prompt_tokens=response.usage.prompt_tokens or 0,
                         completion_tokens=response.usage.completion_tokens or 0,
-                        cost=0.0  # Placeholder for now
+                        cost=parsed_cost  # Use the parsed cost
                     )
                 else:
                     # If no usage info in response, create a default one

@@ -122,7 +122,7 @@ class TestMockLLM:
         assert isinstance(response1.usage, LLMUsageInfo)
         assert response1.usage.prompt_tokens == 10
         assert response1.usage.completion_tokens == 20
-        assert response1.usage.cost == 0.0
+        assert response1.usage.cost == 0.00123 # Updated cost
         # Second message
         response2 = llm.send_message([{"role": "user", "content": "Hello 2"}])
         assert isinstance(response2, LLMResponse)
@@ -130,7 +130,7 @@ class TestMockLLM:
         assert isinstance(response2.usage, LLMUsageInfo) # Check usage again for second response
         assert response2.usage.prompt_tokens == 10
         assert response2.usage.completion_tokens == 20
-        assert response2.usage.cost == 0.0
+        assert response2.usage.cost == 0.00123 # Updated cost
 
 
     def test_mock_llm_send_message(self):
@@ -144,7 +144,7 @@ class TestMockLLM:
         assert isinstance(response1.usage, LLMUsageInfo)
         assert response1.usage.prompt_tokens == 10
         assert response1.usage.completion_tokens == 20
-        assert response1.usage.cost == 0.0
+        assert response1.usage.cost == 0.00123 # Updated cost
 
         # Second message
         response2 = llm.send_message([{"role": "user", "content": "Second message"}])
@@ -153,7 +153,7 @@ class TestMockLLM:
         assert isinstance(response2.usage, LLMUsageInfo)
         assert response2.usage.prompt_tokens == 10
         assert response2.usage.completion_tokens == 20
-        assert response2.usage.cost == 0.0
+        assert response2.usage.cost == 0.00123 # Updated cost
 
     def test_mock_llm_send_message_exhausted(self):
         responses = ["Single response"]
@@ -169,7 +169,7 @@ class TestMockLLM:
         assert isinstance(exhausted_response.usage, LLMUsageInfo)
         assert exhausted_response.usage.prompt_tokens == 10 # Dummy usage still provided
         assert exhausted_response.usage.completion_tokens == 20
-        assert exhausted_response.usage.cost == 0.0
+        assert exhausted_response.usage.cost == 0.00123 # Updated cost
 
 # --- OpenRouterLLM Tests --- (Keeping separate class for clarity if OpenRouter tests grow)
 # Note: Many existing OpenRouterLLM tests already use mock_openai_client fixture.
@@ -427,6 +427,107 @@ def test_openrouter_llm_send_message_no_usage_from_api(mock_openai_client):
     assert result.usage.prompt_tokens == 0
     assert result.usage.completion_tokens == 0
     assert result.usage.cost == 0.0
+
+
+# --- OpenRouterLLM Cost Parsing Tests ---
+
+def test_openrouter_llm_parses_cost_from_usage_cost(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20, cost=0.0005, total_cost=None) # Explicitly set total_cost to None
+    # Ensure response.cost is not set or is None
+    if hasattr(mock_completion, 'cost'):
+        delattr(mock_completion, 'cost')
+
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0005
+
+def test_openrouter_llm_parses_cost_from_usage_total_cost(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    # Simulate 'cost' attribute being absent or None on usage, but 'total_cost' present
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_cost=0.0006)
+    mock_completion.usage.cost = None # Explicitly set cost to None
+    # Ensure response.cost is not set or is None
+    if hasattr(mock_completion, 'cost'):
+        delattr(mock_completion, 'cost')
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0006
+
+def test_openrouter_llm_parses_cost_from_response_cost(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    # Simulate no cost attributes on usage
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20)
+    mock_completion.usage.cost = None
+    mock_completion.usage.total_cost = None
+    mock_completion.cost = 0.0007 # Cost directly on the response object
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0007
+
+def test_openrouter_llm_cost_defaults_to_zero_if_not_present(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20)
+    # Ensure no cost attributes are present
+    if hasattr(mock_completion.usage, 'cost'):
+        delattr(mock_completion.usage, 'cost')
+    if hasattr(mock_completion.usage, 'total_cost'):
+        delattr(mock_completion.usage, 'total_cost')
+    if hasattr(mock_completion, 'cost'):
+        delattr(mock_completion, 'cost')
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0
+
+def test_openrouter_llm_cost_defaults_to_zero_if_usage_cost_is_none(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20, cost=None, total_cost=None)
+    if hasattr(mock_completion, 'cost'):
+        delattr(mock_completion, 'cost')
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0
+
+def test_openrouter_llm_cost_defaults_to_zero_if_usage_total_cost_is_none(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_cost=None)
+    mock_completion.usage.cost = None # Ensure usage.cost is also None or not present
+    if hasattr(mock_completion, 'cost'):
+        delattr(mock_completion, 'cost')
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0
+
+def test_openrouter_llm_cost_defaults_to_zero_if_response_cost_is_none(mock_openai_client):
+    llm = OpenRouterLLM(model="test/model", api_key="test_key")
+    mock_completion = MagicMock()
+    mock_completion.choices = [MagicMock(message=MagicMock(content="Test response"))]
+    mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=20)
+    mock_completion.usage.cost = None
+    mock_completion.usage.total_cost = None
+    mock_completion.cost = None # Response cost is None
+
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    response = llm.send_message([{"role": "user", "content": "Hello"}])
+    assert response.usage.cost == 0.0
 
 # To run this file directly for testing:
 # pytest tests/test_llm.py
