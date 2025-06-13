@@ -24,6 +24,7 @@ from prompt_toolkit.styles import Style
 
 from .agent import DeveloperAgent
 from .llm import MockLLM, OpenRouterLLM
+from .slash_commands import SlashCommandRegistry, ModelCommand, SetTimeoutCommand, PlanModeCommand, ActModeCommand, AgentCliContext
 
 # Global list to store display messages for FormattedTextControl
 # Global list to store display messages for FormattedTextControl
@@ -88,7 +89,7 @@ def setup_logging(
 
 def run_agent_and_update_display(
     task: str,
-    args: argparse.Namespace,
+    current_cli_args: argparse.Namespace,
     app_ref: Application,
     dc_ref: FormattedTextControl,
     stop_event: threading.Event
@@ -119,20 +120,9 @@ def run_agent_and_update_display(
         # A true cooperative stop would require run_agent to take stop_event.
         result = run_agent(
             task=task,
-            responses_file=args.responses_file,
-            auto_approve=args.auto_approve,
-            allow_read_files=args.allow_read_files,
-            allow_edit_files=args.allow_edit_files,
-            allow_execute_safe_commands=args.allow_execute_safe_commands,
-            allow_execute_all_commands=args.allow_execute_all_commands,
-            allow_use_browser=args.allow_use_browser,
-            allow_use_mcp=args.allow_use_mcp,
-            disable_git_auto_commits=args.disable_git_auto_commits,
-            cwd=args.cwd,
-            model=args.model,
-            llm_timeout=args.llm_timeout,
-            matching_strictness=args.matching_strictness,
-            cli_args=args
+            # responses_file=args.responses_file, # This will now come from current_cli_args
+            # ... other direct args from original args if they are not meant to be dynamic
+            cli_args=current_cli_args # Pass the potentially modified cli_args
         )
 
         sys.stdout = original_stdout # Restore stdout
@@ -164,64 +154,48 @@ def run_agent_and_update_display(
         _update_ui(final_message)
 
 
-def run_agent( # Keep the original run_agent signature and logic
+def run_agent(
     task: str,
-    responses_file: str | None = None, # Keep this arg
+    # responses_file: str | None = None, # This will be handled by cli_args.model == "mock"
     *,
-    auto_approve: bool = False,
-    allow_read_files: bool = False,
-    allow_edit_files: bool = False,
-    allow_execute_safe_commands: bool = False,
-    allow_execute_all_commands: bool = False,
-    allow_use_browser: bool = False,
-    allow_use_mcp: bool = False,
-    disable_git_auto_commits: bool = False,
-    cwd: str = ".",
-    model: str = "mock",
+    # auto_approve: bool = False, # From cli_args
+    # ... other direct approval flags removed as they are in cli_args
+    # cwd: str = ".", # No longer a direct param, will come from cli_args
+    # model: str = "mock", # Will come from cli_args
     return_history: bool = False,
-    llm_timeout: Optional[float] = None,
-    matching_strictness: int = 100, # Kept as it's not purely an approval flag
-    cli_args: Optional[argparse.Namespace] = None # Added cli_args
-    # allow_read_files: bool = False, # Removed
-    # allow_edit_files: bool = False, # Removed
-    # allow_execute_safe_commands: bool = False, # Removed
-    # allow_execute_all_commands: bool = False, # Removed
-    # allow_use_browser: bool = False, # Removed
-    # allow_use_mcp: bool = False, # Removed
+    # llm_timeout: Optional[float] = None, # Will come from cli_args
+    # matching_strictness: int = 100, # From cli_args
+    cli_args: Optional[argparse.Namespace] = None
 ) -> str | tuple[str, list[dict[str, str]]]:
-    if cli_args is None:  # Provide default if not passed, though main() should always pass it.
-        cli_args = argparse.Namespace(
-            auto_approve=auto_approve,
-            allow_read_files=allow_read_files,
-            allow_edit_files=allow_edit_files,
-            allow_execute_safe_commands=allow_execute_safe_commands,
-            allow_execute_all_commands=allow_execute_all_commands,
-            allow_use_browser=allow_use_browser,
-            allow_use_mcp=allow_use_mcp,
-        )
-    else:
-        cli_args.auto_approve = auto_approve
-        cli_args.allow_read_files = allow_read_files
-        cli_args.allow_edit_files = allow_edit_files
-        cli_args.allow_execute_safe_commands = allow_execute_safe_commands
-        cli_args.allow_execute_all_commands = allow_execute_all_commands
-        cli_args.allow_use_browser = allow_use_browser
-        cli_args.allow_use_mcp = allow_use_mcp
-        cli_args.disable_git_auto_commits = disable_git_auto_commits
 
-    if model == "mock":
-        if not responses_file:
-            raise ValueError("responses_file is required for mock model")
-        # Ensure responses_file exists if model is mock (FileNotFoundError will be caught by main)
-        llm = MockLLM.from_file(responses_file)
+    if cli_args is None:
+        # This case should ideally not happen if called from CLI with context
+        # Create a default if it does, for programmatic calls.
+        # This needs to be comprehensive or raise an error.
+        # For now, let's assume cli_args is always provided from main()
+        raise ValueError("cli_args must be provided to run_agent")
+
+    # Extract necessary settings from cli_args
+    current_model_name = cli_args.model
+    current_llm_timeout = cli_args.llm_timeout
+    current_cwd = cli_args.cwd # Get cwd from cli_args
+    # responses_file is also in cli_args.responses_file
+
+    # ... (rest of the function)
+
+    if current_model_name == "mock":
+        if not cli_args.responses_file: # Use cli_args here
+            raise ValueError("responses_file is required for mock model (via cli_args)")
+        llm = MockLLM.from_file(cli_args.responses_file)
     else:
         api_key = os.environ.get("OPENROUTER_API_KEY")
         if not api_key:
             # Raising RuntimeError here, which will be caught by the generic Exception in main.
             # Could be a custom error or handled more specifically if desired.
             raise RuntimeError("OPENROUTER_API_KEY environment variable not set, required for non-mock models.")
-        llm = OpenRouterLLM(model=model, api_key=api_key, timeout=llm_timeout)
+        llm = OpenRouterLLM(model=current_model_name, api_key=api_key, timeout=current_llm_timeout)
 
+    # ...
     # The LLMWrapper protocol expects send_message to take temperature and max_tokens.
     # The DeveloperAgent's __init__ expects a send_message callable that matches
     # `Callable[[List[Dict[str, str]]], str]`.
@@ -233,11 +207,10 @@ def run_agent( # Keep the original run_agent signature and logic
     # The current DeveloperAgent.send_message(self.history) matches the basic signature.
     agent = DeveloperAgent(
         llm.send_message,
-        cwd=cwd,
+        cwd=current_cwd, # Use cwd from cli_args
         cli_args=cli_args, # Pass the whole namespace
-        matching_strictness=matching_strictness
-        ,disable_git_auto_commits=disable_git_auto_commits
-        # Removed individual approval flags, they are now in cli_args
+        # matching_strictness and disable_git_auto_commits are already correctly sourced from cli_args if present
+        # in the original code, so no change needed there.
     )
     result = agent.run_task(task)
     if return_history:
@@ -314,6 +287,30 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
         help="Disable automatic git commits after file modifications.",
     )
     args = parser.parse_args(argv)
+
+    # --- Slash Command Setup ---
+    slash_command_registry = SlashCommandRegistry()
+    # The agent_context will be more fully fleshed out as needed.
+    # For now, it needs cli_args and a way to update the UI.
+    # We'll define _ui_update_func later, so use a placeholder for now or None.
+    # This will be properly initialized after app and display_control exist.
+    agent_cli_context = None # Will be initialized later
+
+    # Register commands
+    try:
+        slash_command_registry.register(ModelCommand())
+        slash_command_registry.register(SetTimeoutCommand())
+        slash_command_registry.register(PlanModeCommand())
+        slash_command_registry.register(ActModeCommand())
+        # Add a /help command
+        # (Help command not yet defined, this is a placeholder for where it would go)
+        # from .slash_commands import HelpCommand
+        # slash_command_registry.register(HelpCommand(slash_command_registry))
+
+    except ValueError as e:
+        # This is early in startup, so print to stderr and exit.
+        print(f"Error registering slash commands: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if not (0 <= args.matching_strictness <= 100):
         # This will call sys.exit, so the app won't start.
@@ -392,43 +389,84 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
     )
     logging.info("CLI Agent UI Initialized. Model: %s", args.model) # This will go to file and UI
 
+    # Properly initialize agent_cli_context now that app and display_control are available
+    # and _ui_update_func can be created.
+    # We need to pass the _ui_update_func to the context as well.
+    # The _ui_update_func here is the one defined inside accept_input_handler,
+    # which might be problematic if commands need to update UI outside of handler response.
+    # Let's make a more general one.
+
+    # Create a general UI update function for the context
+    # This is important for commands that might want to give feedback directly.
+    context_ui_update_func = partial(update_display_text_safely, app_ref=app, dc_ref=display_control)
+    agent_cli_context = AgentCliContext(
+        cli_args_namespace=args,
+        display_update_func=context_ui_update_func
+        # agent_instance can be added later if needed by commands
+    )
+
     # Input handler for the TextArea
     def accept_input_handler(buff: Buffer):
-        command_or_task = input_field.text.strip()
+        command_or_task_full = input_field.text.strip()
         input_field.text = ""  # Clear input field
 
-        _ui_update_func = partial(update_display_text_safely, app_ref=app, dc_ref=display_control)
+        # Use the context_ui_update_func for general UI updates from this handler
+        _ui_update_func = agent_cli_context.display_update_func
 
-        if command_or_task == "/exit":
-            _ui_update_func("User command: /exit. Application will close.")
-            stop_agent_event.set() # Signal any running agent
-            app.exit(result=0)
-            return True
+        if not command_or_task_full:
+            _ui_update_func("No task or command entered.")
+            return True # Keep the buffer (though text is cleared)
 
-        if command_or_task == "/stop":
-            if not stop_agent_event.is_set():
-                _ui_update_func("User command: /stop. Signaling current agent task to stop.")
-                stop_agent_event.set()
-            else:
-                _ui_update_func("Stop signal already active.")
-            return True
+        if command_or_task_full.startswith("/"):
+            parts = command_or_task_full[1:].split()
+            command_name = parts[0]
+            command_args = parts[1:]
 
-        if command_or_task: # It's a task
-            _ui_update_func(f"New task received: {command_or_task}")
+            if command_name == "exit": # Keep direct handling for /exit
+                _ui_update_func("User command: /exit. Application will close.")
+                stop_agent_event.set() # Signal any running agent
+                app.exit(result=0)
+                return True
+
+            if command_name == "stop": # Keep direct handling for /stop
+                if not stop_agent_event.is_set():
+                    _ui_update_func("User command: /stop. Signaling current agent task to stop.")
+                    stop_agent_event.set()
+                else:
+                    _ui_update_func("Stop signal already active.")
+                return True
+
+            # Process other slash commands through the registry
+            # Pass the agent_cli_context to the command
+            result_message = slash_command_registry.execute_command(command_name, command_args, agent_cli_context)
+            if result_message:
+                _ui_update_func(f"{result_message}")
+
+            # After executing a slash command, we typically don't start an agent task.
+            # Refresh the prompt or wait for next input.
+            # If a command needs to trigger an agent run, it should do so explicitly
+            # or set up state that the next (empty) input submission triggers.
+
+        elif command_or_task_full: # It's a task for the agent
+            _ui_update_func(f"New task received: {command_or_task_full}")
             stop_agent_event.clear() # Clear event for the new task
+
+            # Ensure agent_cli_context.agent is updated if a new agent is created,
+            # or ensure the agent uses the updated cli_args from agent_cli_context.
+            # For now, run_agent_and_update_display uses the global 'args'.
+            # This needs to be harmonized: run_agent should probably get its config
+            # from agent_cli_context.cli_args.
 
             app.loop.call_soon_threadsafe(
                 app.call_from_executor, # Runs the function in a separate thread
                 run_agent_and_update_display, # The function to run
-                command_or_task,    # task
-                args,               # cli_args
+                command_or_task_full,    # task
+                agent_cli_context.cli_args, # Pass potentially modified args
                 app,                # app_ref for UI updates from thread
                 display_control,    # dc_ref for UI updates from thread
                 stop_agent_event    # stop_event
             )
-        else: # Empty input
-            _ui_update_func("No task or command entered.")
-        return True # Keep the buffer (though text is cleared)
+        return True # Keep the buffer (text was cleared)
 
     input_field.accept_handler = accept_input_handler
 
