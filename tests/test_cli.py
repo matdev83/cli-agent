@@ -611,3 +611,84 @@ def test_cli_llm_stats_display_formatting(
         f"Session Cost: ${test_session_cost3:.6f}"
     )
     mock_update_display_text_safely.assert_called_once_with(expected_stats_string3, ANY, ANY)
+
+
+@patch('src.cli.update_display_text_safely')
+@patch('src.cli.FormattedTextControl') # Mocked because main() uses it for logging setup
+@patch('src.cli.TextArea') # Mocked for main() UI setup
+@patch('src.cli.Application') # Mocked for main() UI setup
+def test_cli_mock_llm_cost_display_and_accumulation(
+    mock_app_class: MagicMock, # Order matches @patch decorators
+    mock_text_area_class: MagicMock,
+    mock_ftc_class: MagicMock,
+    mock_update_display_text_safely: MagicMock,
+    tmp_path: pytest.TempPathFactory
+):
+    """
+    Tests that MockLLM's cost is displayed correctly and session cost accumulates.
+    This test lets the DeveloperAgent run and make calls to MockLLM.
+    """
+    common_test_setup_for_main_invocation(mock_app_class, mock_text_area_class, mock_ftc_class)
+
+    task_to_simulate = "multi_step_task"
+    # MockLLM will make two calls. Each has a cost of 0.00123.
+    responses = [
+        "<write_to_file><path>step1.txt</path><content>First step</content></write_to_file>",
+        "<write_to_file><path>step2.txt</path><content>Second step</content></write_to_file>",
+        "<attempt_completion><result>Task done</result></attempt_completion>" # Agent might make a final call for completion
+    ]
+    resp_file = tmp_path / "responses.json"
+    resp_file.write_text(json.dumps(responses), encoding="utf-8")
+    cwd = tmp_path / "work_cost_test"
+    cwd.mkdir()
+
+    flags_argv = [
+        "--responses-file", str(resp_file),
+        "--model", "mock",
+        "--auto-approve", # To avoid interactive prompts
+        "--cwd", str(cwd),
+    ]
+
+    # Call main, which sets up UI and handlers. app.run() is mocked.
+    # Agent execution happens synchronously due to common_test_setup_for_main_invocation.
+    main(flags_argv)
+
+    # Simulate task input and submission
+    global_captured_input_field_text_setter(task_to_simulate)
+    handler_to_call = mock_text_area_class.return_value.accept_handler
+    handler_to_call(None) # This will trigger run_agent_and_update_display -> run_agent
+
+    # --- Assertions ---
+    # We need to find the calls to mock_update_display_text_safely that contain "STATS:"
+    stats_lines_calls = []
+    for call_args in mock_update_display_text_safely.call_args_list:
+        args, _ = call_args
+        if args and isinstance(args[0], str) and "STATS:" in args[0]:
+            stats_lines_calls.append(args[0])
+
+    assert len(stats_lines_calls) >= 2, f"Expected at least 2 STATS lines, found {len(stats_lines_calls)}. Lines: {stats_lines_calls}"
+
+    # First LLM call stats (from the first <write_to_file>)
+    # MockLLM returns usage for each response. DeveloperAgent calls the callback.
+    # The model name for MockLLM is just "mock" as per current run_agent logic
+    expected_cost_str = "$0.001230"
+
+    # Check first stats line
+    # STATS: Model: mock, Prompt: 10, Completion: 20, Cost: $0.001230, Session Cost: $0.001230
+    assert f"Model: mock" in stats_lines_calls[0]
+    assert f"Cost: {expected_cost_str}" in stats_lines_calls[0]
+    assert f"Session Cost: $0.001230" in stats_lines_calls[0]
+
+    # Check second stats line (from the second <write_to_file>)
+    # STATS: Model: mock, Prompt: 10, Completion: 20, Cost: $0.001230, Session Cost: $0.002460
+    assert f"Model: mock" in stats_lines_calls[1]
+    assert f"Cost: {expected_cost_str}" in stats_lines_calls[1]
+    assert f"Session Cost: $0.002460" in stats_lines_calls[1]
+
+    # Optional: Check if the task completed (agent output)
+    agent_completion_line_found = any("Agent Result:" in call_args[0] and "Task done" in call_args[0] for call_args in mock_update_display_text_safely.call_args_list)
+    assert agent_completion_line_found, "Agent completion message not found in display updates."
+
+    # Check that files were written (verifies agent ran as expected)
+    assert (cwd / "step1.txt").read_text(encoding="utf-8") == "First step"
+    assert (cwd / "step2.txt").read_text(encoding="utf-8") == "Second step"
