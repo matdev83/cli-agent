@@ -19,9 +19,9 @@ def test_execute_command_tool_properties():
     assert tool.name == "execute_command"
     assert isinstance(tool.description, str)
     assert tool.parameters_schema == {
-        "command": "The shell command to execute.",
-        "timeout": "Optional timeout in seconds for the command execution. Defaults to None (no timeout).",
-        "requires_approval": "If true (string 'true' or boolean True), command execution may require approval based on agent's settings. Defaults to False if not provided."
+        "command": "The CLI command to execute.",
+        "requires_approval": "A boolean ('true' or 'false') indicating if explicit user approval is needed.",
+        "timeout_seconds": "Optional timeout in seconds for the command execution."
     }
 
 @patch('subprocess.run')
@@ -73,7 +73,7 @@ def test_execute_command_with_specific_timeout(mock_run, tmp_path):
     mock_process.stderr = ""
     mock_run.return_value = mock_process
 
-    params = {"command": "echo test", "timeout": 10}
+    params = {"command": "echo test", "timeout_seconds": 10}
     result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
@@ -89,7 +89,7 @@ def test_execute_command_timeout_expired(mock_run, tmp_path):
 
     mock_run.side_effect = subprocess.TimeoutExpired(cmd="sleep 5", timeout=1)
 
-    params = {"command": "sleep 5", "timeout": 1}
+    params = {"command": "sleep 5", "timeout_seconds": 1}
     result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
@@ -212,18 +212,18 @@ def test_execute_command_missing_command_param(tmp_path):
 def test_execute_command_invalid_timeout_type(tmp_path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
-    params = {"command": "echo test", "timeout": "not-an-int"}
+    params = {"command": "echo test", "timeout_seconds": "not-an-int"}
     result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
-    assert result == {"success": False, "output": "Error: Invalid value for 'timeout', must be a number: 'not-an-int'."}
+    assert result == {"success": False, "output": "Error: Invalid value for 'timeout_seconds', must be a number: 'not-an-int'."}
 
 def test_execute_command_negative_timeout_value(tmp_path):
     mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
-    params = {"command": "echo test", "timeout": -5}
+    params = {"command": "echo test", "timeout_seconds": -5}
     result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
-    assert result == {"success": False, "output": "Error: 'timeout' must be a positive number."}
+    assert result == {"success": False, "output": "Error: 'timeout_seconds' must be a positive number."}
 
 @patch('subprocess.run')
 def test_execute_command_filenotfound_error(mock_run, tmp_path):

@@ -19,7 +19,7 @@ class NewTaskTool(Tool):
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
-            "context": "Detailed summary of the conversation and work so far to preload the new task."
+            "context": "The context to preload the new task with."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -45,7 +45,7 @@ class AskFollowupQuestionTool(Tool):
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "question": "The question to ask the user.",
-            "options": "Optional JSON string array of 2-5 options for the user."
+            "options": "Optional array of 2-5 options for the user (JSON string or list)."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -71,8 +71,8 @@ class AttemptCompletionTool(Tool):
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
-            "result": "The result of your work to present to the user.",
-            "command": "The command that was executed to achieve this result, if applicable."
+            "result": "The result of the task.",
+            "command": "Optional CLI command to demonstrate the result."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -98,7 +98,7 @@ class PlanModeRespondTool(Tool):
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
-            "response": "The response to send to the user for planning purposes."
+            "response": "The response to provide to the user."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:

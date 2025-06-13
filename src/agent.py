@@ -281,9 +281,11 @@ class DeveloperAgent:
             print(f"Tool '{tool_name}' is not fully implemented: {e}")
             return f"Note: Tool '{tool_name}' is recognized but not fully implemented. {str(e)}"
         except ValueError as e:
+            self.consecutive_tool_errors += 1
             print(f"ValueError during execution of tool '{tool_name}': {e}\n{traceback.format_exc()}")
             return f"Error: Tool '{tool_name}' encountered a value error. Reason: {str(e)}"
         except Exception as e:
+            self.consecutive_tool_errors += 1
             print(f"Unexpected error during execution of tool '{tool_name}': {e}\n{traceback.format_exc()}")
             return f"Error: Tool '{tool_name}' failed to execute. Reason: {str(e)}"
 

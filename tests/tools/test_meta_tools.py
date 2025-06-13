@@ -17,7 +17,7 @@ def test_new_task_tool_properties():
     assert tool.name == "new_task"
     assert isinstance(tool.description, str)
     assert tool.parameters_schema == {
-        "context": "Detailed summary of the conversation and work so far to preload the new task."
+        "context": "The context to preload the new task with."
     }
 
 def test_new_task_tool_stub():
@@ -166,7 +166,7 @@ def test_ask_followup_question_tool_properties(): # Renamed from instantiation
     assert "Ask the user a question to gather additional information" in tool.description
     assert tool.parameters_schema == {
         "question": "The question to ask the user.",
-        "options": "Optional JSON string array of 2-5 options for the user."
+        "options": "Optional array of 2-5 options for the user (JSON string or list)."
     }
 
 def test_ask_followup_question_tool_execute_with_options():
@@ -203,8 +203,8 @@ def test_attempt_completion_tool_properties(): # Renamed from instantiation
     assert tool.name == "attempt_completion"
     assert "present the result of your work to the user" in tool.description
     assert tool.parameters_schema == {
-        "result": "The result of your work to present to the user.",
-        "command": "The command that was executed to achieve this result, if applicable."
+        "result": "The result of the task.",
+        "command": "Optional CLI command to demonstrate the result."
     }
 
 def test_attempt_completion_tool_execute_with_command():
@@ -241,7 +241,7 @@ def test_plan_mode_respond_tool_properties(): # Renamed from instantiation
     assert tool.name == "plan_mode_respond"
     assert "Respond to the user's inquiry in an effort to plan a solution" in tool.description
     assert tool.parameters_schema == {
-        "response": "The response to send to the user for planning purposes."
+        "response": "The response to provide to the user."
     }
 
 def test_plan_mode_respond_tool_execute():

@@ -85,7 +85,7 @@ class ListCodeDefinitionNamesTool(Tool):
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
-            "path": "The relative or absolute path to the directory to scan for source files."
+            "path": "The path of the directory to list top level source code definitions for."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:

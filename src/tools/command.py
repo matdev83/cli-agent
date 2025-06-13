@@ -21,15 +21,15 @@ class ExecuteCommandTool(Tool):
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
-            "command": "The shell command to execute.",
-            "timeout": "Optional timeout in seconds for the command execution. Defaults to None (no timeout).",
-            "requires_approval": "If true (string 'true' or boolean True), command execution may require approval based on agent's settings. Defaults to False if not provided."
+            "command": "The CLI command to execute.",
+            "requires_approval": "A boolean ('true' or 'false') indicating if explicit user approval is needed.",
+            "timeout_seconds": "Optional timeout in seconds for the command execution."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
-        """Executes the given shell command. Expects 'command' and optionally 'timeout' and 'requires_approval' in params."""
+        """Executes the given shell command. Expects 'command' and optionally 'timeout_seconds' and 'requires_approval' in params."""
         command = params.get("command")
-        timeout_val = params.get("timeout") # Renamed variable, can be float/int
+        timeout_val = params.get("timeout_seconds") # Renamed variable, can be float/int
         requires_approval_val = params.get("requires_approval")
 
         if not command:
@@ -40,9 +40,9 @@ class ExecuteCommandTool(Tool):
             try:
                 timeout = float(timeout_val) # Convert to float
                 if timeout <= 0: # Still check, though 0 might be valid for subprocess, we'll require positive
-                    return json.dumps({"success": False, "output": "Error: 'timeout' must be a positive number."})
+                    return json.dumps({"success": False, "output": "Error: 'timeout_seconds' must be a positive number."})
             except ValueError:
-                return json.dumps({"success": False, "output": f"Error: Invalid value for 'timeout', must be a number: '{timeout_val}'."})
+                return json.dumps({"success": False, "output": f"Error: Invalid value for 'timeout_seconds', must be a number: '{timeout_val}'."})
 
         try:
             # Convert requires_approval_val using the utility function
@@ -107,7 +107,7 @@ def execute_command(command: str, requires_approval: bool = False, timeout: Opti
     tool = ExecuteCommandTool()
     params = {"command": command, "requires_approval": requires_approval}
     if timeout is not None:
-        params["timeout"] = timeout # Pass timeout as float/int directly
+        params["timeout_seconds"] = timeout # Pass timeout as float/int directly
 
     result_str = tool.execute(params, agent_tools_instance=agent_tools_instance)
     data = json.loads(result_str)

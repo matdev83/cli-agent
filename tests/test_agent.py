@@ -798,3 +798,282 @@ class TestAgentConfirmationLogic(unittest.TestCase):
         # Yes, it will prompt.
         mock_request_confirmation.assert_called_once()
         mock_cmd_execute.assert_called_once()
+
+
+# --- Unit Tests for DeveloperAgent.__init__() ---
+
+def test_agent_initialization_cwd(tmp_path: Path):
+    """Test that agent.cwd is correctly set to the absolute path."""
+    relative_cwd = "test_dir"
+    test_dir = tmp_path / relative_cwd
+    test_dir.mkdir()
+
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(test_dir))
+    assert Path(agent.cwd).is_absolute()
+    assert agent.cwd == str(test_dir.resolve())
+
+    agent_default_cwd = DeveloperAgent(send_message=MagicMock()) # Uses default cwd="."
+    assert Path(agent_default_cwd.cwd).is_absolute()
+    assert agent_default_cwd.cwd == str(Path(".").resolve())
+
+
+def test_agent_initialization_tools_loaded():
+    """Check that agent.tools_map is populated with expected tool instances."""
+    agent = DeveloperAgent(send_message=MagicMock())
+    assert len(agent.tools_map) > 0
+    # Check for presence of a few key tools
+    from src.tools.file import ReadFileTool # Import specific tools for isinstance check
+    from src.tools.command import ExecuteCommandTool
+    assert "read_file" in agent.tools_map
+    assert isinstance(agent.tools_map["read_file"], ReadFileTool)
+    assert "execute_command" in agent.tools_map
+    assert isinstance(agent.tools_map["execute_command"], ExecuteCommandTool)
+    assert "list_code_definition_names" in agent.tools_map # Check a renamed one
+
+@patch('src.agent.get_system_prompt')
+def test_agent_initialization_system_prompt(mock_get_system_prompt):
+    """Test system prompt is fetched and added to memory during initialization."""
+    mock_system_prompt_content = "Mocked system prompt."
+    mock_get_system_prompt.return_value = mock_system_prompt_content
+
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=".", supports_browser_use=True, mcp_servers_documentation="Test MCP Docs")
+
+    assert mock_get_system_prompt.called, "get_system_prompt was not called"
+    # Verify call args more robustly if necessary, e.g. by checking individual args or key parts
+    call_args, call_kwargs = mock_get_system_prompt.call_args
+    assert call_kwargs['cwd'] == agent.cwd
+    assert call_kwargs['supports_browser_use'] is True
+    assert call_kwargs['mcp_servers_documentation'] == "Test MCP Docs"
+    # Comparing tools can be tricky due to object instances. Check count or key names if needed.
+    assert len(call_kwargs['tools']) == len(agent.tools_map.values())
+
+    assert len(agent.history) > 0
+    assert agent.history[0]["role"] == "system"
+    assert agent.history[0]["content"] == mock_system_prompt_content
+
+
+# --- Unit Tests for DeveloperAgent._run_tool() ---
+
+class MockCLIArgs:
+    def __init__(self, **kwargs):
+        self.auto_approve = kwargs.get('auto_approve', False)
+        self.allow_read_files = kwargs.get('allow_read_files', False)
+        self.allow_edit_files = kwargs.get('allow_edit_files', False)
+        self.allow_execute_safe_commands = kwargs.get('allow_execute_safe_commands', False)
+        self.allow_execute_all_commands = kwargs.get('allow_execute_all_commands', False)
+        self.allow_use_browser = kwargs.get('allow_use_browser', False)
+        self.allow_use_mcp = kwargs.get('allow_use_mcp', False)
+
+class TestRunToolBehaviors(unittest.TestCase):
+    def setUp(self):
+        self.mock_send_message = MagicMock()
+        # Use a temporary directory for CWD in these tests if needed, though many _run_tool tests might not hit filesystem.
+        # For simplicity, using current directory, assuming tests don't do harmful FS operations without mocks.
+        self.cwd = Path(".").resolve()
+        # Default CLI args: no auto-approval, no specific tool type allowances
+        self.cli_args_default = MockCLIArgs()
+        self.cli_args_auto_approve_all = MockCLIArgs(auto_approve=True, allow_read_files=True, allow_edit_files=True, allow_execute_all_commands=True, allow_use_browser=True, allow_use_mcp=True)
+
+
+    def _create_agent(self, cli_args=None, mode="act"):
+        agent_cli_args = cli_args if cli_args is not None else self.cli_args_default
+        return DeveloperAgent(
+            send_message=self.mock_send_message,
+            cwd=str(self.cwd),
+            cli_args=agent_cli_args,
+            mode=mode
+        )
+
+    def test_run_tool_attempt_completion(self):
+        agent = self._create_agent()
+        tool_use = ToolUse(name="attempt_completion", params={"result": "Task is done."})
+        result = agent._run_tool(tool_use)
+        self.assertEqual(result, "Task is done.")
+
+    def test_run_tool_plan_mode_respond_in_plan_mode(self):
+        agent = self._create_agent(mode="plan")
+        original_tool = agent.tools_map["plan_mode_respond"]
+
+        with patch.object(original_tool, 'execute', return_value="Plan response executed.") as mock_execute:
+            tool_use = ToolUse(name="plan_mode_respond", params={"response": "Here is the plan."})
+            result = agent._run_tool(tool_use)
+
+            self.assertEqual(result, "Plan response executed.")
+            mock_execute.assert_called_once_with({"response": "Here is the plan."}, agent_tools_instance=agent)
+            self.assertEqual(agent.consecutive_tool_errors, 0)
+
+    def test_run_tool_plan_mode_respond_in_act_mode(self):
+        agent = self._create_agent(mode="act") # Agent is in 'act' mode
+        tool_use = ToolUse(name="plan_mode_respond", params={"response": "Trying to plan in act mode."})
+
+        result = agent._run_tool(tool_use)
+
+        self.assertEqual(result, "Error: plan_mode_respond can only be used in PLAN MODE.")
+        self.assertEqual(agent.consecutive_tool_errors, 1)
+
+    def test_run_tool_unknown_tool_direct(self):
+        agent = self._create_agent()
+        tool_use = ToolUse(name="non_existent_tool", params={"arg": "val"})
+
+        result = agent._run_tool(tool_use)
+
+        self.assertEqual(result, "Error: Unknown tool 'non_existent_tool'. Please choose from the available tools.")
+        self.assertEqual(agent.consecutive_tool_errors, 1)
+
+    def test_run_tool_catches_value_error(self):
+        agent = self._create_agent(cli_args=self.cli_args_auto_approve_all) # Bypass confirmation
+        mock_specific_tool = MockTool(name="value_error_tool")
+        mock_specific_tool.execute_fn.side_effect = ValueError("Specific value error from tool")
+        agent.tools_map["value_error_tool"] = mock_specific_tool
+
+        tool_use = ToolUse(name="value_error_tool", params={"param1": "test"})
+        result = agent._run_tool(tool_use)
+
+        self.assertEqual(result, "Error: Tool 'value_error_tool' encountered a value error. Reason: Specific value error from tool")
+        self.assertEqual(agent.consecutive_tool_errors, 1) # Should increment on tool execution error
+
+    def test_run_tool_catches_generic_exception(self):
+        agent = self._create_agent(cli_args=self.cli_args_auto_approve_all) # Bypass confirmation
+        mock_specific_tool = MockTool(name="generic_exception_tool")
+        mock_specific_tool.execute_fn.side_effect = Exception("Generic problem in tool")
+        agent.tools_map["generic_exception_tool"] = mock_specific_tool
+
+        tool_use = ToolUse(name="generic_exception_tool", params={"param1": "test"})
+        result = agent._run_tool(tool_use)
+
+        self.assertEqual(result, "Error: Tool 'generic_exception_tool' failed to execute. Reason: Generic problem in tool")
+        self.assertEqual(agent.consecutive_tool_errors, 1)
+
+    def test_run_tool_read_file_adds_to_memory(self):
+        agent = self._create_agent(cli_args=self.cli_args_auto_approve_all) # Bypass confirmation for read_file
+
+        file_path = "test_file_for_memory.txt"
+        file_content = "Content to be remembered."
+        abs_file_path_for_memory = str((self.cwd / file_path).resolve())
+
+        # Mock ReadFileTool's execute method
+        read_file_tool_instance = agent.tools_map["read_file"]
+
+        with patch.object(read_file_tool_instance, 'execute', return_value=file_content) as mock_execute_read_file, \
+             patch.object(agent.memory, 'add_file_context') as mock_add_file_context:
+
+            tool_use = ToolUse(name="read_file", params={"path": file_path})
+            result = agent._run_tool(tool_use)
+
+            self.assertEqual(result, file_content)
+            mock_execute_read_file.assert_called_once_with({"path": file_path}, agent_tools_instance=agent)
+            mock_add_file_context.assert_called_once_with(abs_file_path_for_memory, file_content)
+            self.assertEqual(agent.consecutive_tool_errors, 0)
+
+    def test_run_tool_consecutive_errors_reset_on_specific_success(self):
+        agent = self._create_agent(cli_args=self.cli_args_auto_approve_all) # Bypass confirmation
+
+        # Test for replace_in_file
+        agent.consecutive_tool_errors = 1
+        replace_tool_instance = agent.tools_map["replace_in_file"]
+        file_path_replace = "file_to_replace.txt"
+        abs_path_replace = str((self.cwd / file_path_replace).resolve())
+        success_replace_msg = f"File {abs_path_replace} modified successfully with 1 block(s)."
+
+        with patch.object(replace_tool_instance, 'execute', return_value=success_replace_msg) as mock_replace:
+            tool_use_replace = ToolUse(name="replace_in_file", params={"path": file_path_replace, "diff": "some diff"})
+            agent._run_tool(tool_use_replace)
+            self.assertEqual(agent.consecutive_tool_errors, 0)
+            mock_replace.assert_called_once()
+
+        # Test for write_to_file
+        agent.consecutive_tool_errors = 1 # Reset for next test case
+        write_tool_instance = agent.tools_map["write_to_file"]
+        file_path_write = "file_to_write.txt"
+        abs_path_write = str((self.cwd / file_path_write).resolve())
+        success_write_msg = f"File written successfully to {abs_path_write}"
+
+        with patch.object(write_tool_instance, 'execute', return_value=success_write_msg) as mock_write:
+            tool_use_write = ToolUse(name="write_to_file", params={"path": file_path_write, "content": "some content"})
+            agent._run_tool(tool_use_write)
+            self.assertEqual(agent.consecutive_tool_errors, 0)
+            mock_write.assert_called_once()
+
+
+def test_run_task_known_tool_execution_returns_error(tmp_path: Path):
+    """
+    Integration test for run_task:
+    Known tool's execute() method returns an error string.
+    Agent should process this, increment error counter, and continue.
+    """
+    file_to_read = "test_error_file.txt"
+    llm_tool_call = f"<tool_use><tool_name>read_file</tool_name><params><path>{file_to_read}</path></params></tool_use>"
+    llm_second_response = "<text_content>LLM acknowledged the tool error and is continuing.</text_content>"
+
+    # Make the second response also an error to check counter increment
+    llm_second_response_error = "<tool_use><tool_name>another_unknown_tool</tool_name><params/></tool_use>"
+    # LLM's final response after the second error (which will be the output of run_task if MockLLM is exhausted)
+    # This response is not strictly processed by the agent loop if MockLLM only has 2 responses and run_task ends.
+    # The final_result will be the result of the last processed LLM message.
+    # Let's ensure MockLLM has a third response to make the test cleaner about what final_result is.
+    llm_third_response_text = "<text_content>LLM giving up after multiple errors.</text_content>"
+
+    mock_llm_responses = [llm_tool_call, llm_second_response_error, llm_third_response_text]
+
+    # Use cli_args that would normally allow read_file to proceed without interactive confirmation
+    cli_args_allow_reads = argparse.Namespace(
+        auto_approve=False, # General auto_approve
+        allow_read_files=True, # Specific flag for read_file
+        allow_edit_files=False,
+        allow_execute_safe_commands=False,
+        allow_execute_all_commands=False,
+        allow_use_browser=False,
+        allow_use_mcp=False
+    )
+    agent = DeveloperAgent(send_message=MockLLM(mock_llm_responses).send_message, cwd=str(tmp_path), cli_args=cli_args_allow_reads)
+
+    # Mock the execute method of the specific ReadFileTool instance
+    read_file_tool_instance = agent.tools_map["read_file"]
+    tool_returned_error_message = "Error: File not found for testing."
+
+    with patch.object(read_file_tool_instance, 'execute', return_value=tool_returned_error_message) as mock_read_execute:
+        final_result = agent.run_task("Read a file that will cause a tool error.")
+
+    # Assertions
+    mock_read_execute.assert_called_once_with({"path": file_to_read}, agent_tools_instance=agent)
+
+    # After the first tool error (read_file) and the second tool error (another_unknown_tool),
+    # the counter should be 2. The third LLM response (text) will then reset it.
+    # So, the final state of consecutive_tool_errors after the entire run_task will be 0.
+    # The point of this test is to ensure the counter *does* increment through multiple errors.
+    # We can check the history to see the errors being processed.
+
+    # History check:
+    # 0: System Prompt
+    # 1: User: "Read a file that will cause a tool error."
+    # 2: Assistant: llm_tool_call (<read_file...>)
+    # 3: User: "Result of read_file:\nError: File not found for testing." (Error from read_file)
+    # 4: Assistant: llm_second_response_error (<another_unknown_tool...>)
+    # 5: User: "Result of another_unknown_tool:\nError: Unknown tool 'another_unknown_tool'..." (Error from unknown_tool)
+    # 6: Assistant: llm_third_response_text ("LLM giving up...")
+
+    assert len(agent.history) == 7, f"History length was {len(agent.history)}, expected 7. History: {agent.history}"
+
+    assert agent.history[0]["role"] == "system"
+    assert agent.history[1]["role"] == "user"
+    assert agent.history[1]["content"] == "Read a file that will cause a tool error."
+
+    assert agent.history[2]["role"] == "assistant"
+    assert agent.history[2]["content"] == llm_tool_call
+    assert agent.history[3]["role"] == "user"
+    assert agent.history[3]["content"] == f"Result of read_file:\n{tool_returned_error_message}"
+
+    assert agent.history[4]["role"] == "assistant"
+    assert agent.history[4]["content"] == llm_second_response_error
+    assert agent.history[5]["role"] == "user"
+    assert "Result of another_unknown_tool:\nError: Unknown tool 'another_unknown_tool'" in agent.history[5]["content"]
+
+    assert agent.history[6]["role"] == "assistant"
+    assert agent.history[6]["content"] == llm_third_response_text
+
+    # The consecutive_tool_errors should be 0 at the end because the last LLM response was valid text.
+    assert agent.consecutive_tool_errors == 0, \
+        f"Consecutive tool error counter should be 0 after a final successful text response, but was {agent.consecutive_tool_errors}."
+
+    assert final_result == "LLM giving up after multiple errors.", \
+        "Final result did not match the LLM's third response."

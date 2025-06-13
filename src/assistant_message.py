@@ -12,7 +12,7 @@ TOOL_USE_NAMES = [
     "replace_in_file",
     "search_files",
     "list_files",
-    "list_code_definitions",
+    "list_code_definition_names",
     "browser_action",
     "use_mcp_tool",
     "access_mcp_resource",
