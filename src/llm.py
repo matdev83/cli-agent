@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging # Added import
 from pathlib import Path
 from typing import List, Dict, Optional # Added Optional
 import time # Added for retry delays
@@ -82,12 +83,12 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
                     content = response.choices[0].message.content
                     return content # content can be string or None
                 # If response is valid but no choices/message, consider it a success with no content
-                print("OpenRouter API returned a response with no content.")
+                logging.info("OpenRouter API returned a response with no content.")
                 return None
             except RateLimitError as e:
-                print(f"Rate limit error on attempt {attempt + 1}/{max_retries}: {e}")
+                logging.warning(f"Rate limit error on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt + 1 >= max_retries:
-                    print("Max retries reached for rate limit error. Failing.")
+                    logging.error("Max retries reached for rate limit error. Failing.")
                     return None
 
                 retry_after_header = e.response.headers.get("Retry-After")
@@ -96,39 +97,39 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
                     try:
                         delay = float(retry_after_header)
                     except ValueError:
-                        print(f"Could not parse Retry-After header value: {retry_after_header}. Using exponential backoff.")
+                        logging.warning(f"Could not parse Retry-After header value: {retry_after_header}. Using exponential backoff.")
 
                 delay = min(delay, 60) # Cap delay at 60 seconds
-                print(f"Waiting {delay:.2f} seconds before retrying.")
+                logging.info(f"Waiting {delay:.2f} seconds before retrying.")
                 time.sleep(delay)
             except APIStatusError as e:
-                print(f"API status error on attempt {attempt + 1}/{max_retries}: {e.status_code} - {e.message}")
+                logging.warning(f"API status error on attempt {attempt + 1}/{max_retries}: {e.status_code} - {e.message}")
                 if e.status_code >= 500 or e.status_code == 429: # Server-side errors or (redundant) rate limit
                     if attempt + 1 >= max_retries:
-                        print(f"Max retries reached for API status error {e.status_code}. Failing.")
+                        logging.error(f"Max retries reached for API status error {e.status_code}. Failing.")
                         return None
                     delay = min(base_delay * (2 ** attempt), 60)
-                    print(f"Waiting {delay:.2f} seconds before retrying for status {e.status_code}.")
+                    logging.info(f"Waiting {delay:.2f} seconds before retrying for status {e.status_code}.")
                     time.sleep(delay)
                 else: # Client-side errors (4xx other than 429)
-                    print(f"Client-side API error {e.status_code}. Failing without further retries.")
+                    logging.error(f"Client-side API error {e.status_code}. Failing without further retries.")
                     return None # Do not retry for client errors like 401, 403, 400
             except APIConnectionError as e:
-                print(f"API connection error on attempt {attempt + 1}/{max_retries}: {e}")
+                logging.warning(f"API connection error on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt + 1 >= max_retries:
-                    print("Max retries reached for API connection error. Failing.")
+                    logging.error("Max retries reached for API connection error. Failing.")
                     return None
                 delay = min(base_delay * (2 ** attempt), 60)
-                print(f"Waiting {delay:.2f} seconds before retrying for connection error.")
+                logging.info(f"Waiting {delay:.2f} seconds before retrying for connection error.")
                 time.sleep(delay)
             except Exception as e: # Catch-all for other unexpected errors during the API call
-                print(f"Unexpected error calling OpenRouter API on attempt {attempt + 1}/{max_retries}: {e}")
+                logging.error(f"Unexpected error calling OpenRouter API on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt + 1 >= max_retries:
-                    print("Max retries reached for unexpected error. Failing.")
+                    logging.error("Max retries reached for unexpected error. Failing.")
                     return None
                 delay = min(base_delay * (2 ** attempt), 30) # Shorter cap for general errors
-                print(f"Waiting {delay:.2f} seconds before retrying for unexpected error.")
+                logging.info(f"Waiting {delay:.2f} seconds before retrying for unexpected error.")
                 time.sleep(delay)
 
-        print("All retries failed after multiple attempts.")
+        logging.error("All retries failed after multiple attempts.")
         return None # Return None if all retries fail

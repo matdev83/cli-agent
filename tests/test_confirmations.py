@@ -34,18 +34,24 @@ class TestRequestUserConfirmation(unittest.TestCase):
         self.assertEqual(mock_stdout.getvalue(), prompt + " ")
 
     @patch('builtins.input', side_effect=KeyboardInterrupt)
-    @patch('sys.stdout', new_callable=io.StringIO) # Capture print output
-    def test_keyboard_interrupt_handling(self, mock_stdout, mock_input):
+    def test_keyboard_interrupt_handling(self, mock_input):
         prompt = "Interrupt test"
-        self.assertFalse(request_user_confirmation(prompt))
-        self.assertIn("Confirmation cancelled by user.", mock_stdout.getvalue())
+        # Check that the function returns False and logs the correct message
+        with self.assertLogs(level='INFO') as log_cm:
+            self.assertFalse(request_user_confirmation(prompt))
+        # Check for the specific log message
+        # The logged message in confirmations.py starts with '\n'
+        self.assertTrue(any("\nConfirmation cancelled by user." in message for message in log_cm.output))
 
     @patch('builtins.input', side_effect=EOFError)
-    @patch('sys.stdout', new_callable=io.StringIO) # Capture print output
-    def test_eof_error_handling(self, mock_stdout, mock_input):
+    def test_eof_error_handling(self, mock_input):
         prompt = "EOF test"
-        self.assertFalse(request_user_confirmation(prompt))
-        self.assertIn("Confirmation input stream closed.", mock_stdout.getvalue())
+        # Check that the function returns False and logs the correct message
+        with self.assertLogs(level='INFO') as log_cm:
+            self.assertFalse(request_user_confirmation(prompt))
+        # Check for the specific log message
+        # The logged message in confirmations.py starts with '\n'
+        self.assertTrue(any("\nConfirmation input stream closed." in message for message in log_cm.output))
 
 if __name__ == '__main__':
     unittest.main()

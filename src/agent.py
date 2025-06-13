@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import json
 import traceback
+import logging # Added import
 from typing import Callable, Dict, List, Any, Optional
 import argparse # For type hinting cli_args
 from pathlib import Path
@@ -290,15 +291,15 @@ class DeveloperAgent:
             return result_str
 
         except NotImplementedError as e:
-            print(f"Tool '{tool_name}' is not fully implemented: {e}")
+            logging.warning(f"Tool '{tool_name}' is not fully implemented: {e}")
             return f"Note: Tool '{tool_name}' is recognized but not fully implemented. {str(e)}"
         except ValueError as e:
             self.consecutive_tool_errors += 1
-            print(f"ValueError during execution of tool '{tool_name}': {e}\n{traceback.format_exc()}")
+            logging.error(f"ValueError during execution of tool '{tool_name}': {e}\n{traceback.format_exc()}")
             return f"Error: Tool '{tool_name}' encountered a value error. Reason: {str(e)}"
         except Exception as e:
             self.consecutive_tool_errors += 1
-            print(f"Unexpected error during execution of tool '{tool_name}': {e}\n{traceback.format_exc()}")
+            logging.error(f"Unexpected error during execution of tool '{tool_name}': {e}\n{traceback.format_exc()}")
             return f"Error: Tool '{tool_name}' failed to execute. Reason: {str(e)}"
 
 
@@ -397,9 +398,9 @@ if __name__ == '__main__':
         # For the DeveloperAgent constructor, we pass the method of an LLM instance.
         # This __main__ block is for conceptual testing of DeveloperAgent.
         # The actual MockLLM().send_message will handle response exhaustion.
-        print("\n--- Mock LLM Call (via agent's send_message) ---")
+        logging.info("\n--- Mock LLM Call (via agent's send_message) ---")
         for msg in history[-2:]:
-            print(f"  {msg['role'].upper()}: {msg['content'][:200]}{'...' if len(msg['content']) > 200 else ''}")
+            logging.info(f"  {msg['role'].upper()}: {msg['content'][:200]}{'...' if len(msg['content']) > 200 else ''}")
 
         # This basic mock doesn't use a response list like MockLLM.
         # It's just to satisfy the callable type for the example.
@@ -417,7 +418,7 @@ if __name__ == '__main__':
     # Create a dummy agent.py for read_file test in the mock, if other tests need it
     (Path("src") / "agent.py").write_text("class DeveloperAgent:\n  pass # Dummy for tests")
 
-    print("--- Testing Agent with Response Exhaustion ---")
+    logging.info("--- Testing Agent with Response Exhaustion ---")
     exhausted_responses = ["<tool_use><tool_name>read_file</tool_name><params><path>src/agent.py</path></params></tool_use>"]
     exhausted_llm = MockLLM(exhausted_responses)
     agent_exhaustion_test = DeveloperAgent(send_message=exhausted_llm.send_message, cwd=".")
@@ -425,7 +426,7 @@ if __name__ == '__main__':
     try:
         # First call consumes the only response.
         result1 = agent_exhaustion_test.run_task("Read agent.py", max_steps=2)
-        print(f"Result 1 (exhaustion test): {result1}")
+        logging.info(f"Result 1 (exhaustion test): {result1}")
         # Second call to run_task or if max_steps allowed further loop, send_message would return None.
         # The current run_task structure with max_steps=2:
         # 1. User: "Read agent.py"
@@ -439,10 +440,10 @@ if __name__ == '__main__':
         assert agent_exhaustion_test.history[-1]["role"] == "system"
 
     except Exception as e:
-        print(f"Error during agent exhaustion test: {e}\n{traceback.format_exc()}")
+        logging.error(f"Error during agent exhaustion test: {e}\n{traceback.format_exc()}")
     finally:
         if (Path("src") / "agent.py").exists():
              (Path("src") / "agent.py").unlink()
         try: Path("src").rmdir()
-        except OSError: print("Note: src directory may not be empty or other tests use it.")
+        except OSError: logging.warning("Note: src directory may not be empty or other tests use it.")
         pass
