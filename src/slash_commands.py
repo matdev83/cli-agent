@@ -3,6 +3,14 @@ from __future__ import annotations
 import abc
 from typing import List, Optional, Any, Dict
 
+# It's generally better to import specific names if utils is a module
+# For example: from .utils import revert_to_commit, revert_to_state_before_commit
+# However, the prompt asked for `from . import utils`
+from . import utils
+# For type hinting agent_context.agent. DeveloperAgent might cause circular dependency if imported directly.
+# Using 'Any' for now as per instructions, but consider forward reference 'DeveloperAgent' if appropriate.
+# from .agent import DeveloperAgent # Example of potential direct import
+
 class SlashCommand(abc.ABC):
     """
     Abstract base class for slash commands.
@@ -272,7 +280,7 @@ class HelpCommand(SlashCommand):
     """
     Displays help information for available slash commands.
     """
-    def __init__(self, registry: SlashCommandRegistry):
+    def __init__(self, registry: SlashCommandRegistry): # HelpCommand takes registry in constructor
         self._registry = registry
 
     @property
@@ -304,3 +312,140 @@ class HelpCommand(SlashCommand):
                 for example in command.usage_examples:
                     help_lines.append(f"      {example}\n")
         return "".join(help_lines)
+
+
+class UndoCommand(SlashCommand):
+    """
+    Reverts file changes based on auto-commits made during the session.
+    """
+    @property
+    def name(self) -> str:
+        return "undo"
+
+    @property
+    def description(self) -> str:
+        return "Reverts file changes. No args: reverts last auto-commit. With commit ID: reverts to state *before* that commit."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/undo", "/undo <commit_id>"]
+
+    def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
+        if not agent_context or not hasattr(agent_context, 'agent') or not agent_context.agent:
+            return "Error: Agent context not available or not initialized correctly."
+
+        # Using Any for agent type hint as per instructions, ideally this would be DeveloperAgent
+        agent = agent_context.agent
+        if not hasattr(agent, 'session_commit_history') or not hasattr(agent, 'cwd'):
+            return "Error: Agent instance is not correctly configured (missing session_commit_history or cwd)."
+
+        if len(args) == 0:
+            if not agent.session_commit_history:
+                return "No auto-commits in the current session to undo."
+
+            last_commit_hash = agent.session_commit_history[-1]
+            success = utils.revert_to_state_before_commit(agent.cwd, last_commit_hash)
+
+            if success:
+                agent.session_commit_history.pop()
+                return f"Successfully reverted changes from the last auto-commit ({last_commit_hash[:7]})."
+            else:
+                return f"Error: Failed to revert changes from commit {last_commit_hash[:7]}."
+
+        elif len(args) == 1:
+            commit_id_to_undo = args[0]
+            # Optional: Basic validation for commit_id_to_undo
+            if not all(c in "0123456789abcdefABCDEF" for c in commit_id_to_undo) or not (4 <= len(commit_id_to_undo) <= 40):
+                return f"Error: Invalid commit ID format: {commit_id_to_undo}."
+
+            success = utils.revert_to_state_before_commit(agent.cwd, commit_id_to_undo)
+
+            if success:
+                try:
+                    # Attempt to find and remove the commit and subsequent ones from history
+                    found_index = -1
+                    for i, chash in enumerate(agent.session_commit_history):
+                        if chash.startswith(commit_id_to_undo):
+                            found_index = i
+                            break
+
+                    if found_index != -1:
+                        # Make sure we are removing the correct one if short hash was used
+                        # For safety, could compare with full hash if available from a utils.get_full_hash()
+                        # For now, assume prefix match is sufficient if found in session_commit_history
+                        removed_commits_count = len(agent.session_commit_history) - found_index
+                        del agent.session_commit_history[found_index:]
+                        return f"Successfully reverted to the state before commit {commit_id_to_undo[:7]}. {removed_commits_count} commit(s) removed from session history."
+                    else:
+                        # If not found in session history, it might be an older commit or one not tracked by this session.
+                        # The git operation still succeeded.
+                        return f"Successfully reverted to the state before commit {commit_id_to_undo[:7]}. (Commit not found in current session history or history was already diverged)"
+                except ValueError:
+                    # Should not happen if using enumerate, but as a fallback.
+                    return f"Successfully reverted to the state before commit {commit_id_to_undo[:7]}. (Commit not found in current session history)"
+            else:
+                return f"Error: Failed to revert to the state before commit {commit_id_to_undo[:7]}."
+        else:
+            return "Error: /undo accepts 0 or 1 argument (commit_id)."
+
+
+class UndoAllCommand(SlashCommand):
+    """
+    Reverts all auto-committed changes made during the current CLI agent session.
+    """
+    @property
+    def name(self) -> str:
+        return "undo-all"
+
+    @property
+    def description(self) -> str:
+        return "Reverts all auto-committed changes made during the current CLI agent session."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/undo-all"]
+
+    def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
+        if not agent_context or not hasattr(agent_context, 'agent') or not agent_context.agent:
+            return "Error: Agent context not available or not initialized correctly."
+
+        agent = agent_context.agent
+        if not hasattr(agent, 'session_commit_history') or \
+           not hasattr(agent, 'initial_session_head_commit_hash') or \
+           not hasattr(agent, 'cwd'):
+            return "Error: Agent instance is not correctly configured."
+
+        if not agent.session_commit_history:
+            # Check if already at initial state, perhaps.
+            # For now, if no session commits, nothing to "undo-all" from session perspective.
+            # However, user might have made manual commits. This command is about session's auto-commits.
+            try:
+                current_head = utils.subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=agent.cwd, text=True).strip()
+                if agent.initial_session_head_commit_hash and current_head == agent.initial_session_head_commit_hash:
+                    return "No auto-commits in the current session to undo. Repository is already at the initial session state."
+            except Exception: # Ignore if git check fails, proceed to standard message
+                pass
+            return "No auto-commits recorded in the current session to undo."
+
+        initial_hash = agent.initial_session_head_commit_hash
+        if initial_hash is None:
+            return "Error: Cannot determine the initial state of the repository for this session (e.g., not a git repo, or failed to get initial HEAD)."
+
+        success = utils.revert_to_commit(agent.cwd, initial_hash)
+
+        if success:
+            count_before_clear = len(agent.session_commit_history)
+            agent.session_commit_history.clear()
+            return f"Successfully reverted all {count_before_clear} auto-committed changes made during this session to state {initial_hash[:7]}."
+        else:
+            # If initial_hash was a specific commit, and it's gone (e.g. rebase), this might fail.
+            # Or if repo became dirty.
+            return f"Error: Failed to revert all session changes to the initial session state {initial_hash[:7]}."
+
+# Registration of commands (assuming a global registry instance as per common pattern)
+# This part might be in cli.py or another central place.
+# If COMMAND_REGISTRY is defined and used in this file, new commands would be added:
+# COMMAND_REGISTRY.register(UndoCommand())
+# COMMAND_REGISTRY.register(UndoAllCommand())
+# Since the file read didn't show this, I'm only defining the classes as per primary task.
+# The subtask states: "actual registration might be in cli.py later".
