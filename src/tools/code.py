@@ -9,14 +9,14 @@ from typing import List, Dict, Any, Optional
 from .tool_protocol import Tool
 
 # --- Helper function for path resolution (similar to one in file.py) ---
-def _resolve_path(path_str: str, agent_memory: Any = None) -> Path:
+def _resolve_path(path_str: str, agent_tools_instance: Any = None) -> Path:
     p = Path(path_str)
     if p.is_absolute():
         return p.resolve()
 
     base_dir = Path(os.getcwd()) # Default base
-    if agent_memory and hasattr(agent_memory, 'cwd') and agent_memory.cwd:
-        base_dir = Path(agent_memory.cwd)
+    if agent_tools_instance and hasattr(agent_tools_instance, 'cwd') and agent_tools_instance.cwd:
+        base_dir = Path(agent_tools_instance.cwd)
 
     return (base_dir / p).resolve()
 
@@ -62,24 +62,19 @@ class ListCodeDefinitionNamesTool(Tool):
                 "in the specified directory. Returns a JSON string detailing definitions per file.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path",
-                "description": "The relative or absolute path to the directory to scan for Python files.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "The relative or absolute path to the directory to scan for Python files."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool to find Python definitions. Expects 'path' in params."""
         path_str = params.get("path")
         if not path_str:
             return json.dumps({"error": "Missing required parameter 'path'."})
 
         try:
-            abs_dir_path = _resolve_path(path_str, agent_memory)
+            abs_dir_path = _resolve_path(path_str, agent_tools_instance)
 
             if not abs_dir_path.exists():
                 return json.dumps({"error": f"Directory not found at {str(abs_dir_path)}"})
@@ -122,9 +117,9 @@ class ListCodeDefinitionNamesTool(Tool):
             return json.dumps({"error": f"Error listing code definitions in {path_str}: {e}"})
 
 # --- Wrapper function for old tests ---
-def list_code_definition_names(directory_path: str, agent_memory: Any = None) -> str:
+def list_code_definition_names(directory_path: str, agent_tools_instance: Any = None) -> str: # Renamed parameter
     tool = ListCodeDefinitionNamesTool()
-    result_str = tool.execute({"path": directory_path}, agent_memory=agent_memory)
+    result_str = tool.execute({"path": directory_path}, agent_tools_instance=agent_tools_instance) # Pass updated param
     data = json.loads(result_str)
 
     if "error" in data:

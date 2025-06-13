@@ -19,29 +19,14 @@ class ExecuteCommandTool(Tool):
                 "'success' (boolean) and 'output' (string) of the command.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "command",
-                "description": "The shell command to execute.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "timeout",
-                "description": "Optional timeout in seconds for the command execution. Defaults to None (no timeout).",
-                "type": "integer",
-                "required": False
-            },
-            {
-                "name": "requires_approval",
-                "description": "If true (string 'true' or boolean True), command execution may require approval based on agent's settings. Defaults to False if not provided.",
-                "type": "boolean", # LLM sees this as boolean, sends "true"/"false"
-                "required": False
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "command": "The shell command to execute.",
+            "timeout": "Optional timeout in seconds for the command execution. Defaults to None (no timeout).",
+            "requires_approval": "If true (string 'true' or boolean True), command execution may require approval based on agent's settings. Defaults to False if not provided."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the given shell command. Expects 'command' and optionally 'timeout' and 'requires_approval' in params."""
         command = params.get("command")
         timeout_val = params.get("timeout") # Renamed variable, can be float/int
@@ -79,8 +64,11 @@ class ExecuteCommandTool(Tool):
 
 
         auto_approved = False
-        if agent_memory and hasattr(agent_memory, 'auto_approve'):
-            auto_approved = agent_memory.auto_approve
+        if agent_tools_instance and hasattr(agent_tools_instance, 'cli_args') and hasattr(agent_tools_instance.cli_args, 'auto_approve'):
+            auto_approved = agent_tools_instance.cli_args.auto_approve
+        elif agent_tools_instance and hasattr(agent_tools_instance, 'auto_approve'): # Fallback for direct attribute
+            auto_approved = agent_tools_instance.auto_approve
+
 
         if requires_approval_bool and not auto_approved:
             # The test `test_execute_command_rejected` expects "rejected" in output and success=False
@@ -115,13 +103,13 @@ class ExecuteCommandTool(Tool):
             return json.dumps({"success": False, "output": f"Error executing command '{command}': {exc}"})
 
 # --- Wrapper function for old tests ---
-def execute_command(command: str, requires_approval: bool = False, timeout: Optional[float] = None, agent_memory: Any = None) -> Tuple[bool, str]:
+def execute_command(command: str, requires_approval: bool = False, timeout: Optional[float] = None, agent_tools_instance: Any = None) -> Tuple[bool, str]:
     tool = ExecuteCommandTool()
     params = {"command": command, "requires_approval": requires_approval}
     if timeout is not None:
         params["timeout"] = timeout # Pass timeout as float/int directly
 
-    result_str = tool.execute(params, agent_memory=agent_memory)
+    result_str = tool.execute(params, agent_tools_instance=agent_tools_instance)
     data = json.loads(result_str)
 
     # Test 'test_execute_command_rejected' is problematic.

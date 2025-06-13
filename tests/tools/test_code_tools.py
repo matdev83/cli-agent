@@ -7,14 +7,22 @@ from src.tools.code import (
 )
 # BrowserActionTool, UseMCPTool, AccessMCPResourceTool are now in their own test files.
 
-# Dummy AgentMemory class
-class MockAgentMemory:
+# Dummy AgentToolsInstance class
+class MockAgentToolsInstance:
     def __init__(self, cwd: str):
         self.cwd = str(Path(cwd).resolve()) # Ensure cwd is absolute for consistent pathing
 
 # --- ListCodeDefinitionsTool Tests ---
+def test_list_code_definitions_tool_properties():
+    tool = ListCodeDefinitionNamesTool()
+    assert tool.name == "list_code_definition_names"
+    assert isinstance(tool.description, str)
+    assert tool.parameters_schema == {
+        "path": "The relative or absolute path to the directory to scan for Python files."
+    }
+
 def test_list_code_definitions_success(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
 
     py_file_content = """
@@ -31,7 +39,7 @@ async def my_async_function():
     (tmp_path / "example.py").write_text(py_file_content)
     (tmp_path / "another.txt").write_text("some text") # Non-python file
 
-    result_str = tool.execute({"path": "."}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": "."}, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     assert "results" in result
@@ -44,12 +52,12 @@ async def my_async_function():
     assert "Successfully listed code definitions." in result.get("message", "")
 
 def test_list_code_definitions_no_python_files(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
     (tmp_path / "another.txt").write_text("some text")
     (tmp_path / "README.md").write_text("# Readme")
 
-    result_str = tool.execute({"path": "."}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": "."}, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     # Check for the specific message
@@ -76,14 +84,14 @@ def test_list_code_definitions_no_python_files(tmp_path: Path):
 
 
 def test_list_code_definitions_empty_directory(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
 
     # Create an empty subdirectory to test
     empty_dir = tmp_path / "empty_subdir"
     empty_dir.mkdir()
 
-    result_str = tool.execute({"path": str(empty_dir)}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": str(empty_dir)}, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
     # If the directory is empty, no .py files will be found.
     assert result.get("message", "") == "No Python files found in the directory."
@@ -91,11 +99,11 @@ def test_list_code_definitions_empty_directory(tmp_path: Path):
 
 
 def test_list_code_definitions_python_file_with_syntax_error(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
     (tmp_path / "broken.py").write_text("def func_one(:\n pass") # Syntax error
 
-    result_str = tool.execute({"path": "."}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": "."}, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     assert "results" in result
@@ -106,27 +114,27 @@ def test_list_code_definitions_python_file_with_syntax_error(tmp_path: Path):
     assert "Found Python files, but encountered errors while parsing definitions." in result.get("message", "")
 
 def test_list_code_definitions_non_existent_directory(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
-    result_str = tool.execute({"path": "non_existent_dir"}, agent_memory=mock_memory)
+    result_str = tool.execute({"path": "non_existent_dir"}, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
     assert "error" in result
     assert "Directory not found" in result["error"]
 
 def test_list_code_definitions_path_is_file(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
     file_path = tmp_path / "a_file.py"
     file_path.write_text("def x(): pass")
-    result_str = tool.execute({"path": str(file_path)}, agent_memory=mock_memory) # Pass file path
+    result_str = tool.execute({"path": str(file_path)}, agent_tools_instance=mock_agent_tools_instance) # Pass file path
     result = json.loads(result_str)
     assert "error" in result
     assert "is not a directory" in result["error"]
 
 def test_list_code_definitions_no_directory_path_param(tmp_path: Path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ListCodeDefinitionNamesTool()
-    result_str = tool.execute({}, agent_memory=mock_memory) # Empty params
+    result_str = tool.execute({}, agent_tools_instance=mock_agent_tools_instance) # Empty params
     result = json.loads(result_str)
     assert "error" in result
     assert "Missing required parameter 'path'" in result["error"]

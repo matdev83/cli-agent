@@ -28,7 +28,10 @@ from src.tools import (
     NewTaskTool,
     CondenseTool,
     ReportBugTool,
-    NewRuleTool
+    NewRuleTool,
+    AskFollowupQuestionTool,
+    PlanModeRespondTool,
+    LoadMcpDocumentationTool
 )
 
 # For Step 3: General Failure Counter
@@ -86,7 +89,8 @@ class DeveloperAgent:
             ReadFileTool(), WriteToFileTool(), ReplaceInFileTool(), ListFilesTool(),
             SearchFilesTool(), ExecuteCommandTool(), ListCodeDefinitionNamesTool(), # Renamed
             BrowserActionTool(), UseMCPTool(), AccessMCPResourceTool(), NewTaskTool(),
-            CondenseTool(), ReportBugTool(), NewRuleTool()
+            CondenseTool(), ReportBugTool(), NewRuleTool(),
+            AskFollowupQuestionTool(), PlanModeRespondTool(), LoadMcpDocumentationTool()
         ]
         self.tools_map: Dict[str, Tool] = {tool.name: tool for tool in tool_instances}
 
@@ -125,11 +129,15 @@ class DeveloperAgent:
 
             if self.cli_args.allow_execute_all_commands:
                 proceed_with_tool = True
-            elif self.cli_args.allow_execute_safe_commands and not requires_approval_param:
+            elif self.cli_args.allow_execute_safe_commands and not requires_approval_param: # Flag: allow safe + LLM says safe
                 proceed_with_tool = True
-            elif self.cli_args.auto_approve and requires_approval_param: # Legacy --auto-approve for commands
+            elif self.cli_args.auto_approve: # General auto-approve flag
                 proceed_with_tool = True
             else:
+                # This 'else' is now reached if:
+                # - Not allow_all_commands
+                # - Not (allow_safe_commands AND LLM_safe)
+                # - Not auto_approve
                 if request_user_confirmation(f"Allow executing command: '{command_str}'? (y/n)"):
                     proceed_with_tool = True
                 else:
@@ -208,7 +216,7 @@ class DeveloperAgent:
             # its internal check for `requires_approval_bool and not auto_approved` should effectively pass
             # because either auto_approved (from cli_args) will be true, or the command will have been
             # interactively confirmed already. The tool itself does not prompt.
-            result_str = tool_to_execute.execute(tool_params, agent_memory=self) # agent_memory=self passes the agent instance
+            result_str = tool_to_execute.execute(tool_params, agent_tools_instance=self) # Pass self as agent_tools_instance
 
             if result_str.startswith("Error:"):
                 self.consecutive_tool_errors += 1

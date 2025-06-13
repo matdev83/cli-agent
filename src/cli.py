@@ -23,19 +23,27 @@ def run_agent(
     task: str,
     responses_file: str | None = None,
     *,
-    auto_approve: bool = False,
+    # auto_approve: bool = False, # Removed individual flags
     cwd: str = ".",
     model: str = "mock",
     return_history: bool = False,
     llm_timeout: Optional[float] = None,
-    matching_strictness: int = 100,
-    allow_read_files: bool = False,
-    allow_edit_files: bool = False,
-    allow_execute_safe_commands: bool = False,
-    allow_execute_all_commands: bool = False,
-    allow_use_browser: bool = False,
-    allow_use_mcp: bool = False,
+    matching_strictness: int = 100, # Kept as it's not purely an approval flag
+    cli_args: Optional[argparse.Namespace] = None # Added cli_args
+    # allow_read_files: bool = False, # Removed
+    # allow_edit_files: bool = False, # Removed
+    # allow_execute_safe_commands: bool = False, # Removed
+    # allow_execute_all_commands: bool = False, # Removed
+    # allow_use_browser: bool = False, # Removed
+    # allow_use_mcp: bool = False, # Removed
 ) -> str | tuple[str, list[dict[str, str]]]:
+    if cli_args is None: # Provide default if not passed, though main() should always pass it.
+        cli_args = argparse.Namespace(
+            auto_approve=False, allow_read_files=False, allow_edit_files=False,
+            allow_execute_safe_commands=False, allow_execute_all_commands=False,
+            allow_use_browser=False, allow_use_mcp=False
+        )
+
     if model == "mock":
         if not responses_file:
             raise ValueError("responses_file is required for mock model")
@@ -61,15 +69,9 @@ def run_agent(
     agent = DeveloperAgent(
         llm.send_message,
         cwd=cwd,
-        auto_approve=auto_approve,
-        matching_strictness=matching_strictness,
-        # Pass new approval flags
-        allow_read_files=allow_read_files,
-        allow_edit_files=allow_edit_files,
-        allow_execute_safe_commands=allow_execute_safe_commands,
-        allow_execute_all_commands=allow_execute_all_commands,
-        allow_use_browser=allow_use_browser,
-        allow_use_mcp=allow_use_mcp,
+        cli_args=cli_args, # Pass the whole namespace
+        matching_strictness=matching_strictness
+        # Removed individual approval flags, they are now in cli_args
     )
     result = agent.run_task(task)
     if return_history:
@@ -155,19 +157,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         result = run_agent(
-            args.task,
-            args.responses_file,
-            auto_approve=args.auto_approve,
+            task=args.task,
+            responses_file=args.responses_file,
             cwd=args.cwd,
             model=args.model,
             llm_timeout=args.llm_timeout,
             matching_strictness=args.matching_strictness,
-            allow_read_files=args.allow_read_files,
-            allow_edit_files=args.allow_edit_files,
-            allow_execute_safe_commands=args.allow_execute_safe_commands,
-            allow_execute_all_commands=args.allow_execute_all_commands,
-            allow_use_browser=args.allow_use_browser,
-            allow_use_mcp=args.allow_use_mcp,
+            cli_args=args # Pass the whole args namespace
         )
         print(result) # Print result only on success
         logging.info("Agent completed successfully")

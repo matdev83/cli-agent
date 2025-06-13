@@ -17,17 +17,12 @@ class NewTaskTool(Tool):
                 "5. Pending Tasks and Next Steps.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "context",
-                "description": "Detailed summary of the conversation and work so far to preload the new task.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "context": "Detailed summary of the conversation and work so far to preload the new task."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool. Expects 'context' in params. Full task creation logic is pending."""
         context = params.get("context")
         if context is None: # Check if None, empty string might be valid context
@@ -47,13 +42,13 @@ class AskFollowupQuestionTool(Tool):
                 "The question should be clear and specific. If providing options, they should be concise and distinct.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {"name": "question", "description": "The question to ask the user.", "type": "string", "required": True},
-            {"name": "options", "description": "Optional JSON string array of 2-5 options for the user.", "type": "string", "required": False}
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "question": "The question to ask the user.",
+            "options": "Optional JSON string array of 2-5 options for the user."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool. Expects 'question' and optionally 'options' in params. Full implementation pending."""
         question = params.get("question")
         if question is None: # Check if None, empty string might be a (bad) question
@@ -74,13 +69,13 @@ class AttemptCompletionTool(Tool):
                 "Use this tool to present the result of your work. This tool use means you are done with the task for now.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {"name": "result", "description": "The result of your work to present to the user.", "type": "string", "required": True},
-            {"name": "command", "description": "The command that was executed to achieve this result, if applicable.", "type": "string", "required": False}
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "result": "The result of your work to present to the user.",
+            "command": "The command that was executed to achieve this result, if applicable."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool. Expects 'result' and optionally 'command' in params. Full implementation pending."""
         result = params.get("result")
         if result is None: # Check if None
@@ -101,12 +96,12 @@ class PlanModeRespondTool(Tool):
                 "questions before attempting to execute the plan. This is not for asking for help or saying you are stuck.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {"name": "response", "description": "The response to send to the user for planning purposes.", "type": "string", "required": True}
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "response": "The response to send to the user for planning purposes."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool. Expects 'response' in params. Full implementation pending."""
         response = params.get("response")
         if response is None: # Check if None
@@ -126,10 +121,10 @@ class LoadMcpDocumentationTool(Tool):
                 "This tool helps in understanding and starting MCP server development.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [] # No parameters as per prompt
+    def parameters_schema(self) -> Dict[str, str]:
+        return {} # No parameters as per prompt
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool. Expects no parameters. Full implementation pending."""
         # No parameters expected, so params dictionary might be empty or not contain specific keys.
         return f"Success: LoadMcpDocumentationTool called. Full implementation pending."
@@ -144,17 +139,12 @@ class CondenseTool(Tool):
         return "Creates a detailed summary of the conversation so far to compact the context window. (Full implementation pending)"
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "context", # Parameter name kept as "context" as per prompt, though "summary" might also fit
-                "description": "Detailed summary of the conversation to be condensed.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "context": "Detailed summary of the conversation to be condensed."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         context = params.get("context")
         if context is None: # Check if None
             return "Error: Missing required parameter 'context' for tool 'condense'."
@@ -170,41 +160,16 @@ class ReportBugTool(Tool):
         return "Collects information to submit a bug report. (Full implementation pending)"
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "title",
-                "description": "Concise description of the issue.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "what_happened",
-                "description": "What happened and what was expected.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "steps_to_reproduce",
-                "description": "Steps to reproduce the bug.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "api_request_output",
-                "description": "Relevant API request output, if any.",
-                "type": "string",
-                "required": False # Explicitly False
-            },
-            {
-                "name": "additional_context",
-                "description": "Other issue details or relevant context.",
-                "type": "string",
-                "required": False # Explicitly False
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "title": "Concise description of the issue.",
+            "what_happened": "What happened and what was expected.",
+            "steps_to_reproduce": "Steps to reproduce the bug.",
+            "api_request_output": "Relevant API request output, if any.",
+            "additional_context": "Other issue details or relevant context."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         title = params.get('title')
         what_happened = params.get('what_happened')
         steps_to_reproduce = params.get('steps_to_reproduce')
@@ -238,23 +203,13 @@ class NewRuleTool(Tool):
         return "Creates a new Cline rule file in .clinerules directory. (Full implementation pending)"
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path",
-                "description": "Path for the new rule file (e.g., .clinerules/my-rule.md). Should be relative to project root.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "content",
-                "description": "Content of the new rule file (Markdown format).",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "Path for the new rule file (e.g., .clinerules/my-rule.md). Should be relative to project root.",
+            "content": "Content of the new rule file (Markdown format)."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         path = params.get("path")
         content = params.get("content") # Renamed for clarity, was content_preview
 

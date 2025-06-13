@@ -28,10 +28,10 @@ def _parse_diff_blocks(diff: str) -> List[tuple[str, str]]:
     return blocks
 
 # --- Utility for path resolution ---
-def _resolve_path(path_str: str, agent_memory: Any = None) -> Path:
+def _resolve_path(path_str: str, agent_tools_instance: Any = None) -> Path:
     """
     Resolves a path string to an absolute Path object.
-    If agent_memory.cwd is available, it's used as the base for relative paths.
+    If agent_tools_instance.cwd is available, it's used as the base for relative paths.
     Otherwise, os.getcwd() is used.
     Absolute paths are resolved directly.
     """
@@ -40,8 +40,8 @@ def _resolve_path(path_str: str, agent_memory: Any = None) -> Path:
         return p.resolve()
 
     base_dir = Path(os.getcwd()) # Default base directory
-    if agent_memory and hasattr(agent_memory, 'cwd') and agent_memory.cwd:
-        base_dir = Path(agent_memory.cwd)
+    if agent_tools_instance and hasattr(agent_tools_instance, 'cwd') and agent_tools_instance.cwd:
+        base_dir = Path(agent_tools_instance.cwd)
 
     return (base_dir / p).resolve()
 
@@ -57,23 +57,18 @@ class ReadFileTool(Tool):
         return "Reads the entire content of a specified file and returns it as a string."
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path",
-                "description": "The relative or absolute path to the file to be read.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "The relative or absolute path to the file to be read."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         file_path_str = params.get("path")
         if not file_path_str:
             return "Error: Missing required parameter 'path'."
 
         try:
-            abs_file_path = _resolve_path(file_path_str, agent_memory)
+            abs_file_path = _resolve_path(file_path_str, agent_tools_instance)
 
             if not abs_file_path.exists():
                 return f"Error: File not found at {str(abs_file_path)}"
@@ -97,23 +92,13 @@ class WriteToFileTool(Tool):
         return "Writes the given content to a specified file. Creates parent directories if they don't exist."
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path",
-                "description": "The relative or absolute path to the file to be written.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "content",
-                "description": "The content to write to the file.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "The relative or absolute path to the file to be written.",
+            "content": "The content to write to the file."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         file_path_str = params.get("path")
         content = params.get("content")
 
@@ -123,7 +108,7 @@ class WriteToFileTool(Tool):
             return "Error: Missing required parameter 'content'."
 
         try:
-            abs_file_path = _resolve_path(file_path_str, agent_memory)
+            abs_file_path = _resolve_path(file_path_str, agent_tools_instance)
 
             abs_file_path.parent.mkdir(parents=True, exist_ok=True)
             with abs_file_path.open("w", encoding="utf-8") as f:
@@ -144,23 +129,13 @@ class ReplaceInFileTool(Tool):
                 "Each block must follow the format: ------- SEARCH\\n(lines to search)\\n=======\\n(lines to replace)\\n+++++++ REPLACE")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path",
-                "description": "The relative or absolute path to the file to be modified.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "diff_blocks",
-                "description": "A string containing one or more diff blocks in the specified format.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "The relative or absolute path to the file to be modified.",
+            "diff_blocks": "A string containing one or more diff blocks in the specified format."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         file_path_str = params.get("path")
         diff_str = params.get("diff_blocks")
 
@@ -170,7 +145,7 @@ class ReplaceInFileTool(Tool):
             return "Error: Missing required parameter 'diff_blocks'."
 
         try:
-            abs_file_path = _resolve_path(file_path_str, agent_memory)
+            abs_file_path = _resolve_path(file_path_str, agent_tools_instance)
 
             if not abs_file_path.exists():
                 return f"Error: File not found at {str(abs_file_path)}"
@@ -185,7 +160,7 @@ class ReplaceInFileTool(Tool):
             blocks = _parse_diff_blocks(diff_str) # Helper function handles format errors
 
             modified_text = original_text
-            matching_strictness = getattr(agent_memory, 'matching_strictness', 100)
+            matching_strictness = getattr(agent_tools_instance, 'matching_strictness', 100)
 
             for i, (search, replace) in enumerate(blocks):
                 if matching_strictness == 100:
@@ -229,23 +204,13 @@ class ListFilesTool(Tool):
         return "Lists files and directories within a specified path. Can list recursively. Returns a JSON list of strings."
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path", # Renamed from dir_path for consistency with other tools
-                "description": "The relative or absolute path to the directory to list.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "recursive",
-                "description": "Whether to list files recursively. Defaults to False.",
-                "type": "boolean",
-                "required": False
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "The relative or absolute path to the directory to list.",
+            "recursive": "Whether to list files recursively. Defaults to False."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         dir_path_str = params.get("path")
         recursive_param = params.get("recursive")
 
@@ -262,7 +227,7 @@ class ListFilesTool(Tool):
                 return "Error: Invalid parameter type for 'recursive' in tool 'list_files'. Expected boolean (true/false)."
 
         try:
-            abs_dir_path = _resolve_path(dir_path_str, agent_memory)
+            abs_dir_path = _resolve_path(dir_path_str, agent_tools_instance)
 
             if not abs_dir_path.exists():
                 return f"Error: Directory not found at {str(abs_dir_path)}"
@@ -302,29 +267,14 @@ class SearchFilesTool(Tool):
                 "This tool uses Python's `re` module for regular expression matching.")
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "path",
-                "description": "The relative or absolute path to the directory to search within.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "regex",
-                "description": "The Python regex to search for within file lines.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "file_pattern",
-                "description": "Optional glob pattern to filter files (e.g., '*.py', 'test_*.py'). Defaults to all files ('*').",
-                "type": "string",
-                "required": False
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "path": "The relative or absolute path to the directory to search within.",
+            "regex": "The Python regex to search for within file lines.",
+            "file_pattern": "Optional glob pattern to filter files (e.g., '*.py', 'test_*.py'). Defaults to all files ('*')."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         path_str = params.get("path")
         regex_str = params.get("regex")
         file_glob_pattern = params.get("file_pattern", "*")
@@ -335,7 +285,7 @@ class SearchFilesTool(Tool):
             return "Error: Missing required parameter 'regex'."
 
         try:
-            abs_dir_path = _resolve_path(path_str, agent_memory)
+            abs_dir_path = _resolve_path(path_str, agent_tools_instance)
 
             if not abs_dir_path.exists():
                 return f"Error: Directory not found at {str(abs_dir_path)}"
@@ -380,9 +330,9 @@ class SearchFilesTool(Tool):
 # Ensure json is imported if not already (it is used by ListFilesTool and SearchFilesTool's execute, but wrappers parse it)
 # import json # Already imported at the top
 
-def read_file(path: str, agent_memory: Any = None) -> str:
+def read_file(path: str, agent_tools_instance: Any = None) -> str:
     tool = ReadFileTool()
-    result = tool.execute({"path": path}, agent_memory=agent_memory)
+    result = tool.execute({"path": path}, agent_tools_instance=agent_tools_instance)
     if result.startswith("Error:"):
         # Old tests might expect FileNotFoundError or similar.
         # This is a simple bridge; more sophisticated error mapping could be done.
@@ -390,19 +340,19 @@ def read_file(path: str, agent_memory: Any = None) -> str:
         raise ValueError(result)
     return result
 
-def write_to_file(path: str, content: str, agent_memory: Any = None) -> None:
+def write_to_file(path: str, content: str, agent_tools_instance: Any = None) -> None:
     tool = WriteToFileTool()
-    result = tool.execute({"path": path, "content": content}, agent_memory=agent_memory)
+    result = tool.execute({"path": path, "content": content}, agent_tools_instance=agent_tools_instance)
     if result.startswith("Error:"):
         raise ValueError(result)
     # Original function had no return, so None is fine.
 
-def replace_in_file(path: str, diff_blocks: str, agent_memory: Any = None) -> None:
+def replace_in_file(path: str, diff_blocks: str, agent_tools_instance: Any = None) -> None:
     tool = ReplaceInFileTool()
     # The test 'test_replace_in_file' uses a diff format "------- SEARCH...+++++++ REPLACE"
     # The tool's _parse_diff_blocks method now expects "------- SEARCH...+++++++ REPLACE"
     # The wrapper will now pass the diff_blocks directly.
-    result = tool.execute({"path": path, "diff_blocks": diff_blocks}, agent_memory=agent_memory)
+    result = tool.execute({"path": path, "diff_blocks": diff_blocks}, agent_tools_instance=agent_tools_instance)
 
     # The test 'test_replace_in_file_not_found' expects ValueError if search block not found.
     # The tool's execute method returns a string like "Error: Search block ... not found..."
@@ -411,9 +361,9 @@ def replace_in_file(path: str, diff_blocks: str, agent_memory: Any = None) -> No
     elif result.startswith("Error:"): # Other errors reported by the tool
         raise RuntimeError(result) # Or a more specific custom error
 
-def list_files(path: str, recursive: bool = False, agent_memory: Any = None) -> List[str]:
+def list_files(path: str, recursive: bool = False, agent_tools_instance: Any = None) -> List[str]:
     tool = ListFilesTool()
-    result_str = tool.execute({"path": path, "recursive": recursive}, agent_memory=agent_memory)
+    result_str = tool.execute({"path": path, "recursive": recursive}, agent_tools_instance=agent_tools_instance)
     if result_str.startswith("Error:"):
         raise ValueError(result_str)
     # The test 'test_list_files' expects a list of strings.
@@ -421,7 +371,7 @@ def list_files(path: str, recursive: bool = False, agent_memory: Any = None) -> 
     loaded_json = json.loads(result_str)
     return loaded_json
 
-def search_files(path: str, regex: str, file_pattern: str = "*", agent_memory: Any = None) -> List[Dict[str, Any]]:
+def search_files(path: str, regex: str, file_pattern: str = "*", agent_tools_instance: Any = None) -> List[Dict[str, Any]]:
     tool = SearchFilesTool()
     params = {"path": path, "regex": regex}
     # The tool's execute method defaults file_pattern to '*' internally if not provided.
@@ -429,7 +379,7 @@ def search_files(path: str, regex: str, file_pattern: str = "*", agent_memory: A
     if file_pattern != "*": # This check ensures we don't override the tool's internal default unless specified.
         params["file_pattern"] = file_pattern
 
-    result_str = tool.execute(params, agent_memory=agent_memory)
+    result_str = tool.execute(params, agent_tools_instance=agent_tools_instance)
     if result_str.startswith("Error:"):
         raise ValueError(result_str)
     # The test 'test_search_files' expects a list of dictionaries.

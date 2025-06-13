@@ -18,29 +18,14 @@ class UseMCPTool(Tool): # Renamed to UseMCPTool
         )
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "server_name",
-                "description": "The name of the MCP server providing the tool.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "tool_name",
-                "description": "The name of the tool to execute.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "arguments",
-                "description": "A JSON object string containing the tool's input parameters.",
-                "type": "string", # Expecting a JSON string
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "server_name": "The name of the MCP server providing the tool.",
+            "tool_name": "The name of the tool to execute.",
+            "arguments": "A JSON object string containing the tool's input parameters."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """
         Executes the tool stub.
         Expects 'server_name', 'tool_name', and 'arguments' in params.
@@ -78,23 +63,13 @@ class AccessMCPResourceTool(Tool): # Renamed to AccessMCPResourceTool
         )
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "server_name",
-                "description": "The name of the MCP server providing the resource.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "uri",
-                "description": "The URI identifying the specific resource to access.",
-                "type": "string",
-                "required": True
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "server_name": "The name of the MCP server providing the resource.",
+            "uri": "The URI identifying the specific resource to access."
+        }
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """
         Executes the tool stub.
         Expects 'server_name' and 'uri' in params.

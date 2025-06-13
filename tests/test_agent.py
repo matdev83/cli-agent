@@ -1,5 +1,7 @@
 import pytest
 import json
+import unittest
+import argparse # Added import
 from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from typing import List, Dict, Any
@@ -13,7 +15,8 @@ class MockTool(Tool):
     def __init__(self, name="mock_tool", execute_return_value="Result from mock_tool"):
         self._name = name
         self._description = f"A mock tool named {name}."
-        self._parameters = [{"name": "param1", "description": "A parameter", "type": "string", "required": False}]
+        # Store as the new schema type: Dict[str, str]
+        self._parameters_schema_dict = {"param1": "A parameter"}
         self.execute_fn = MagicMock(return_value=execute_return_value)
 
     @property
@@ -21,10 +24,10 @@ class MockTool(Tool):
     @property
     def description(self) -> str: return self._description
     @property
-    def parameters(self) -> list[dict[str, str]]: return self._parameters
+    def parameters_schema(self) -> Dict[str, str]: return self._parameters_schema_dict
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
-        return self.execute_fn(params, agent_memory)
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
+        return self.execute_fn(params, agent_tools_instance)
 
 def test_agent_simple_text_response(tmp_path: Path):
     mock_llm_responses = ["Just some text output, task complete."]
@@ -33,7 +36,8 @@ def test_agent_simple_text_response(tmp_path: Path):
     assert result == "Just some text output, task complete."
     assert len(agent.history) == 3
 
-def test_agent_one_tool_call_then_completion(tmp_path: Path):
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_one_tool_call_then_completion(mock_user_confirm, tmp_path: Path):
     mock_llm_responses = [
         "<tool_use><tool_name>read_file</tool_name><params><path>file.txt</path></params></tool_use>",
         "<text_content>Okay, I have read the file.</text_content><tool_use><tool_name>attempt_completion</tool_name><params><result>Read file.txt successfully.</result></params></tool_use>"
@@ -47,14 +51,15 @@ def test_agent_one_tool_call_then_completion(tmp_path: Path):
     with patch.object(original_read_file_tool, 'execute', return_value=expected_file_content) as mock_execute:
         result = agent.run_task("Read file.txt for me.")
 
-        mock_execute.assert_called_once_with({"path": "file.txt"}, agent_memory=agent)
+        mock_execute.assert_called_once_with({"path": "file.txt"}, agent_tools_instance=agent)
         assert result == "Okay, I have read the file.\nRead file.txt successfully."
 
         assert len(agent.history) == 5
         assert agent.history[3]["role"] == "user"
         assert f"Result of read_file:\n{expected_file_content}" == agent.history[3]["content"]
 
-def test_agent_max_steps_reached(tmp_path: Path):
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_max_steps_reached(mock_user_confirm, tmp_path: Path):
     tool_call_response = "<tool_use><tool_name>read_file</tool_name><params><path>f.txt</path></params></tool_use>"
     mock_llm_responses = [tool_call_response] * 5
 
@@ -63,8 +68,9 @@ def test_agent_max_steps_reached(tmp_path: Path):
     original_read_file_tool = agent.tools_map.get("read_file")
     assert original_read_file_tool is not None
 
-    with patch.object(original_read_file_tool, 'execute', return_value="mock content"):
+    with patch.object(original_read_file_tool, 'execute', return_value="mock content") as mock_read_execute:
         result = agent.run_task("A task that will exceed max steps.", max_steps=3)
+        # mock_read_execute.assert_called_with(ANY, agent_tools_instance=agent) # Check if called with new signature
         assert result == "Max steps reached without completion."
         assert len(agent.history) == 8
 
@@ -92,7 +98,8 @@ def test_agent_handles_unknown_tool_from_llm(tmp_path: Path):
     assert agent.history[4]['role'] == "system"
     assert agent.history[4]['content'] == expected_no_reply_message
 
-def test_agent_llm_runs_out_of_responses(tmp_path: Path):
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_llm_runs_out_of_responses(mock_user_confirm, tmp_path: Path):
     # MockLLM provides one response, then will return None.
     mock_llm_responses = ["<tool_use><tool_name>read_file</tool_name><params><path>f.txt</path></params></tool_use>"]
     agent = DeveloperAgent(send_message=MockLLM(mock_llm_responses).send_message, cwd=str(tmp_path))
@@ -100,7 +107,7 @@ def test_agent_llm_runs_out_of_responses(tmp_path: Path):
     original_read_file_tool = agent.tools_map.get("read_file")
     assert original_read_file_tool is not None
 
-    with patch.object(original_read_file_tool, 'execute', return_value="mock content"):
+    with patch.object(original_read_file_tool, 'execute', return_value="mock content") as mock_read_execute:
         # Agent gets one tool call, processes it. Adds result to history.
         # Then calls send_message again. MockLLM runs out of responses, returns None.
         # run_task should catch this and return the specific message.
@@ -126,9 +133,20 @@ def test_agent_handles_execute_command_approval_json(tmp_path: Path):
         f"<tool_use><tool_name>execute_command</tool_name><params><command>{command_to_run}</command><requires_approval>true</requires_approval></params></tool_use>",
         "<text_content>Okay, command needs approval.</text_content><tool_use><tool_name>attempt_completion</tool_name><params><result>Acknowledged approval request for rm -rf /</result></params></tool_use>"
     ]
-    agent = DeveloperAgent(send_message=MockLLM(mock_llm_responses).send_message, cwd=str(tmp_path), auto_approve=False)
+    # Set all flags to False for this test, including the specific auto_approve for commands
+    cli_args = argparse.Namespace(
+        auto_approve=False,
+        allow_read_files=False,
+        allow_edit_files=False,
+        allow_execute_safe_commands=False,
+        allow_execute_all_commands=False, # Explicitly false to trigger confirmation path
+        allow_use_browser=False,
+        allow_use_mcp=False
+    )
+    agent = DeveloperAgent(send_message=MockLLM(mock_llm_responses).send_message, cwd=str(tmp_path), cli_args=cli_args)
 
-    result = agent.run_task("Execute a dangerous command.")
+    with patch('src.agent.request_user_confirmation', return_value=True): # Auto-approve for this specific test run
+        result = agent.run_task("Execute a dangerous command.")
 
     assert result == "Okay, command needs approval.\nAcknowledged approval request for rm -rf /"
 
@@ -345,7 +363,8 @@ def test_agent_unknown_tool_increments_error_counter(tmp_path: Path):
     assert agent.history[3]["role"] == "user"
 
 
-def test_agent_tool_missing_required_parameter(tmp_path: Path):
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_tool_missing_required_parameter(mock_user_confirm, tmp_path: Path):
     """Test that tool error for missing params increments error counter."""
     # read_file requires 'path'
     missing_param_response = "<tool_use><tool_name>read_file</tool_name><params></params></tool_use>" # Missing 'path'
@@ -412,7 +431,8 @@ def test_agent_consecutive_error_admonishment(tmp_path: Path):
     assert agent.consecutive_tool_errors == 0
 
 
-def test_agent_consecutive_error_counter_resets_on_successful_tool_call(tmp_path: Path):
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_agent_consecutive_error_counter_resets_on_successful_tool_call(mock_user_confirm, tmp_path: Path):
     """Test that consecutive_tool_errors resets after a successful tool call."""
     responses = [
         "<tool_use><tool_name>unknown_tool_1</tool_name><params/></tool_use>", # Error 1
@@ -443,7 +463,8 @@ REPLACE_SUGGESTION_MESSAGE_TEMPLATE = (
     "with the full desired content instead."
 )
 
-def test_diff_failure_escalation_suggests_write_to_file(tmp_path: Path):
+@patch('src.agent.request_user_confirmation', return_value=True)
+def test_diff_failure_escalation_suggests_write_to_file(mock_user_confirm, tmp_path: Path):
     """Test that replace_in_file failure escalation message is added after max failures."""
     file_to_edit = "test_file.txt"
     abs_file_path_str = str((tmp_path / file_to_edit).resolve())
@@ -470,6 +491,21 @@ def test_diff_failure_escalation_suggests_write_to_file(tmp_path: Path):
         diff_format_error   # Second failure, should trigger suggestion
     ]) as mock_replace_execute:
         final_output = agent.run_task(f"Edit {file_to_edit} twice with failing diffs.")
+        # Check calls to the mocked execute
+        assert mock_replace_execute.call_count == 2
+        # Example check for the first call (params might vary based on how replace_in_file is called by agent)
+        # This is to ensure agent_tools_instance is passed.
+        # The exact params for replace_in_file would be:
+        # {"path": file_to_edit, "diff_blocks": "..."} - where "..." is the content from LLM
+        # We can't know the exact diff_blocks here without seeing the LLM response.
+        # So, we'll just check that agent_tools_instance was passed.
+        args, kwargs = mock_replace_execute.call_args_list[0]
+        assert 'agent_tools_instance' in kwargs
+        assert kwargs['agent_tools_instance'] == agent
+        args, kwargs = mock_replace_execute.call_args_list[1]
+        assert 'agent_tools_instance' in kwargs
+        assert kwargs['agent_tools_instance'] == agent
+
 
     assert final_output == "Ok, will try write_to_file."
     assert agent.diff_failure_tracker.get(abs_file_path_str, 0) == 0 # Reset after suggestion
@@ -503,7 +539,8 @@ def test_diff_failure_tracker_resets_on_successful_replace(tmp_path: Path):
     (tmp_path / file_to_edit).write_text("content", encoding="utf-8")
 
     # Simulate one failure first
-    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path)) # Generic mock for send_message
+    cli_args_allow_all = argparse.Namespace(auto_approve=True, allow_read_files=True, allow_edit_files=True, allow_execute_safe_commands=True, allow_execute_all_commands=True, allow_use_browser=True, allow_use_mcp=True)
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path), cli_args=cli_args_allow_all)
     agent.diff_failure_tracker[abs_file_path_str] = 1
 
     # Now simulate a successful replace_in_file call for the same file
@@ -511,9 +548,10 @@ def test_diff_failure_tracker_resets_on_successful_replace(tmp_path: Path):
     success_response_from_tool = f"File {abs_file_path_str} modified successfully with 1 block(s)."
     replace_tool_instance = agent.tools_map["replace_in_file"]
 
-    with patch.object(replace_tool_instance, 'execute', return_value=success_response_from_tool):
+    with patch.object(replace_tool_instance, 'execute', return_value=success_response_from_tool) as mock_execute:
         tool_use = ToolUse(name="replace_in_file", params={"path": file_to_edit, "diff_blocks": "..."})
         agent._run_tool(tool_use)
+        mock_execute.assert_called_once_with({"path": file_to_edit, "diff_blocks": "..."}, agent_tools_instance=agent)
 
     assert agent.diff_failure_tracker.get(abs_file_path_str, 0) == 0
 
@@ -524,16 +562,18 @@ def test_diff_failure_tracker_resets_on_successful_write(tmp_path: Path):
     abs_file_path_str = str((tmp_path / file_to_edit).resolve())
     (tmp_path / file_to_edit).write_text("content", encoding="utf-8")
 
-    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path))
+    cli_args_allow_all = argparse.Namespace(auto_approve=True, allow_read_files=True, allow_edit_files=True, allow_execute_safe_commands=True, allow_execute_all_commands=True, allow_use_browser=True, allow_use_mcp=True)
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path), cli_args=cli_args_allow_all)
     agent.diff_failure_tracker[abs_file_path_str] = MAX_DIFF_FAILURES_PER_FILE -1 # One less than max
 
     # Simulate a successful write_to_file
     write_tool_instance = agent.tools_map["write_to_file"]
     success_response_from_tool = f"File written successfully to {abs_file_path_str}"
 
-    with patch.object(write_tool_instance, 'execute', return_value=success_response_from_tool):
+    with patch.object(write_tool_instance, 'execute', return_value=success_response_from_tool) as mock_execute:
         tool_use = ToolUse(name="write_to_file", params={"path": file_to_edit, "content": "new content"})
         agent._run_tool(tool_use)
+        mock_execute.assert_called_once_with({"path": file_to_edit, "content": "new content"}, agent_tools_instance=agent)
 
     assert agent.diff_failure_tracker.get(abs_file_path_str, 0) == 0
 
@@ -546,24 +586,28 @@ def test_diff_failure_tracker_handles_relative_and_absolute_paths(tmp_path: Path
 
     search_block_error = "Error: Search block 1 not found..."
 
-    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path))
+    cli_args_allow_all = argparse.Namespace(auto_approve=True, allow_read_files=True, allow_edit_files=True, allow_execute_safe_commands=True, allow_execute_all_commands=True, allow_use_browser=True, allow_use_mcp=True)
+    agent = DeveloperAgent(send_message=MagicMock(), cwd=str(tmp_path), cli_args=cli_args_allow_all)
     replace_tool_instance = agent.tools_map["replace_in_file"]
 
-    with patch.object(replace_tool_instance, 'execute', return_value=search_block_error) as mock_replace_exec:
+    with patch.object(replace_tool_instance, 'execute', return_value=search_block_error) as mock_replace_execute:
         # First failure with relative path
         tool_use_relative = ToolUse(name="replace_in_file", params={"path": relative_path, "diff_blocks": "d1"})
         agent._run_tool(tool_use_relative)
+        mock_replace_execute.assert_called_with({"path": relative_path, "diff_blocks": "d1"}, agent_tools_instance=agent)
         assert agent.diff_failure_tracker.get(abs_path_str, 0) == 1
 
         # Second failure with absolute path (should be treated as same file)
         tool_use_absolute = ToolUse(name="replace_in_file", params={"path": abs_path_str, "diff_blocks": "d2"})
         result = agent._run_tool(tool_use_absolute)
+        mock_replace_execute.assert_called_with({"path": abs_path_str, "diff_blocks": "d2"}, agent_tools_instance=agent)
+
 
         assert agent.diff_failure_tracker.get(abs_path_str, 0) == 0 # Reset after suggestion
         expected_suggestion = REPLACE_SUGGESTION_MESSAGE_TEMPLATE.format(file_path=abs_path_str)
         assert expected_suggestion in result
 
-    assert mock_replace_exec.call_count == 2
+    assert mock_replace_execute.call_count == 2
 
 
 # --- Tests for Agent Confirmation Logic ---
@@ -584,13 +628,14 @@ class TestAgentConfirmationLogic(unittest.TestCase):
 
         # Default args with all approval flags False
         self.base_cli_args = argparse.Namespace(
-            auto_approve=False,
+            auto_approve=False, # General auto-approve for non-command tasks if ever used by tools
             allow_read_files=False,
             allow_edit_files=False,
             allow_execute_safe_commands=False,
             allow_execute_all_commands=False,
             allow_use_browser=False,
             allow_use_mcp=False
+            # Ensure all boolean flags expected by DeveloperAgent.__init__ are present
         )
 
     def _create_agent(self, cli_args_overrides=None):
@@ -615,7 +660,7 @@ class TestAgentConfirmationLogic(unittest.TestCase):
                     agent._run_tool(tool_use)
 
                     mock_request_confirmation.assert_not_called()
-                    mock_tool_execute.assert_called_once_with(params, agent_memory=agent)
+                    mock_tool_execute.assert_called_once_with(params, agent_tools_instance=agent)
 
                 mock_request_confirmation.reset_mock() # Reset for next subtest
 
@@ -634,7 +679,7 @@ class TestAgentConfirmationLogic(unittest.TestCase):
                     agent._run_tool(tool_use)
 
                     mock_request_confirmation.assert_called_once()
-                    mock_tool_execute.assert_called_once_with(params, agent_memory=agent)
+                    mock_tool_execute.assert_called_once_with(params, agent_tools_instance=agent)
 
                 mock_request_confirmation.reset_mock()
 
