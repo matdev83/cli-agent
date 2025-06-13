@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging # Added import
 from typing import Union # Union is used in the type hint
 import subprocess
 from pathlib import Path
@@ -46,7 +47,7 @@ def commit_all_changes(cwd: str, message: str = "Auto-commit") -> str | None:
             return None
         subprocess.run(["git", "commit", "-m", message], cwd=cwd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         commit_id = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=cwd).decode().strip()
-        print(f"Auto-commit id: {commit_id}")
+        logging.info(f"Auto-commit id: {commit_id}")
         return commit_id
     except Exception:
         return None
