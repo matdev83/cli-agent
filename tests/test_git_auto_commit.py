@@ -16,7 +16,9 @@ def commit_count(path: Path) -> int:
     return int(out.decode().strip())
 
 
-def test_auto_commit_after_write(tmp_path: Path, capsys):
+import logging # Add this import
+def test_auto_commit_after_write(tmp_path: Path, caplog):
+    caplog.set_level(logging.INFO) # Ensure INFO messages are captured
     init_repo(tmp_path)
     responses = [
         "<write_to_file><path>a.txt</path><content>data</content></write_to_file>",
@@ -44,8 +46,8 @@ def test_auto_commit_after_write(tmp_path: Path, capsys):
     log = subprocess.check_output(["git", "log", "--oneline"], cwd=tmp_path).decode().splitlines()[0]
     commit_id = log.split()[0]
     assert "Auto-commit" in log
-    out = capsys.readouterr().out
-    assert f"Auto-commit id: {commit_id}" in out
+    # Check logging output for the auto-commit message
+    assert f"Auto-commit id: {commit_id}" in caplog.text
 
 
 def test_disable_git_auto_commit(tmp_path: Path):
