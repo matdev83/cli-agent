@@ -30,6 +30,7 @@ def run_agent(
     allow_execute_all_commands: bool = False,
     allow_use_browser: bool = False,
     allow_use_mcp: bool = False,
+    disable_git_auto_commits: bool = False,
     cwd: str = ".",
     model: str = "mock",
     return_history: bool = False,
@@ -61,6 +62,7 @@ def run_agent(
         cli_args.allow_execute_all_commands = allow_execute_all_commands
         cli_args.allow_use_browser = allow_use_browser
         cli_args.allow_use_mcp = allow_use_mcp
+        cli_args.disable_git_auto_commits = disable_git_auto_commits
 
     if model == "mock":
         if not responses_file:
@@ -89,6 +91,7 @@ def run_agent(
         cwd=cwd,
         cli_args=cli_args, # Pass the whole namespace
         matching_strictness=matching_strictness
+        ,disable_git_auto_commits=disable_git_auto_commits
         # Removed individual approval flags, they are now in cli_args
     )
     result = agent.run_task(task)
@@ -160,6 +163,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=100,
         help="Set the string matching strictness for file edits (0-100, 100 is exact match).",
     )
+    parser.add_argument(
+        "--disable-git-auto-commits",
+        action="store_true",
+        default=False,
+        help="Disable automatic git commits after file modifications.",
+    )
     args = parser.parse_args(argv)
 
     if not (0 <= args.matching_strictness <= 100):
@@ -184,6 +193,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             allow_execute_all_commands=args.allow_execute_all_commands,
             allow_use_browser=args.allow_use_browser,
             allow_use_mcp=args.allow_use_mcp,
+            disable_git_auto_commits=args.disable_git_auto_commits,
             cwd=args.cwd,
             model=args.model,
             llm_timeout=args.llm_timeout,
