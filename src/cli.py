@@ -23,7 +23,13 @@ def run_agent(
     task: str,
     responses_file: str | None = None,
     *,
-    # auto_approve: bool = False, # Removed individual flags
+    auto_approve: bool = False,
+    allow_read_files: bool = False,
+    allow_edit_files: bool = False,
+    allow_execute_safe_commands: bool = False,
+    allow_execute_all_commands: bool = False,
+    allow_use_browser: bool = False,
+    allow_use_mcp: bool = False,
     cwd: str = ".",
     model: str = "mock",
     return_history: bool = False,
@@ -37,12 +43,24 @@ def run_agent(
     # allow_use_browser: bool = False, # Removed
     # allow_use_mcp: bool = False, # Removed
 ) -> str | tuple[str, list[dict[str, str]]]:
-    if cli_args is None: # Provide default if not passed, though main() should always pass it.
+    if cli_args is None:  # Provide default if not passed, though main() should always pass it.
         cli_args = argparse.Namespace(
-            auto_approve=False, allow_read_files=False, allow_edit_files=False,
-            allow_execute_safe_commands=False, allow_execute_all_commands=False,
-            allow_use_browser=False, allow_use_mcp=False
+            auto_approve=auto_approve,
+            allow_read_files=allow_read_files,
+            allow_edit_files=allow_edit_files,
+            allow_execute_safe_commands=allow_execute_safe_commands,
+            allow_execute_all_commands=allow_execute_all_commands,
+            allow_use_browser=allow_use_browser,
+            allow_use_mcp=allow_use_mcp,
         )
+    else:
+        cli_args.auto_approve = auto_approve
+        cli_args.allow_read_files = allow_read_files
+        cli_args.allow_edit_files = allow_edit_files
+        cli_args.allow_execute_safe_commands = allow_execute_safe_commands
+        cli_args.allow_execute_all_commands = allow_execute_all_commands
+        cli_args.allow_use_browser = allow_use_browser
+        cli_args.allow_use_mcp = allow_use_mcp
 
     if model == "mock":
         if not responses_file:
@@ -159,6 +177,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         result = run_agent(
             task=args.task,
             responses_file=args.responses_file,
+            auto_approve=args.auto_approve,
+            allow_read_files=args.allow_read_files,
+            allow_edit_files=args.allow_edit_files,
+            allow_execute_safe_commands=args.allow_execute_safe_commands,
+            allow_execute_all_commands=args.allow_execute_all_commands,
+            allow_use_browser=args.allow_use_browser,
+            allow_use_mcp=args.allow_use_mcp,
             cwd=args.cwd,
             model=args.model,
             llm_timeout=args.llm_timeout,

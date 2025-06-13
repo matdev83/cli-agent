@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import ast
-import json # For returning structured output
+import json  # For returning structured output
 import os
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -50,25 +51,45 @@ def _python_top_level_defs(file_path: Path) -> List[str]:
                  defs.append(f"| Error: Could not retrieve line for a definition in {file_path.name}")
     return defs
 
+# --- JavaScript/TypeScript support ---
+def _javascript_top_level_defs(file_path: Path) -> List[str]:
+    """Extracts top-level function and class definitions from a JS/TS file."""
+    try:
+        lines = file_path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return [f"Error: Could not read {file_path.name}"]
+
+    defs = []
+    pattern_func = re.compile(r"^\s*(export\s+)?(async\s+)?function\s+\w+")
+    pattern_class = re.compile(r"^\s*(export\s+)?class\s+\w+")
+    pattern_arrow = re.compile(r"^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s*)?\(?")
+
+    for line in lines:
+        stripped = line.rstrip()
+        if pattern_func.match(stripped) or pattern_class.match(stripped) or pattern_arrow.match(stripped):
+            defs.append(f"| {stripped.strip()}")
+
+    return defs
+
 class ListCodeDefinitionNamesTool(Tool):
-    """A tool to list top-level definitions (functions and classes) from Python files in a directory."""
+    """A tool to list top-level definitions (functions and classes) from source files."""
     @property
     def name(self) -> str:
         return "list_code_definition_names"
-
     @property
     def description(self) -> str:
-        return ("Lists top-level function and class definition lines from Python source code files "
-                "in the specified directory. Returns a JSON string detailing definitions per file.")
-
+        return (
+            "Lists top-level function and class definition lines from Python and JavaScript/TypeScript "
+            "source files in the specified directory. Returns a JSON string detailing definitions per file."
+        )
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
-            "path": "The relative or absolute path to the directory to scan for Python files."
+            "path": "The relative or absolute path to the directory to scan for source files."
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
-        """Executes the tool to find Python definitions. Expects 'path' in params."""
+        """Executes the tool to find top-level code definitions. Expects 'path' in params."""
         path_str = params.get("path")
         if not path_str:
             return json.dumps({"error": "Missing required parameter 'path'."})
@@ -81,37 +102,42 @@ class ListCodeDefinitionNamesTool(Tool):
             if not abs_dir_path.is_dir():
                 return json.dumps({"error": f"Path {str(abs_dir_path)} is not a directory."})
 
-            output_structure = [] # List of dicts: {"file": "name", "definitions": []} or similar
+            output_structure = []
 
             found_defs = False
-            # Track if any Python files were found at all
-            found_py_files = False
+            found_supported_files = False
+
+            suffix_map = {
+                ".py": _python_top_level_defs,
+                ".js": _javascript_top_level_defs,
+                ".ts": _javascript_top_level_defs,
+            }
+
             for entry in sorted(abs_dir_path.iterdir()):
-                if entry.is_file() and entry.suffix == ".py":
-                    found_py_files = True
-                    defs = _python_top_level_defs(entry)
-                    if defs: # Only add if there are definitions or errors from parsing
+                if entry.is_file() and entry.suffix in suffix_map:
+                    found_supported_files = True
+                    defs = suffix_map[entry.suffix](entry)
+                    if defs:
                         output_structure.append({
                             "file": entry.name,
-                            "definitions": defs # These already include error messages if any
+                            "definitions": defs,
                         })
-                        # Consider it found_defs if at least one definition is not an error
                         if any(not d.startswith("Error:") and not d.startswith("| Error:") for d in defs):
                             found_defs = True
 
-            if not found_py_files: # No .py files found
-                 return json.dumps({"message": "No Python files found in the directory."}) # More specific message
+            if not found_supported_files:
+                return json.dumps({"message": "No supported source files found in the directory."})
 
-            if not output_structure and found_py_files: # .py files found, but no definitions extracted (e.g. all empty or no classes/funcs)
-                 return json.dumps({"message": "No definitions found in Python files."})
+            if not output_structure:
+                return json.dumps({"message": "No definitions found in source files."})
 
 
             if not found_defs and any("Error:" in d for item in output_structure for d in item["definitions"]):
                  # Only errors were found during parsing of some files
-                 return json.dumps({"results": output_structure, "message": "Found Python files, but encountered errors while parsing definitions."})
+                 return json.dumps({"results": output_structure, "message": "Found source files, but encountered errors while parsing definitions."})
 
             # If found_defs is true, or if there are no parsing errors in any file.
-            return json.dumps({"results": output_structure, "message": "Successfully listed code definitions." if found_defs else "No definitions found in Python files."})
+            return json.dumps({"results": output_structure, "message": "Successfully listed code definitions." if found_defs else "No definitions found in source files."})
 
         except Exception as e:
             return json.dumps({"error": f"Error listing code definitions in {path_str}: {e}"})
@@ -131,9 +157,8 @@ def list_code_definition_names(directory_path: str, agent_tools_instance: Any = 
         raise RuntimeError(f"Tool error: {data['error']}")
 
     if "message" in data and (
-        data["message"] == "No Python files found in the directory." or
-        data["message"] == "No definitions found in Python files." or # Covers case where .py files are empty/no defs
-        data["message"] == "No Python files with definitions found or directory is empty." # Original tool message
+        data["message"] == "No supported source files found in the directory." or
+        data["message"] == "No definitions found in source files."
     ):
         return "No source code definitions found."
 

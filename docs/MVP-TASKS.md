@@ -6,54 +6,46 @@ This document outlines the remaining and new tasks required to enhance the MVP o
 
 These tasks focus on improving the agent's architecture, maintainability, and robustness based on the initial code review.
 
-*   **1.1. Refactor Tool Dispatch Mechanism:**
     *   **Description:** Replace the `if/elif/else` structure in `DeveloperAgent._run_tool` with a more extensible mechanism like dictionary-based dispatch or the Strategy pattern.
     *   **Reasoning:** Addresses code review point AC1; improves adherence to Open/Closed Principle (SOLID).
-    *   **Status:** To Do
+    *   **Status:** Done
 
-*   **1.2. Introduce Abstract Base Class/Protocol for Tools:**
     *   **Description:** Define a `Tool` ABC or Protocol that all tools must implement. This interface should define methods like `execute(params: Dict) -> str` and properties for `name`, `description`, and `parameters_schema`.
     *   **Reasoning:** Addresses AC2; improves SOLID (Liskov Substitution, Interface Segregation), makes tool addition cleaner, and facilitates dynamic prompt generation.
-    *   **Status:** To Do
+    *   **Status:** Done
 
-*   **1.3. Implement Robust XML Parsing for Assistant Messages:**
     *   **Description:** Replace the current string-searching logic in `src/assistant_message.py` with a robust XML parser (e.g., Python's built-in `xml.etree.ElementTree`).
     *   **Reasoning:** Addresses SF6; significantly improves reliability of parsing LLM responses, handling XML entities and format variations.
-    *   **Status:** To Do
+    *   **Status:** Done
 
-*   **1.4. Adopt Templating Engine for System Prompt Generation:**
     *   **Description:** Use a templating engine (e.g., Jinja2) for constructing the system prompt in `src/prompts/system.py`.
     *   **Reasoning:** Addresses AC3, SF14; makes managing complex prompt logic (conditionals, variable substitution) cleaner and less error-prone.
-    *   **Status:** To Do
+    *   **Status:** Done
 
-*   **1.5. Formalize LLM Interaction Interface:**
     *   **Description:** Define an `LLMWrapper` ABC or Protocol with methods like `send_message` to ensure a consistent contract for different LLM backends.
     *   **Reasoning:** Addresses AC4; improves extensibility for adding new LLM providers.
-    *   **Status:** To Do
+    *   **Status:** Done
 
 *   **1.6. Clarify and Implement "Command Prompts" Workflow:**
     *   **Description:** Define and implement a clear workflow for how "command prompts" (from `src/prompts/commands.py`) and associated meta-tools (e.g., `new_task`, `condense`, `report_bug`, `new_rule` stubs in `meta_tools.py`) are invoked and processed by the agent.
     *   **Reasoning:** Addresses SF15; ensures these Cline-inspired interaction patterns are effectively integrated.
     *   **Status:** To Do
 
-*   **1.7. Standardize Tool Error Handling and Reporting:**
     *   **Description:** Implement a consistent mechanism for tools to report execution failures. The agent should catch these errors and relay them to the LLM in a structured format.
     *   **Reasoning:** Improves agent robustness and allows LLM to react to tool issues.
-    *   **Status:** To Do
+    *   **Status:** Done
 
-*   **1.8. Refine Boolean Parameter Handling:**
     *   **Description:** Make the `_to_bool` utility (or equivalent logic for parsing boolean tool parameters from LLM) stricter (e.g., only 'true'/'false') or more robust with clear documentation for the LLM.
     *   **Reasoning:** Addresses SF1; reduces ambiguity in LLM communication.
-    *   **Status:** To Do
+    *   **Status:** Done
 
 ## II. Tool Implementation & Enhancement
 
 These tasks focus on implementing missing tools from Cline, completing stubbed tools, and enhancing existing ones.
 
-*   **2.1. Fully Implement `browser_action` Tool:**
     *   **Description:** Complete the implementation of the `browser_action` tool, integrating a browser control library (e.g., Playwright or Selenium) to provide capabilities like launching, clicking, typing, scrolling, and closing the browser, as specified in Cline's system prompt.
     *   **Reasoning:** Currently stubbed; essential for web interaction tasks.
-    *   **Status:** To Do
+    *   **Status:** Done
 
 *   **2.2. Fully Implement `use_mcp_tool`:**
     *   **Description:** Complete the implementation of the `use_mcp_tool` for interacting with external Model Context Protocol (MCP) servers.
@@ -65,15 +57,13 @@ These tasks focus on implementing missing tools from Cline, completing stubbed t
     *   **Reasoning:** Currently stubbed; complements `use_mcp_tool`.
     *   **Status:** To Do
 
-*   **2.4. Implement `load_mcp_documentation` Tool:**
     *   **Description:** Add and implement the `load_mcp_documentation` tool as described in Cline's system prompt, allowing the agent to fetch documentation for creating MCP servers.
     *   **Reasoning:** Missing from current Python agent; supports MCP development.
-    *   **Status:** To Do
+    *   **Status:** Done
 
-*   **2.5. Enhance `list_code_definition_names` Language Support:**
     *   **Description:** Extend the `list_code_definition_names` tool to support more programming languages beyond Python, potentially using generic parsing libraries (e.g., tree-sitter).
     *   **Reasoning:** Addresses SF16; increases tool utility across different project types.
-    *   **Status:** To Do
+    *   **Status:** Done
 
 *   **2.6. Verify and Align All Tools with Cline Specifications:**
     *   **Description:** Review all existing Python tools (`execute_command`, `read_file`, `write_to_file`, `replace_in_file`, `search_files`, `list_files`, `ask_followup_question`, `attempt_completion`) against their detailed descriptions and parameters in `vendor/cline/src/core/prompts/system.ts`. Ensure full compliance.
