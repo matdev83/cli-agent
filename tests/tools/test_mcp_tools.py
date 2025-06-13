@@ -8,7 +8,11 @@ def test_use_mcp_tool_instantiation():
     tool = UseMCPTool() # Corrected case
     assert tool.name == "use_mcp_tool" # Name property remains snake_case
     assert "Request to use a tool provided by a connected MCP server." in tool.description
-    assert len(tool.parameters) == 3
+    assert tool.parameters_schema == {
+        "server_name": "The name of the MCP server providing the tool.",
+        "tool_name": "The name of the tool to execute.",
+        "arguments": "A JSON object string containing the tool's input parameters."
+    }
 
 def test_use_mcp_tool_execute_success():
     tool = UseMCPTool() # Corrected case
@@ -17,7 +21,7 @@ def test_use_mcp_tool_execute_success():
         "tool_name": "test-tool",
         "arguments": "{'param1': 'value1'}"
     }
-    result = tool.execute(params)
+    result = tool.execute(params, agent_tools_instance=None)
     assert "Success: UseMCPTool called." in result # Corrected class name in message
     assert "Server: 'test-server'" in result
     assert "Tool: 'test-tool'" in result
@@ -28,27 +32,27 @@ def test_use_mcp_tool_execute_missing_params():
     tool = UseMCPTool() # Corrected case
 
     # Missing all
-    result_all_missing = tool.execute({})
+    result_all_missing = tool.execute({}, agent_tools_instance=None)
     assert "Error: Missing required parameters: server_name, tool_name, arguments." in result_all_missing
 
     # Missing server_name
     params_no_server = {"tool_name": "t", "arguments": "{}"}
-    result_no_server = tool.execute(params_no_server)
+    result_no_server = tool.execute(params_no_server, agent_tools_instance=None)
     assert "Error: Missing required parameters: server_name." in result_no_server
 
     # Missing tool_name
     params_no_tool = {"server_name": "s", "arguments": "{}"}
-    result_no_tool = tool.execute(params_no_tool)
+    result_no_tool = tool.execute(params_no_tool, agent_tools_instance=None)
     assert "Error: Missing required parameters: tool_name." in result_no_tool
 
     # Missing arguments
     params_no_args = {"server_name": "s", "tool_name": "t"}
-    result_no_args = tool.execute(params_no_args)
+    result_no_args = tool.execute(params_no_args, agent_tools_instance=None)
     assert "Error: Missing required parameters: arguments." in result_no_args
 
     # Arguments is None (should be treated as missing)
     params_args_none = {"server_name": "s", "tool_name": "t", "arguments": None}
-    result_args_none = tool.execute(params_args_none)
+    result_args_none = tool.execute(params_args_none, agent_tools_instance=None)
     assert "Error: Missing required parameters: arguments." in result_args_none
 
 def test_use_mcp_tool_execute_empty_args_string_is_valid():
@@ -58,7 +62,7 @@ def test_use_mcp_tool_execute_empty_args_string_is_valid():
         "tool_name": "test-tool",
         "arguments": "" # Empty string for JSON arguments
     }
-    result = tool.execute(params)
+    result = tool.execute(params, agent_tools_instance=None)
     assert "Success: UseMCPTool called." in result # Corrected class name in message
     assert "Args: ''" in result # Ensure empty string is passed through
 
@@ -68,7 +72,10 @@ def test_access_mcp_resource_tool_instantiation():
     tool = AccessMCPResourceTool() # Corrected case
     assert tool.name == "access_mcp_resource" # Name property remains snake_case
     assert "Request to access a resource provided by a connected MCP server." in tool.description
-    assert len(tool.parameters) == 2
+    assert tool.parameters_schema == {
+        "server_name": "The name of the MCP server providing the resource.",
+        "uri": "The URI identifying the specific resource to access."
+    }
 
 def test_access_mcp_resource_tool_execute_success():
     tool = AccessMCPResourceTool() # Corrected case
@@ -76,7 +83,7 @@ def test_access_mcp_resource_tool_execute_success():
         "server_name": "resource-server",
         "uri": "mcp://resource-server/some/resource-id"
     }
-    result = tool.execute(params)
+    result = tool.execute(params, agent_tools_instance=None)
     assert "Success: AccessMCPResourceTool called." in result # Corrected class name in message
     assert "Server: 'resource-server'" in result
     assert "URI: 'mcp://resource-server/some/resource-id'" in result
@@ -86,22 +93,22 @@ def test_access_mcp_resource_tool_execute_missing_params():
     tool = AccessMCPResourceTool() # Corrected case
 
     # Missing all
-    result_all_missing = tool.execute({})
+    result_all_missing = tool.execute({}, agent_tools_instance=None)
     assert "Error: Missing required parameters: server_name, uri." in result_all_missing
 
     # Missing server_name
     params_no_server = {"uri": "mcp://s/r"}
-    result_no_server = tool.execute(params_no_server)
+    result_no_server = tool.execute(params_no_server, agent_tools_instance=None)
     assert "Error: Missing required parameters: server_name." in result_no_server
 
     # Missing uri
     params_no_uri = {"server_name": "s"}
-    result_no_uri = tool.execute(params_no_uri)
+    result_no_uri = tool.execute(params_no_uri, agent_tools_instance=None)
     assert "Error: Missing required parameters: uri." in result_no_uri
 
     # URI is None (should be treated as missing)
     params_uri_none = {"server_name": "s", "uri": None}
-    result_uri_none = tool.execute(params_uri_none)
+    result_uri_none = tool.execute(params_uri_none, agent_tools_instance=None)
     assert "Error: Missing required parameters: uri." in result_uri_none
 
 def test_access_mcp_resource_tool_execute_empty_uri_is_valid():
@@ -115,7 +122,7 @@ def test_access_mcp_resource_tool_execute_empty_uri_is_valid():
     # For a URI, an empty string is usually not a valid identifier, but let's test current behavior.
     # If an empty URI string should be valid, the tool logic `if not uri:` needs to be `if uri is None:`.
     # Based on current tool code: `if not uri:` means "" is a "missing" (falsy) value.
-    result = tool.execute(params)
+    result = tool.execute(params, agent_tools_instance=None)
     assert "Error: Missing required parameters: uri." in result # Current behavior
 
     # If we wanted to allow empty string URI and only error on None:

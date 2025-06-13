@@ -35,61 +35,42 @@ class BrowserActionTool(Tool):
         )
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "name": "action",
-                "description": "The browser action to perform. Options: launch, click, type, scroll_down, scroll_up, close.",
-                "type": "string",
-                "required": True
-            },
-            {
-                "name": "url",
-                "description": "The URL to navigate to (required for 'launch' action).",
-                "type": "string",
-                "required": False
-            },
-            {
-                "name": "coordinate",
-                "description": "The x,y coordinate for 'click' action (e.g., '640,512').",
-                "type": "string",
-                "required": False
-            },
-            {
-                "name": "text",
-                "description": "The text to type for 'type' action.",
-                "type": "string",
-                "required": False
-            }
-        ]
+    def parameters_schema(self) -> Dict[str, str]:
+        return {
+            "action": "The browser action to perform. Options: launch, click, type, scroll_down, scroll_up, close.",
+            "url": "The URL to navigate to (required for 'launch' action).",
+            "coordinate": "The x,y coordinate for 'click' action (e.g., '640,512').",
+            "text": "The text to type for 'type' action."
+        }
 
-    def _get_playwright_page(self, agent_memory: Any) -> Optional[Page]:
-        if agent_memory and hasattr(agent_memory, 'playwright_page'):
-            return agent_memory.playwright_page
+    def _get_playwright_page(self, agent_tools_instance: Any) -> Optional[Page]:
+        if agent_tools_instance and hasattr(agent_tools_instance, 'playwright_page'):
+            return agent_tools_instance.playwright_page
         return None
 
-    def _get_playwright_context(self, agent_memory: Any) -> Optional[BrowserContext]:
-        if agent_memory and hasattr(agent_memory, 'playwright_browser_context'):
-            return agent_memory.playwright_browser_context
+    def _get_playwright_context(self, agent_tools_instance: Any) -> Optional[BrowserContext]:
+        if agent_tools_instance and hasattr(agent_tools_instance, 'playwright_browser_context'):
+            return agent_tools_instance.playwright_browser_context
         return None
 
-    def _get_playwright_sync_instance(self, agent_memory: Any) -> Optional[Playwright]:
-        if agent_memory and hasattr(agent_memory, 'playwright_sync_instance'):
-            return agent_memory.playwright_sync_instance
+    def _get_playwright_sync_instance(self, agent_tools_instance: Any) -> Optional[Playwright]:
+        if agent_tools_instance and hasattr(agent_tools_instance, 'playwright_sync_instance'):
+            return agent_tools_instance.playwright_sync_instance
         return None
 
-    def _set_playwright_state(self, agent_memory: Any, sync_instance: Optional[Playwright] = None, context: Optional[BrowserContext] = None, page: Optional[Page] = None):
-        if agent_memory:
+    def _set_playwright_state(self, agent_tools_instance: Any, sync_instance: Optional[Playwright] = None, context: Optional[BrowserContext] = None, page: Optional[Page] = None):
+        if agent_tools_instance:
             # Allow setting None to clear state
-            agent_memory.playwright_sync_instance = sync_instance
-            agent_memory.playwright_browser_context = context
-            agent_memory.playwright_page = page
+            agent_tools_instance.playwright_sync_instance = sync_instance
+            agent_tools_instance.playwright_browser_context = context
+            agent_tools_instance.playwright_page = page
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """
         Executes the browser action.
         Expects 'action' in params, and other params based on the action.
-        Manages Playwright browser instance and page via agent_memory.
+        Manages Playwright browser instance and page via agent_tools_instance.
+        Manages Playwright browser instance and page via agent_tools_instance.
         """
         action = params.get("action")
         if not action:
@@ -105,19 +86,19 @@ class BrowserActionTool(Tool):
                     return json.dumps({"status": "error", "message": "Missing 'url' for 'launch' action."})
 
                 # Close existing browser if any, before launching a new one
-                existing_context = self._get_playwright_context(agent_memory)
+                existing_context = self._get_playwright_context(agent_tools_instance)
                 if existing_context:
                     try:
                         existing_context.close()
                     except Exception: # Ignore errors on closing old context
                         pass
-                existing_sync_instance = self._get_playwright_sync_instance(agent_memory)
+                existing_sync_instance = self._get_playwright_sync_instance(agent_tools_instance)
                 if existing_sync_instance:
                     try:
                         existing_sync_instance.stop()
                     except Exception:
                         pass
-                self._set_playwright_state(agent_memory, None, None, None)
+                self._set_playwright_state(agent_tools_instance, None, None, None)
 
                 print("[DEBUG] Attempting to start Playwright...")
                 p_sync = sync_playwright().start()
@@ -140,25 +121,25 @@ class BrowserActionTool(Tool):
                 page = context.new_page()
                 page.goto(url)
 
-                self._set_playwright_state(agent_memory, p_sync, context, page)
+                self._set_playwright_state(agent_tools_instance, p_sync, context, page)
 
                 # Screenshot logic would go here. For now, just a message.
                 return json.dumps({"status": "success", "message": f"Browser launched at {url}.", "screenshot": screenshot_data})
 
             elif action == "close":
-                context = self._get_playwright_context(agent_memory)
-                sync_instance = self._get_playwright_sync_instance(agent_memory)
+                context = self._get_playwright_context(agent_tools_instance)
+                sync_instance = self._get_playwright_sync_instance(agent_tools_instance)
 
                 if context:
                     context.close()
                 if sync_instance:
                     sync_instance.stop()
 
-                self._set_playwright_state(agent_memory, None, None, None)
+                self._set_playwright_state(agent_tools_instance, None, None, None)
                 return json.dumps({"status": "success", "message": "Browser closed."})
 
             # Actions requiring an active page
-            page = self._get_playwright_page(agent_memory)
+            page = self._get_playwright_page(agent_tools_instance)
             if not page:
                 return json.dumps({"status": "error", "message": "Browser not launched or page not available."})
 
@@ -200,17 +181,17 @@ class BrowserActionTool(Tool):
 
         except Exception as e:
             # Attempt to clean up playwright resources on error
-            current_context = self._get_playwright_context(agent_memory)
+            current_context = self._get_playwright_context(agent_tools_instance)
             if current_context:
                 try:
                     current_context.close()
                 except Exception:
                     pass # best effort
-            current_sync_instance = self._get_playwright_sync_instance(agent_memory)
+            current_sync_instance = self._get_playwright_sync_instance(agent_tools_instance)
             if current_sync_instance:
                 try:
                     current_sync_instance.stop()
                 except Exception:
                     pass
-            self._set_playwright_state(agent_memory, None, None, None)
+            self._set_playwright_state(agent_tools_instance, None, None, None)
             return json.dumps({"status": "error", "message": f"An error occurred: {str(e)}"})

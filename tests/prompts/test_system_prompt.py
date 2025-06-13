@@ -8,19 +8,19 @@ from src.tools.tool_protocol import Tool
 
 # Define a reusable MockTool class for these tests
 class MockPromptTool(Tool):
-    def __init__(self, name: str, description: str, parameters: List[Dict[str, str]]):
+    def __init__(self, name: str, description: str, parameters_schema: Dict[str, str]): # Updated
         self._name = name
         self._description = description
-        self._parameters = parameters
+        self._parameters_schema = parameters_schema # Updated
 
     @property
     def name(self) -> str: return self._name
     @property
     def description(self) -> str: return self._description
     @property
-    def parameters(self) -> List[Dict[str, str]]: return self._parameters
+    def parameters_schema(self) -> Dict[str, str]: return self._parameters_schema # Updated
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str: # Updated
         # Not called in prompt generation tests
         raise NotImplementedError
 
@@ -31,7 +31,7 @@ def test_generate_tools_documentation_empty():
     assert docs.strip() == "" # Empty list of tools should produce an empty string
 
 def test_generate_tools_documentation_single_tool_no_params():
-    tool1 = MockPromptTool(name="tool_one", description="Tool one does stuff.", parameters=[])
+    tool1 = MockPromptTool(name="tool_one", description="Tool one does stuff.", parameters_schema={}) # Updated
     docs = generate_tools_documentation([tool1], "/test/cwd")
     assert "## tool_one" in docs
     assert "Description: Tool one does stuff." in docs
@@ -43,10 +43,10 @@ def test_generate_tools_documentation_single_tool_with_params_cwd_replacement():
     tool1 = MockPromptTool(
         name="tool_two",
         description="Tool two with params from ${cwd}.", # Old style placeholder
-        parameters=[
-            {"name": "param1", "description": "First param.", "type": "string", "required": True},
-            {"name": "param2", "description": "Second param from ${cwd.toPosix()}.", "type": "int", "required": False} # Old style
-        ]
+        parameters_schema={ # Updated
+            "param1": "First param.",
+            "param2": "Second param from ${cwd.toPosix()}."
+        }
     )
     test_cwd_val = "/test/cwd"
     docs = generate_tools_documentation([tool1], test_cwd_val)
@@ -54,38 +54,41 @@ def test_generate_tools_documentation_single_tool_with_params_cwd_replacement():
     assert "## tool_two" in docs
     assert f"Description: Tool two with params from {test_cwd_val}." in docs # CWD replaced by generate_tools_documentation
     assert "Parameters:" in docs
-    assert "- param1: (string, (required)) First param." in docs
+    # Assertions updated to reflect default type "string" and "(optional)" from _format_parameter
+    assert "- param1: (string, (optional)) First param." in docs
     # CWD replaced by generate_tools_documentation for param description
-    assert f"- param2: (int, (optional)) Second param from {test_cwd_val}." in docs
+    assert f"- param2: (string, (optional)) Second param from {test_cwd_val}." in docs
     assert "<tool_two>" in docs
-    assert "<param1>string</param1>" in docs
-    assert "<param2>int</param2>" in docs
+    assert "<param1>string</param1>" in docs # Usage part defaults to string
+    assert "<param2>string</param2>" in docs # Usage part defaults to string
     assert "</tool_two>" in docs
 
 def test_generate_tools_documentation_parameter_formatting():
-    tool_params = [
-        {"name": "p_string", "description": "A string.", "type": "string", "required": True},
-        {"name": "p_int_opt", "description": "An int.", "type": "int"}, # required defaults to False
-        {"name": "p_bool", "description": "A bool.", "type": "boolean", "required": True},
-        {"name": "p_no_type", "description": "No type specified.", "required": False},
-    ]
-    tool = MockPromptTool(name="complex_tool", description="Desc.", parameters=tool_params)
+    tool_params_schema = { # Updated
+        "p_string": "A string.",
+        "p_int_opt": "An int.",
+        "p_bool": "A bool.",
+        "p_no_type": "No type specified."
+    }
+    # Note: 'type' and 'required' are no longer part of parameters_schema directly.
+    # _format_parameter defaults them to "string" and "(optional)".
+    tool = MockPromptTool(name="complex_tool", description="Desc.", parameters_schema=tool_params_schema) # Updated
     docs = generate_tools_documentation([tool], "/cwd")
 
-    assert "- p_string: (string, (required)) A string." in docs
-    assert "- p_int_opt: (int, (optional)) An int." in docs
-    assert "- p_bool: (boolean, (required)) A bool." in docs
-    assert "- p_no_type: (string, (optional)) No type specified." in docs # Defaults to string type if missing
+    assert "- p_string: (string, (optional)) A string." in docs
+    assert "- p_int_opt: (string, (optional)) An int." in docs
+    assert "- p_bool: (string, (optional)) A bool." in docs
+    assert "- p_no_type: (string, (optional)) No type specified." in docs
 
     assert "<p_string>string</p_string>" in docs
-    assert "<p_int_opt>int</p_int_opt>" in docs
-    assert "<p_bool>boolean</p_bool>" in docs
-    assert "<p_no_type>string</p_no_type>" in docs # Defaults to string for usage example type
+    assert "<p_int_opt>string</p_int_opt>" in docs # Type in usage defaults to string
+    assert "<p_bool>string</p_bool>" in docs     # Type in usage defaults to string
+    assert "<p_no_type>string</p_no_type>" in docs
 
 # --- Tests for get_system_prompt (using Jinja2) ---
 
 def test_get_system_prompt_basic_substitutions():
-    mock_tools = [MockPromptTool("fake_tool", "desc for {{ cwd }}", [])] # Tool desc with Jinja style CWD
+    mock_tools = [MockPromptTool("fake_tool", "desc for {{ cwd }}", {})] # Updated & Tool desc with Jinja style CWD
     test_cwd = "/projects/my_agent"
     prompt = get_system_prompt(tools=mock_tools, cwd=test_cwd)
 
@@ -100,7 +103,7 @@ def test_get_system_prompt_basic_substitutions():
     assert f"desc for {test_cwd}" in prompt # Jinja should render {{ cwd }} within the tool_documentation block
 
 def test_get_system_prompt_browser_support_conditional():
-    mock_tools = []
+    mock_tools = [] # No tools needed, just testing conditional sections
     # Test when supports_browser_use is False
     prompt_no_browser = get_system_prompt(tools=mock_tools, cwd="/cwd", supports_browser_use=False)
     # Check that the specific capability text for browser is NOT there
@@ -113,7 +116,7 @@ def test_get_system_prompt_browser_support_conditional():
     assert "You can use the browser_action tool to interact with websites." in prompt_with_browser
 
 def test_get_system_prompt_mcp_servers_documentation():
-    mock_tools = []
+    mock_tools = [] # No tools needed
     custom_mcp_docs = "### Server XYZ\n- Status: connected."
     prompt = get_system_prompt(tools=mock_tools, cwd="/cwd", mcp_servers_documentation=custom_mcp_docs)
     assert custom_mcp_docs in prompt
@@ -123,8 +126,8 @@ def test_get_system_prompt_mcp_servers_documentation():
     assert default_mcp_docs in prompt_default
 
 def test_get_system_prompt_with_multiple_tools():
-    tool1 = MockPromptTool("tool_alpha", "Alpha tool.", [])
-    tool2 = MockPromptTool("tool_beta", "Beta tool with param {{ cwd }}.", [{"name": "p1", "type":"str", "description":"P1", "required":True}])
+    tool1 = MockPromptTool("tool_alpha", "Alpha tool.", {}) # Updated
+    tool2 = MockPromptTool("tool_beta", "Beta tool with param {{ cwd }}.", {"p1": "P1"}) # Updated
     mock_tools = [tool1, tool2]
     test_cwd = "/beta/test"
     prompt = get_system_prompt(tools=mock_tools, cwd=test_cwd)
@@ -133,4 +136,4 @@ def test_get_system_prompt_with_multiple_tools():
     assert "Alpha tool." in prompt
     assert "## tool_beta" in prompt
     assert f"Beta tool with param {test_cwd}." in prompt # Jinja replacement for {{ cwd }}
-    assert "- p1: (str, (required)) P1" in prompt
+    assert "- p1: (string, (optional)) P1" in prompt # Updated assertion

@@ -16,21 +16,23 @@ class Tool(Protocol):
         ...
 
     @property
-    def parameters(self) -> List[Dict[str, str]]:
+    def parameters_schema(self) -> Dict[str, str]:
         """
-        A list of parameter definitions, where each definition is a dictionary
-        containing 'name' and 'description' for the parameter.
-        Example: [{'name': 'path', 'description': 'The path to the file.'}]
+        A dictionary describing the tool's parameters, where keys are parameter
+        names and values are their descriptions.
+        Example: {"path": "The path to the file."}
         """
         ...
 
-    def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str:
+    def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """
         Executes the tool with the given parameters.
 
         Args:
             params: A dictionary of parameters for the tool.
-            agent_memory: An optional memory object for tools that need to interact with agent's memory.
+            agent_tools_instance: An instance of the agent or a dedicated tools
+                                  handler class, providing access to shared
+                                  functionality like user confirmations if needed.
 
         Returns:
             A string representing the result of the tool execution.

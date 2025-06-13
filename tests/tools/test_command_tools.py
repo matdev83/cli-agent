@@ -6,15 +6,27 @@ from unittest.mock import patch, MagicMock
 from src.tools.command import ExecuteCommandTool
 # Assuming src.utils.to_bool will be used by the tool, no direct import needed in test file itself.
 
-# Dummy AgentMemory class
-class MockAgentMemory:
-    def __init__(self, cwd: str, auto_approve: bool = False):
+# Dummy AgentToolsInstance class
+class MockAgentToolsInstance:
+    def __init__(self, cwd: str, auto_approve: bool = False): # auto_approve is used by the tool
         self.cwd = cwd
+        # For ExecuteCommandTool, it checks agent_tools_instance.cli_args.auto_approve
+        # or agent_tools_instance.auto_approve. We'll use the latter for this mock.
         self.auto_approve = auto_approve
+
+def test_execute_command_tool_properties():
+    tool = ExecuteCommandTool()
+    assert tool.name == "execute_command"
+    assert isinstance(tool.description, str)
+    assert tool.parameters_schema == {
+        "command": "The shell command to execute.",
+        "timeout": "Optional timeout in seconds for the command execution. Defaults to None (no timeout).",
+        "requires_approval": "If true (string 'true' or boolean True), command execution may require approval based on agent's settings. Defaults to False if not provided."
+    }
 
 @patch('subprocess.run')
 def test_execute_command_success(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -24,7 +36,7 @@ def test_execute_command_success(mock_run, tmp_path):
     mock_run.return_value = mock_process
 
     params = {"command": "echo hello"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_called_once_with(
@@ -34,7 +46,7 @@ def test_execute_command_success(mock_run, tmp_path):
 
 @patch('subprocess.run')
 def test_execute_command_failure(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -44,7 +56,7 @@ def test_execute_command_failure(mock_run, tmp_path):
     mock_run.return_value = mock_process
 
     params = {"command": "exit 1"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     expected_output = "Some outputError output"
@@ -52,7 +64,7 @@ def test_execute_command_failure(mock_run, tmp_path):
 
 @patch('subprocess.run')
 def test_execute_command_with_specific_timeout(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -62,7 +74,7 @@ def test_execute_command_with_specific_timeout(mock_run, tmp_path):
     mock_run.return_value = mock_process
 
     params = {"command": "echo test", "timeout": 10}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_called_once_with(
@@ -72,24 +84,24 @@ def test_execute_command_with_specific_timeout(mock_run, tmp_path):
 
 @patch('subprocess.run')
 def test_execute_command_timeout_expired(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
 
     mock_run.side_effect = subprocess.TimeoutExpired(cmd="sleep 5", timeout=1)
 
     params = {"command": "sleep 5", "timeout": 1}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     assert result == {"success": False, "output": "Error: Command 'sleep 5' timed out after 1.0 seconds."}
 
 @patch('subprocess.run')
 def test_execute_command_requires_approval_true_string_not_auto_approved(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path), auto_approve=False)
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path), auto_approve=False)
     tool = ExecuteCommandTool()
 
     params = {"command": "rm -rf /", "requires_approval": "true"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_not_called()
@@ -100,11 +112,11 @@ def test_execute_command_requires_approval_true_string_not_auto_approved(mock_ru
 
 @patch('subprocess.run')
 def test_execute_command_requires_approval_true_bool_not_auto_approved(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path), auto_approve=False)
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path), auto_approve=False)
     tool = ExecuteCommandTool()
 
     params = {"command": "rm -rf /", "requires_approval": True} # Boolean True
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_not_called()
@@ -116,7 +128,7 @@ def test_execute_command_requires_approval_true_bool_not_auto_approved(mock_run,
 
 @patch('subprocess.run')
 def test_execute_command_requires_approval_auto_approved(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path), auto_approve=True)
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path), auto_approve=True)
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -126,7 +138,7 @@ def test_execute_command_requires_approval_auto_approved(mock_run, tmp_path):
     mock_run.return_value = mock_process
 
     params = {"command": "rm -rf /", "requires_approval": "true"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_called_once()
@@ -135,7 +147,7 @@ def test_execute_command_requires_approval_auto_approved(mock_run, tmp_path):
 @patch('subprocess.run')
 def test_execute_command_requires_approval_false_string_runs_normally(mock_run, tmp_path):
     """Test that string 'false' for requires_approval is correctly converted to False."""
-    mock_memory = MockAgentMemory(cwd=str(tmp_path), auto_approve=False)
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path), auto_approve=False)
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -145,7 +157,7 @@ def test_execute_command_requires_approval_false_string_runs_normally(mock_run, 
     mock_run.return_value = mock_process
 
     params = {"command": "ls", "requires_approval": "false"} # String "false"
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_called_once()
@@ -154,7 +166,7 @@ def test_execute_command_requires_approval_false_string_runs_normally(mock_run, 
 @patch('subprocess.run')
 def test_execute_command_requires_approval_false_bool_runs_normally(mock_run, tmp_path):
     """Test that boolean False for requires_approval runs normally."""
-    mock_memory = MockAgentMemory(cwd=str(tmp_path), auto_approve=False)
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path), auto_approve=False)
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -164,7 +176,7 @@ def test_execute_command_requires_approval_false_bool_runs_normally(mock_run, tm
     mock_run.return_value = mock_process
 
     params = {"command": "ls", "requires_approval": False} # Boolean False
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_called_once()
@@ -173,7 +185,7 @@ def test_execute_command_requires_approval_false_bool_runs_normally(mock_run, tm
 @patch('subprocess.run')
 def test_execute_command_requires_approval_omitted_runs_normally(mock_run, tmp_path):
     """Test that omitting requires_approval defaults to False and runs normally."""
-    mock_memory = MockAgentMemory(cwd=str(tmp_path), auto_approve=False)
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path), auto_approve=False)
     tool = ExecuteCommandTool()
 
     mock_process = MagicMock()
@@ -183,55 +195,55 @@ def test_execute_command_requires_approval_omitted_runs_normally(mock_run, tmp_p
     mock_run.return_value = mock_process
 
     params = {"command": "ls"} # requires_approval omitted
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_called_once()
     assert result == {"success": True, "output": "LS output"}
 
 def test_execute_command_missing_command_param(tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
     params = {}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
     assert result == {"success": False, "output": "Error: Missing required parameter 'command'."}
 
 def test_execute_command_invalid_timeout_type(tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
     params = {"command": "echo test", "timeout": "not-an-int"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
     assert result == {"success": False, "output": "Error: Invalid value for 'timeout', must be a number: 'not-an-int'."}
 
 def test_execute_command_negative_timeout_value(tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
     params = {"command": "echo test", "timeout": -5}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
     assert result == {"success": False, "output": "Error: 'timeout' must be a positive number."}
 
 @patch('subprocess.run')
 def test_execute_command_filenotfound_error(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
 
     mock_run.side_effect = FileNotFoundError("No such file or directory: non_existent_command")
 
     params = {"command": "non_existent_command"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     assert result == {"success": False, "output": "Error: Command not found: non_existent_command"}
 
 @patch('subprocess.run')
 def test_execute_command_invalid_requires_approval_string(mock_run, tmp_path):
-    mock_memory = MockAgentMemory(cwd=str(tmp_path))
+    mock_agent_tools_instance = MockAgentToolsInstance(cwd=str(tmp_path))
     tool = ExecuteCommandTool()
     params = {"command": "echo test", "requires_approval": "blah"}
-    result_str = tool.execute(params, agent_memory=mock_memory)
+    result_str = tool.execute(params, agent_tools_instance=mock_agent_tools_instance)
     result = json.loads(result_str)
 
     mock_run.assert_not_called()

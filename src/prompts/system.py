@@ -176,18 +176,22 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
 """
 
 # The _format_parameter and generate_tools_documentation functions remain the same
-def _format_parameter(param: Dict[str, Any], cwd: str) -> str:
+def _format_parameter(name: str, description: str, cwd: str, ptype: str = "string", required: bool = False) -> str:
     """Formats a single tool parameter for display."""
-    name = param.get("name", "unknown_param")
-    ptype = param.get("type", "string")
-    raw_desc = param.get("description", "No description.")
+    # name = param.get("name", "unknown_param") # No longer needed
+    # ptype = param.get("type", "string") # Defaulted in signature
+    # raw_desc = param.get("description", "No description.") # Passed directly
     # Replace ${cwd} and ${cwd.toPosix()} placeholders first
-    processed_desc = raw_desc.replace("${cwd}", cwd).replace("${cwd.toPosix()}", cwd)
+    processed_desc = description.replace("${cwd}", cwd).replace("${cwd.toPosix()}", cwd)
     # Then render as Jinja template
     desc_template = Template(processed_desc)
     desc = desc_template.render(cwd=cwd)
-    required = param.get("required", False)
-    req_str = "(required)" if required else "(optional)"
+    # required = param.get("required", False) # Defaulted in signature
+    # For now, we'll assume the description will clarify if required, or default to optional.
+    # The new parameters_schema doesn't explicitly carry 'type' or 'required'.
+    # We'll default type to 'string' and required to False (optional).
+    # Descriptions should be clear if a param is effectively required.
+    req_str = "(optional)" # Defaulting to optional as schema doesn't specify
     return f"- {name}: ({ptype}, {req_str}) {desc}"
 
 def generate_tools_documentation(tools_list: Iterable[Tool], cwd: str) -> str:
@@ -202,15 +206,18 @@ def generate_tools_documentation(tools_list: Iterable[Tool], cwd: str) -> str:
 
         doc_parts.append(f"## {tool.name}")
         doc_parts.append(f"Description: {description}")
-        if tool.parameters:
+        if tool.parameters_schema:
             doc_parts.append("Parameters:")
-            for param_def in tool.parameters:
-                # param_def["description"] already plain string after _format_parameter handles it
-                doc_parts.append(_format_parameter(param_def, cwd)) # Pass cwd
+            for param_name, param_desc in tool.parameters_schema.items():
+                # Assuming default type 'string' and required=False for now,
+                # as this info is not in the new simple parameters_schema.
+                # The description itself should clarify if required.
+                doc_parts.append(_format_parameter(param_name, param_desc, cwd, ptype="string", required=False))
         else:
             doc_parts.append("Parameters: None")
 
-        usage_params = "\n".join(f"<{p['name']}>{p.get('type', 'string')}</{p['name']}>" for p in tool.parameters) if tool.parameters else "" # Default to 'string'
+        # Usage section: defaulting type to 'string' as it's not in parameters_schema
+        usage_params = "\n".join(f"<{name}>string</{name}>" for name in tool.parameters_schema.keys()) if tool.parameters_schema else ""
         doc_parts.append("Usage:")
         doc_parts.append(f"<{tool.name}>\n{usage_params}\n</{tool.name}>")
         doc_parts.append("")
@@ -249,21 +256,21 @@ def get_system_prompt(
 if __name__ == '__main__':
     # Dummy tools for testing
     class DummyTool(Tool):
-        def __init__(self, name, description, parameters):
+        def __init__(self, name, description, parameters_schema):
             self._name = name
             self._description = description
-            self._parameters = parameters
+            self._parameters_schema = parameters_schema # Updated name
         @property
         def name(self) -> str: return self._name
         @property
         def description(self) -> str: return self._description
         @property
-        def parameters(self) -> List[Dict[str, str]]: return self._parameters
-        def execute(self, params: Dict[str, Any], agent_memory: Any = None) -> str: return "executed"
+        def parameters_schema(self) -> Dict[str, str]: return self._parameters_schema # Updated name
+        def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str: return "executed" # Updated param
 
     example_tools = [
-        DummyTool("read_file", "Reads a file from {{ cwd }}/path.", [{"name": "path", "description": "Path to read from {{ cwd }}", "type": "string", "required": True}]),
-        DummyTool("execute_command", "Executes a command.", [{"name": "command", "description": "The command", "type": "string", "required": True}, {"name": "requires_approval", "description": "Needs approval", "type": "boolean"}])
+        DummyTool("read_file", "Reads a file from {{ cwd }}/path.", {"path": "Path to read from {{ cwd }}"}),
+        DummyTool("execute_command", "Executes a command.", {"command": "The command", "requires_approval": "Needs approval"})
     ]
     # Ensure Jinja2 is installed if running this directly: pip install Jinja2
     try:
