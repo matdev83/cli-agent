@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Tuple, Any, Union
 import traceback # For detailed error logging in the UI
 import threading # For stop_agent_event
 
@@ -31,21 +31,34 @@ from .slash_commands import (
 )
 
 # Global list to store display messages for FormattedTextControl
-# Global list to store display messages for FormattedTextControl
-display_text_fragments = []
+display_text_fragments: List[Tuple[str, str]] = [] # Now stores (style, text) tuples
 stop_agent_event = threading.Event()
 
 
 # This function is called from various threads (agent, logging) to update the UI
-def update_display_text_safely(text_line: str, app_ref: Application, dc_ref: FormattedTextControl):
+def update_display_text_safely(text_input: Union[str, List[Tuple[str, str]]], app_ref: Application, dc_ref: FormattedTextControl):
     """
     Safely updates the display_text_fragments and the FormattedTextControl.
+    Accepts either a plain string (with default style) or a list of (style, text) tuples.
     To be called via app_ref.loop.call_soon_threadsafe if called from a non-main thread.
     """
-    display_text_fragments.append(text_line + "\n")
-    new_text = "".join(display_text_fragments)
-    # Ensure the actual update to the prompt_toolkit control happens in the main event loop
-    app_ref.loop.call_soon_threadsafe(setattr, dc_ref, 'text', new_text)
+    global display_text_fragments
+    if isinstance(text_input, str):
+        # Default style for plain strings
+        processed_input = [('', text_input + '\n')]
+    else: # It's already List[Tuple[str, str]]
+        # Ensure it ends with a newline
+        if text_input and not text_input[-1][1].endswith('\n'): # Corrected condition
+             processed_input = text_input + [('', '\n')]
+        else:
+            processed_input = text_input
+
+    display_text_fragments.extend(processed_input)
+    # Optional: Keep a reasonable buffer size
+    # display_text_fragments = display_text_fragments[-1000:] # Example: keep last 1000 entries
+
+    # This must run in the app's event loop
+    app_ref.loop.call_soon_threadsafe(setattr, dc_ref, 'text', list(display_text_fragments))
 
 
 class UIUpdateLogHandler(logging.Handler):
@@ -102,6 +115,19 @@ def run_agent_and_update_display(
     Runs the agent in a separate thread and updates the display control.
     """
 
+    def _llm_response_ui_callback(data: Dict[str, Any]):
+        cost_str = (
+            f"Used model: {data.get('model_name', 'N/A')}, "
+            f"prompt: {data.get('prompt_tokens', 'N/A')}, "
+            f"completion: {data.get('completion_tokens', 'N/A')}, "
+            f"cost: ${data.get('cost', 0.0):.6f}, "
+            f"session_cost: ${data.get('session_cost', 0.0):.6f}"
+        )
+        # Prepare as styled text
+        styled_cost_str_fragments = [('class:cost-info', cost_str)]
+        # Call the modified update_display_text_safely
+        update_display_text_safely(styled_cost_str_fragments, app_ref, dc_ref)
+
     def _update_ui(message: str):
         # Ensures UI updates happen on the main event loop
         update_display_text_safely(message, app_ref, dc_ref)
@@ -124,9 +150,8 @@ def run_agent_and_update_display(
         # A true cooperative stop would require run_agent to take stop_event.
         result = run_agent(
             task=task,
-            # responses_file=args.responses_file, # This will now come from current_cli_args
-            # ... other direct args from original args if they are not meant to be dynamic
-            cli_args=current_cli_args # Pass the potentially modified cli_args
+            cli_args=current_cli_args, # Pass the potentially modified cli_args
+            on_llm_response_callback=_llm_response_ui_callback # Pass the callback here
         )
 
         sys.stdout = original_stdout # Restore stdout
@@ -169,7 +194,8 @@ def run_agent(
     return_history: bool = False,
     # llm_timeout: Optional[float] = None, # Will come from cli_args
     # matching_strictness: int = 100, # From cli_args
-    cli_args: Optional[argparse.Namespace] = None
+    cli_args: Optional[argparse.Namespace] = None,
+    on_llm_response_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> str | tuple[str, list[dict[str, str]]]:
 
     if cli_args is None:
@@ -213,6 +239,7 @@ def run_agent(
         llm.send_message,
         cwd=current_cwd, # Use cwd from cli_args
         cli_args=cli_args, # Pass the whole namespace
+        on_llm_response_callback=on_llm_response_callback,
         # matching_strictness and disable_git_auto_commits are already correctly sourced from cli_args if present
         # in the original code, so no change needed there.
     )
@@ -325,32 +352,14 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
         parser.error("--responses-file is required when using the mock model.")
 
     # --- prompt_toolkit UI Setup ---
-    display_text_fragments.append("Welcome to the CLI Agent. Type your task below and press Enter.\nUse Ctrl-C or Ctrl-D to exit.\n")
-    display_control = FormattedTextControl(text="".join(display_text_fragments), focusable=False, focus_on_click=False)
-    display_window = Window(
-        content=display_control,
-        wrap_lines=True,
-        # Make it scrollable from the bottom if content overflows
-        # scroll_offsets=ScrollOffsets(bottom=0, top=0), # Might need custom scroll handler
-        dont_extend_height=False
-    )
-
-    input_field = TextArea(
-        height=3, # Allow multi-line input, but keep it modest
-        prompt="Task: ",
-        multiline=True, # Use True for Enter key to submit, False for Shift+Enter for newline
-        wrap_lines=True,
-        search_field=SearchToolbar(), # Optional: for multi-line search
-    )
-
-    # --- prompt_toolkit UI Setup ---
-    # Initial message for the display
-    display_text_fragments.append(
-        "Welcome to the CLI Agent. Type your task, or /stop, /exit.\n"
-        "Ctrl-C or Ctrl-D also exits.\n"
-    )
+    global display_text_fragments # Ensure we are modifying the global
+    display_text_fragments = [
+        ('', "Welcome to the CLI Agent. Type your task below and press Enter.\n"),
+        ('', "Use Ctrl-C or Ctrl-D to exit.\n"),
+        ('', "Type /help for a list of commands.\n")
+    ]
     display_control = FormattedTextControl(
-        text="".join(display_text_fragments),
+        text=list(display_text_fragments), # Use the list of tuples directly
         focusable=False,
         focus_on_click=False
     )
@@ -358,7 +367,6 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
 
     input_field = TextArea(
         height=3, prompt="Task / Command: ", multiline=True, wrap_lines=True,
-        # search_field=SearchToolbar(), # Optional
     )
 
     # Main container for UI
@@ -382,7 +390,11 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
         layout=Layout(container, focused_element=input_field),
         key_bindings=kb,
         full_screen=True,
-        style=Style.from_dict({'line': '#888888', 'textarea': 'bg:#1e1e1e #ansidefault'}), # Basic styling
+        style=Style.from_dict({
+            'line': '#888888',
+            'textarea': 'bg:#1e1e1e #ansidefault',
+            'cost-info': 'fg:ansiblue italic', # Added style for cost info
+        }),
         mouse_support=True,
     )
 

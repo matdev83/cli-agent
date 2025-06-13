@@ -11,7 +11,7 @@ def test_agent_basic_loop(tmp_path: Path):
     ]
 
     def fake_send(history):
-        return responses.pop(0)
+        return responses.pop(0), None # Return (content, usage_info)
 
     cli_args = argparse.Namespace(
         auto_approve=True, allow_read_files=True, allow_edit_files=True,
@@ -28,7 +28,9 @@ def test_agent_max_steps(tmp_path: Path):
     responses = ["<write_to_file><path>a.txt</path><content>x</content></write_to_file>"] * 3
 
     def fake_send(history):
-        return responses.pop(0) if responses else ""
+        if not responses:
+            return "", None # Exhausted
+        return responses.pop(0), None # Return (content, usage_info)
 
     cli_args = argparse.Namespace(
         auto_approve=True, allow_read_files=True, allow_edit_files=True,

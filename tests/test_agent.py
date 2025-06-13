@@ -4,7 +4,7 @@ import unittest
 import argparse # Added import
 from unittest.mock import patch, MagicMock, call
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
 import subprocess # For git_repo fixture and direct git calls
 import shutil # For git_repo fixture
 import os # For git_repo fixture
@@ -818,6 +818,19 @@ def test_agent_initialization_cwd(tmp_path: Path):
     agent_default_cwd = DeveloperAgent(send_message=MagicMock()) # Uses default cwd="."
     assert Path(agent_default_cwd.cwd).is_absolute()
     assert agent_default_cwd.cwd == str(Path(".").resolve())
+    # Test new cost/token attributes
+    assert agent.session_cost == 0.0
+    assert agent.last_model_name is None
+    assert agent.last_prompt_tokens is None
+    assert agent.last_completion_tokens is None
+    assert agent.last_cost is None
+    assert agent.on_llm_response_callback is None
+
+
+def test_agent_initialization_with_callback():
+    mock_callback = MagicMock()
+    agent = DeveloperAgent(send_message=MagicMock(), on_llm_response_callback=mock_callback)
+    assert agent.on_llm_response_callback == mock_callback
 
 
 def test_agent_initialization_tools_loaded():
@@ -1268,3 +1281,122 @@ def test_agent_auto_commit_handles_commit_all_changes_returning_none(mock_user_c
 
     mock_commit_all.assert_called_once_with(str(minimal_git_repo))
     assert len(agent.session_commit_history) == 0
+
+
+class TestAgentCostTracking(unittest.TestCase):
+    def setUp(self):
+        self.cwd = Path(".")
+        self.cli_args = argparse.Namespace(
+            auto_approve=True, allow_read_files=True, allow_edit_files=True,
+            allow_execute_safe_commands=True, allow_execute_all_commands=True,
+            allow_use_browser=True, allow_use_mcp=True,
+            disable_git_auto_commits=True # Disable commits for these tests
+        )
+        # Create a dummy file that tools might try to interact with if not fully mocked
+        (self.cwd / "dummy.txt").touch()
+
+
+    def test_agent_run_task_updates_cost_info(self):
+        mock_usage_data_call1 = {
+            "model_name": "mock_model_v1",
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "cost": 0.0005
+        }
+        mock_usage_data_call2 = {
+            "model_name": "mock_model_v1", # Same model
+            "prompt_tokens": 15,
+            "completion_tokens": 25,
+            "cost": 0.0007
+        }
+
+        # Use a list to manage responses for multiple calls
+        responses_with_usage = [
+            ("<tool_use><tool_name>read_file</tool_name><params><path>dummy.txt</path></params></tool_use>", mock_usage_data_call1),
+            ("<tool_use><tool_name>read_file</tool_name><params><path>dummy.txt</path></params></tool_use>", mock_usage_data_call2),
+            ("No further action.", None) # Stop the loop
+        ]
+
+        call_count = 0
+        def mock_send_message_with_usage(messages: List[Dict[str, str]]) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+            nonlocal call_count
+            response = responses_with_usage[call_count]
+            call_count += 1
+            return response
+
+        agent = DeveloperAgent(
+            send_message=mock_send_message_with_usage,
+            cwd=str(self.cwd),
+            cli_args=self.cli_args
+        )
+
+        # Mock the read_file tool to prevent actual file operations and ensure loop continues
+        read_file_tool_instance = agent.tools_map["read_file"]
+        with patch.object(read_file_tool_instance, 'execute', return_value="Dummy file content") as mock_read_execute:
+            agent.run_task("A task involving two LLM calls with usage.")
+
+        self.assertEqual(mock_read_execute.call_count, 2) # Ensure agent looped twice for tools
+
+        # Attributes should reflect the *last* call's usage data (which was None)
+        self.assertIsNone(agent.last_model_name)
+        self.assertIsNone(agent.last_prompt_tokens)
+        self.assertIsNone(agent.last_completion_tokens)
+        self.assertIsNone(agent.last_cost)
+
+        # Session cost should be accumulated from calls that had usage
+        expected_session_cost = mock_usage_data_call1["cost"] + mock_usage_data_call2["cost"]
+        self.assertAlmostEqual(agent.session_cost, expected_session_cost)
+
+    def test_agent_calls_llm_response_callback(self):
+        mock_usage_data = {
+            "model_name": "mock_model_v1",
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "cost": 0.0005
+        }
+
+        # Simulate one LLM call that returns usage, then one that doesn't, then stops.
+        responses_for_callback_test = [
+            ("<tool_use><tool_name>read_file</tool_name><params><path>dummy.txt</path></params></tool_use>", mock_usage_data),
+            ("<tool_use><tool_name>read_file</tool_name><params><path>dummy.txt</path></params></tool_use>", None), # No usage on second call
+            ("Task complete.", None)
+        ]
+
+        send_message_call_count = 0
+        def mock_send_message_for_callback(messages: List[Dict[str, str]]) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+            nonlocal send_message_call_count
+            response_content, usage = responses_for_callback_test[send_message_call_count]
+            send_message_call_count += 1
+            return response_content, usage
+
+        mock_callback_fn = MagicMock()
+
+        agent = DeveloperAgent(
+            send_message=mock_send_message_for_callback,
+            cwd=str(self.cwd),
+            cli_args=self.cli_args,
+            on_llm_response_callback=mock_callback_fn
+        )
+
+        read_file_tool_instance = agent.tools_map["read_file"]
+        with patch.object(read_file_tool_instance, 'execute', return_value="Dummy file content"):
+            agent.run_task("Test callback invocation.")
+
+        # Callback should be called once, only for the first LLM response that had usage_info
+        mock_callback_fn.assert_called_once()
+
+        expected_callback_data = {
+            "model_name": "mock_model_v1",
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "cost": 0.0005,
+            "session_cost": 0.0005 # First call, session_cost equals this call's cost
+        }
+        mock_callback_fn.assert_called_with(expected_callback_data)
+
+        # Check agent's own tracking after all calls
+        self.assertEqual(agent.last_model_name, None) # Last call had no usage
+        self.assertEqual(agent.last_prompt_tokens, None)
+        self.assertEqual(agent.last_completion_tokens, None)
+        self.assertEqual(agent.last_cost, None)
+        self.assertAlmostEqual(agent.session_cost, 0.0005) # Only first call had cost

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging # Added import
 from pathlib import Path
-from typing import List, Dict, Optional # Added Optional
+from typing import List, Dict, Optional, Tuple, Any # Added Optional, Tuple, Any
 import time # Added for retry delays
 
 from openai import OpenAI, APIStatusError, APIConnectionError, RateLimitError # Added specific exceptions
@@ -29,13 +29,13 @@ class MockLLM(LLMWrapper): # Indicate conformance to the protocol
         messages: List[Dict[str, str]],
         temperature: float = 0.7, # Added to match protocol
         max_tokens: int = 1024     # Added to match protocol
-    ) -> Optional[str]: # Changed return type to Optional[str]
+    ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]: # Changed return type
         # temperature and max_tokens are ignored in this mock implementation
         if self._index >= len(self._responses):
-            return None # Return None if no more responses, fits Optional[str]
+            return None, None # Return None, None if no more responses
         resp = self._responses[self._index]
         self._index += 1
-        return resp # This is a string, fits Optional[str]
+        return resp, None # This is a string, fits Optional[str]
 
 
 class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
@@ -50,6 +50,7 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
             default_headers={
                 "HTTP-Referer": "https://cline.bot", # Example referrer
                 "X-Title": "CLI Agent",              # Example title
+                "X-OpenRouter-Settings": '{"return_usage": true}',
             },
         )
 
@@ -58,7 +59,7 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
         messages: List[Dict[str, str]],
         temperature: float = 0.7,  # Added to match protocol
         max_tokens: int = 1024      # Added to match protocol
-    ) -> Optional[str]: # Changed return type to Optional[str]
+    ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]: # Changed return type
 
         # Prepare request parameters, including temperature and max_tokens if model supports them
         request_params = {
@@ -78,18 +79,36 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
         for attempt in range(max_retries):
             try:
                 response = self._client.chat.completions.create(**request_params, timeout=self.timeout)
+                usage_info: Optional[Dict[str, Any]] = None
 
-                if response.choices and response.choices[0].message:
+                if response.usage:
+                    cost = 0.0
+                    # OpenRouter returns cost in millionths of a cent, convert to dollars.
+                    # total_cost is in 1/10000th of a cent. So 100 * 10000 to get to dollars
+                    # According to OpenRouter docs, `cost` is already in USD.
+                    if hasattr(response.usage, 'cost'):
+                        cost = response.usage.cost
+                    elif hasattr(response.usage, 'total_cost'): # Fallback if 'cost' is not present
+                        cost = response.usage.total_cost / 10000000 # Convert from 1/10000th of a cent to USD
+
+                    usage_info = {
+                        "model_name": self.model,
+                        "prompt_tokens": response.usage.prompt_tokens,
+                        "completion_tokens": response.usage.completion_tokens,
+                        "cost": cost
+                    }
+
+                if response.choices and response.choices[0].message and response.choices[0].message.content:
                     content = response.choices[0].message.content
-                    return content # content can be string or None
-                # If response is valid but no choices/message, consider it a success with no content
-                logging.info("OpenRouter API returned a response with no content.")
-                return None
+                    return content, usage_info
+
+                logging.info("OpenRouter API returned a response with no content or choices.")
+                return None, usage_info # Return usage_info even if content is None
             except RateLimitError as e:
                 logging.warning(f"Rate limit error on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt + 1 >= max_retries:
                     logging.error("Max retries reached for rate limit error. Failing.")
-                    return None
+                    return None, None
 
                 retry_after_header = e.response.headers.get("Retry-After")
                 delay = base_delay * (2 ** attempt) # Default exponential backoff
@@ -107,18 +126,18 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
                 if e.status_code >= 500 or e.status_code == 429: # Server-side errors or (redundant) rate limit
                     if attempt + 1 >= max_retries:
                         logging.error(f"Max retries reached for API status error {e.status_code}. Failing.")
-                        return None
+                        return None, None
                     delay = min(base_delay * (2 ** attempt), 60)
                     logging.info(f"Waiting {delay:.2f} seconds before retrying for status {e.status_code}.")
                     time.sleep(delay)
                 else: # Client-side errors (4xx other than 429)
                     logging.error(f"Client-side API error {e.status_code}. Failing without further retries.")
-                    return None # Do not retry for client errors like 401, 403, 400
+                    return None, None # Do not retry for client errors like 401, 403, 400
             except APIConnectionError as e:
                 logging.warning(f"API connection error on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt + 1 >= max_retries:
                     logging.error("Max retries reached for API connection error. Failing.")
-                    return None
+                    return None, None
                 delay = min(base_delay * (2 ** attempt), 60)
                 logging.info(f"Waiting {delay:.2f} seconds before retrying for connection error.")
                 time.sleep(delay)
@@ -126,10 +145,10 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
                 logging.error(f"Unexpected error calling OpenRouter API on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt + 1 >= max_retries:
                     logging.error("Max retries reached for unexpected error. Failing.")
-                    return None
+                    return None, None
                 delay = min(base_delay * (2 ** attempt), 30) # Shorter cap for general errors
                 logging.info(f"Waiting {delay:.2f} seconds before retrying for unexpected error.")
                 time.sleep(delay)
 
         logging.error("All retries failed after multiple attempts.")
-        return None # Return None if all retries fail
+        return None, None # Return None, None if all retries fail

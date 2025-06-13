@@ -13,7 +13,7 @@ def test_memory_tracking(tmp_path: Path):
     ]
 
     def fake_send(history):
-        return responses.pop(0)
+        return responses.pop(0), None # Return (content, usage_info)
 
     cli_args = argparse.Namespace(
         auto_approve=True, allow_read_files=True, allow_edit_files=True,

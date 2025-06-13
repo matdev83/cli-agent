@@ -26,7 +26,7 @@ def test_auto_commit_after_write(tmp_path: Path, caplog):
     ]
 
     def fake_send(_):
-        return responses.pop(0)
+        return responses.pop(0), None # Return (content, usage_info)
 
     cli_args = argparse.Namespace(
         auto_approve=True,
@@ -61,7 +61,7 @@ def test_disable_git_auto_commit(tmp_path: Path):
     ]
 
     def fake_send(_):
-        return responses.pop(0)
+        return responses.pop(0), None # Return (content, usage_info)
 
     cli_args = argparse.Namespace(
         auto_approve=True,

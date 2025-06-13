@@ -58,7 +58,7 @@ class DeveloperAgent:
 
     def __init__(
         self,
-        send_message: Callable[[List[Dict[str, str]]], Optional[str]],
+        send_message: Callable[[List[Dict[str, str]]], Tuple[Optional[str], Optional[Dict[str, Any]]]],
         *,
         cwd: str = ".",
         cli_args: Optional[argparse.Namespace] = None, # Changed auto_approve to cli_args
@@ -68,8 +68,10 @@ class DeveloperAgent:
         matching_strictness: int = 100,
         mode: str = "act",
         disable_git_auto_commits: bool = False,
+        on_llm_response_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         self.send_message = send_message
+        self.on_llm_response_callback = on_llm_response_callback
         self.cwd: str = os.path.abspath(cwd)
         self.cli_args = cli_args if cli_args is not None else argparse.Namespace() # Store cli_args
         # Ensure default values for flags if cli_args is minimal or None
@@ -88,6 +90,12 @@ class DeveloperAgent:
         self.supports_browser_use: bool = supports_browser_use # Retain this for system prompt
         self.matching_strictness: int = matching_strictness
         self.mode = mode.lower()
+
+        self.session_cost: float = 0.0
+        self.last_model_name: Optional[str] = None
+        self.last_prompt_tokens: Optional[int] = None
+        self.last_completion_tokens: Optional[int] = None
+        self.last_cost: Optional[float] = None
 
         self.memory = Memory()
         self.history: List[Dict[str, str]] = self.memory.history
@@ -344,9 +352,35 @@ class DeveloperAgent:
                 self.memory.add_message("system", ADMONISHMENT_MESSAGE)
                 self.consecutive_tool_errors = 0 # Reset after admonishing
 
-            assistant_reply = self.send_message(self.history)
+            assistant_reply_content, usage_info = self.send_message(self.history)
 
-            if assistant_reply is None:
+            if usage_info:
+                self.last_model_name = usage_info.get("model_name")
+                self.last_prompt_tokens = usage_info.get("prompt_tokens")
+                self.last_completion_tokens = usage_info.get("completion_tokens")
+                current_call_cost = usage_info.get("cost")
+                if current_call_cost is not None:
+                    self.last_cost = float(current_call_cost) # Ensure it's a float
+                    self.session_cost += self.last_cost
+                else:
+                    self.last_cost = None
+            else:
+                self.last_model_name = None
+                self.last_prompt_tokens = None
+                self.last_completion_tokens = None
+                self.last_cost = None
+
+            if self.on_llm_response_callback and usage_info: # Check usage_info to ensure data is available
+                callback_data = {
+                    "model_name": self.last_model_name,
+                    "prompt_tokens": self.last_prompt_tokens,
+                    "completion_tokens": self.last_completion_tokens,
+                    "cost": self.last_cost,
+                    "session_cost": self.session_cost,
+                }
+                self.on_llm_response_callback(callback_data)
+
+            if assistant_reply_content is None:
                 # This is an LLM failure, not a tool error from the LLM's perspective.
                 # Decide if this should count towards consecutive_tool_errors.
                 # For now, not counting it as a "tool error" from the LLM.
@@ -356,11 +390,11 @@ class DeveloperAgent:
                 self.memory.add_message("system", no_reply_message)
                 return no_reply_message
 
-            self.memory.add_message("assistant", assistant_reply)
+            self.memory.add_message("assistant", assistant_reply_content)
 
-            # parse_assistant_message expects a string. If assistant_reply could be None,
+            # parse_assistant_message expects a string. If assistant_reply_content could be None,
             # this was a potential point of failure. Now guarded by the None check above.
-            parsed_responses = parse_assistant_message(assistant_reply)
+            parsed_responses = parse_assistant_message(assistant_reply_content)
 
             text_content_parts = []
             malformed_tool_error_this_turn = False
@@ -424,8 +458,9 @@ class DeveloperAgent:
 # Example of how DeveloperAgent might be run (conceptual)
 if __name__ == '__main__':
     from src.llm import MockLLM # For the example
+    from typing import Tuple # Required for the new signature
 
-    def mock_send_message_for_agent_constructor(history: List[Dict[str, str]]) -> Optional[str]:
+    def mock_send_message_for_agent_constructor(history: List[Dict[str, str]]) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         # This is the function that will be wrapped by MockLLM instance's send_message
         # For the DeveloperAgent constructor, we pass the method of an LLM instance.
         # This __main__ block is for conceptual testing of DeveloperAgent.
@@ -439,8 +474,8 @@ if __name__ == '__main__':
         # Actual tests use MockLLM instance.
         last_user_message_content = history[-1]['content'] if history and history[-1]['role'] == 'user' else ""
         if "list files in src" in last_user_message_content:
-            return "<tool_use><tool_name>list_files</tool_name><params><path>src</path></params></tool_use>"
-        return "<text_content>Default mock response for __main__.</text_content>"
+            return "<tool_use><tool_name>list_files</tool_name><params><path>src</path></params></tool_use>", None
+        return "<text_content>Default mock response for __main__.</text_content>", None
 
     # This example needs a proper MockLLM instance for send_message
     # to test exhaustion.
