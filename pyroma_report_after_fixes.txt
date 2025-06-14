@@ -1,0 +1,64 @@
+------------------------------
+Checking .
+Getting metadata for wheel...
+Creating isolated environment: venv+pip...
+Installing packages in isolated environment:
+- setuptools>=61
+Getting build dependencies for wheel...
+Exception raised during metadata preparation
+Traceback (most recent call last):
+  File "/home/swebot/.local/lib/python3.10/site-packages/pyroma/projectdata.py", line 75, in get_data
+    return get_build_data(path)
+  File "/home/swebot/.local/lib/python3.10/site-packages/pyroma/projectdata.py", line 62, in get_build_data
+    metadata = build_metadata(path, isolated=isolated)
+  File "/home/swebot/.local/lib/python3.10/site-packages/pyroma/projectdata.py", line 38, in build_metadata
+    return build.util.project_wheel_metadata(path, isolated=True)
+  File "/usr/local/lib/python3.10/dist-packages/build/util.py", line 49, in project_wheel_metadata
+    env.install(builder.get_requires_for_build('wheel'))
+  File "/usr/local/lib/python3.10/dist-packages/build/_builder.py", line 225, in get_requires_for_build
+    with self._handle_backend(hook_name):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.10/dist-packages/build/_builder.py", line 353, in _handle_backend
+    raise BuildBackendException(exception, f'Backend subprocess exited when trying to invoke {hook}') from None
+build._exceptions.BuildBackendException: Backend subprocess exited when trying to invoke get_requires_for_build_wheel
+Neither setup.py nor setup.cfg was found
+Traceback (most recent call last):
+  File "/home/swebot/.local/lib/python3.10/site-packages/pyroma/projectdata.py", line 75, in get_data
+    return get_build_data(path)
+  File "/home/swebot/.local/lib/python3.10/site-packages/pyroma/projectdata.py", line 62, in get_build_data
+    metadata = build_metadata(path, isolated=isolated)
+  File "/home/swebot/.local/lib/python3.10/site-packages/pyroma/projectdata.py", line 38, in build_metadata
+    return build.util.project_wheel_metadata(path, isolated=True)
+  File "/usr/local/lib/python3.10/dist-packages/build/util.py", line 49, in project_wheel_metadata
+    env.install(builder.get_requires_for_build('wheel'))
+  File "/usr/local/lib/python3.10/dist-packages/build/_builder.py", line 225, in get_requires_for_build
+    with self._handle_backend(hook_name):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.10/dist-packages/build/_builder.py", line 353, in _handle_backend
+    raise BuildBackendException(exception, f'Backend subprocess exited when trying to invoke {hook}') from None
+build._exceptions.BuildBackendException: Backend subprocess exited when trying to invoke get_requires_for_build_wheel
+Found nothing
+------------------------------
+Your package does not have name data!
+Your package does not have version data!
+The version number should be a string.
+The package's version number does not comply with PEP-386 or PEP-440.
+The package had no description!
+The package's long_description is quite short.
+Your package does not have classifiers data.
+The classifiers should specify what Python versions you support.
+You should specify what Python versions you support with the 'requires-python'/'python_requires' metadata.
+Your package does not have keywords data.
+Your package does not have author data.
+Your package does not have author_email data.
+Your package should have a 'url' field with a link to the project home page, or a 'project_urls' field, with a dictionary of links, or both.
+Your package does neither have a license field nor any license classifiers.
+Specifying a development status in the classifiers gives users a hint of how stable your software is.
+Your Cheese may have spoiled!! The only way to gather metadata from your package was to execute a patched setup.py. This indicates that your package is using very old packaging techniques, (or that your setup.py isn't executable at all), and Pyroma will soon regard that as a complete failure!
+Please modernize your packaging! If it is already modern, this is a bug.
+------------------------------
+Final rating: 0/10
+This cheese seems to contain no dairy products
+------------------------------

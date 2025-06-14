@@ -1,5 +1,6 @@
 """Command prompt templates extracted from Cline"""
 
+
 def new_task_tool_response() -> str:
     return """<explicit_instructions type="new_task">
 The user has explicitly asked you to help them create a new task with preloaded context, which you will generate. The user may have provided instructions or additional information for you to consider when summarizing existing work and creating the context for the new task.
@@ -26,6 +27,7 @@ Usage:
 
 Below is the the user's input when they indicated that they wanted to create a new task.
 </explicit_instructions>\n"""
+
 
 def condense_tool_response() -> str:
     return """<explicit_instructions type="condense">
@@ -88,6 +90,7 @@ Example:
 
 </explicit_instructions>\n"""
 
+
 def new_rule_tool_response() -> str:
     return """<explicit_instructions type="new_rule">
 The user has explicitly asked you to help them create a new Cline rule file inside the .clinerules top-level directory based on the conversation up to this point in time. The user may have provided instructions or additional information for you to consider when creating the new Cline rule.
@@ -144,6 +147,7 @@ Example:
 
 Below is the user's input when they indicated that they wanted to create a new Cline rule file.
 </explicit_instructions>\n"""
+
 
 def report_bug_tool_response() -> str:
     return """<explicit_instructions type="report_bug">

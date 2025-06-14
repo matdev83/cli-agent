@@ -3,14 +3,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_IGNORE_DIRS = ['.git', '.hg', '.svn', '__pycache__', 'node_modules', '.vscode', '.idea']
-DEFAULT_IGNORE_FILES = ['.DS_Store']
+DEFAULT_IGNORE_DIRS = [".git", ".hg", ".svn", "__pycache__", "node_modules", ".vscode", ".idea"]
+DEFAULT_IGNORE_FILES = [".DS_Store"]
+
 
 class FileCache:
     """
     Scans a root directory for all files and stores their relative paths.
     Provides a method to refresh this cache.
     """
+
     def __init__(self, root_dir: str, initial_scan: bool = True):
         """
         Initializes the FileCache.
@@ -25,7 +27,9 @@ class FileCache:
         self.ignore_files = set(DEFAULT_IGNORE_FILES)
 
         if not os.path.isdir(self.root_dir):
-            logger.warning(f"Root directory for FileCache does not exist or is not a directory: {self.root_dir}")
+            logger.warning(
+                f"Root directory for FileCache does not exist or is not a directory: {self.root_dir}"
+            )
             # Potentially raise an error, but for now, allow creation with an empty list.
             # This might be useful if the directory is expected to be created later.
             self.file_paths = []
@@ -65,7 +69,7 @@ class FileCache:
                 relative_path = os.path.relpath(full_path, self.root_dir)
                 found_paths.append(relative_path)
 
-        self.file_paths = sorted(list(set(found_paths))) # Sort and remove duplicates
+        self.file_paths = sorted(list(set(found_paths)))  # Sort and remove duplicates
         logger.info(f"File scan completed. Found {len(self.file_paths)} files.")
         return self.file_paths
 
@@ -78,7 +82,9 @@ class FileCache:
         """
         logger.info("Refreshing file cache...")
         if not os.path.isdir(self.root_dir):
-            logger.warning(f"Cannot refresh: Root directory for FileCache does not exist or is not a directory: {self.root_dir}")
+            logger.warning(
+                f"Cannot refresh: Root directory for FileCache does not exist or is not a directory: {self.root_dir}"
+            )
             self.file_paths = []
             return []
         return self.scan_directory()
@@ -89,21 +95,28 @@ class FileCache:
         """
         return self.file_paths
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Example Usage (for testing purposes)
     logging.basicConfig(level=logging.INFO)
     # Create a dummy directory structure for testing
     if not os.path.exists("temp_test_dir"):
-        os.makedirs("temp_test_dir/subdir1/.git") # .git folder
+        os.makedirs("temp_test_dir/subdir1/.git")  # .git folder
         os.makedirs("temp_test_dir/subdir1/subsubdir")
         os.makedirs("temp_test_dir/subdir2")
 
-        with open("temp_test_dir/file1.txt", "w") as f: f.write("test")
-        with open("temp_test_dir/.DS_Store", "w") as f: f.write("test") # ignored file
-        with open("temp_test_dir/subdir1/file2.py", "w") as f: f.write("test")
-        with open("temp_test_dir/subdir1/subsubdir/file3.md", "w") as f: f.write("test")
-        with open("temp_test_dir/subdir2/file4.txt", "w") as f: f.write("test")
-        with open("temp_test_dir/subdir1/.git/config", "w") as f: f.write("test") # ignored
+    with open("temp_test_dir/file1.txt", "w") as f:
+        f.write("test")
+    with open("temp_test_dir/.DS_Store", "w") as f:
+        f.write("test")  # ignored file
+    with open("temp_test_dir/subdir1/file2.py", "w") as f:
+        f.write("test")
+    with open("temp_test_dir/subdir1/subsubdir/file3.md", "w") as f:
+        f.write("test")
+    with open("temp_test_dir/subdir2/file4.txt", "w") as f:
+        f.write("test")
+    with open("temp_test_dir/subdir1/.git/config", "w") as f:
+        f.write("test")  # ignored
 
     cache = FileCache("./temp_test_dir")
     print("\nInitial scan:")
@@ -111,7 +124,8 @@ if __name__ == '__main__':
         print(path)
 
     # Simulate adding a new file
-    with open("temp_test_dir/subdir2/new_file.txt", "w") as f: f.write("new")
+    with open("temp_test_dir/subdir2/new_file.txt", "w") as f:
+        f.write("new")
 
     cache.refresh()
     print("\nAfter refresh:")
@@ -125,17 +139,19 @@ if __name__ == '__main__':
     # Test with a non-existent directory
     non_existent_cache = FileCache("./non_existent_dir", initial_scan=False)
     print(f"\nCache for non-existent_dir (no initial scan): {non_existent_cache.get_paths()}")
-    non_existent_cache.refresh() # Should log a warning
+    non_existent_cache.refresh()  # Should log a warning
     print(f"Cache for non-existent_dir after refresh: {non_existent_cache.get_paths()}")
 
-    non_existent_cache_scan = FileCache("./non_existent_dir_scan_init") # Should log a warning
-    print(f"\nCache for non_existent_dir_scan_init (initial scan): {non_existent_cache_scan.get_paths()}")
+    non_existent_cache_scan = FileCache("./non_existent_dir_scan_init")  # Should log a warning
+    print(
+        f"\nCache for non_existent_dir_scan_init (initial scan): {non_existent_cache_scan.get_paths()}"
+    )
 
     # Test with a file instead of a directory
-    file_as_dir_cache = FileCache("./temp_test_dir/file1.txt") # Should log a warning
+    file_as_dir_cache = FileCache("./temp_test_dir/file1.txt")  # Should log a warning
     print(f"\nCache for file1.txt as root: {file_as_dir_cache.get_paths()}")
 
     # Clean up dummy directory if not already commented out
     if os.path.exists("temp_test_dir"):
-         shutil.rmtree("temp_test_dir")
-         print("\nCleaned up temp_test_dir.")
+        shutil.rmtree("temp_test_dir")
+        print("\nCleaned up temp_test_dir.")

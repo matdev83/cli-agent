@@ -8,12 +8,32 @@ version = "0.1.0"
 description = "CLI-based software development agent"
 readme = "README.md"
 requires-python = ">=3.8"
+# Pyroma improvements
+authors = [
+    { name = "Dev Agent Team", email = "devagent@example.com" },
+]
+keywords = ["cli", "agent", "developer tool", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License", # Added license classifier
+]
+license = { text = "MIT License" } # Added license text
+
 dependencies = [
     "openai>=1.0.0",
     "playwright>=1.30",
     "Jinja2>=3.0",
     "prompt_toolkit~=3.0",
 ]
+
+[project.urls]
+Homepage = "https://example.com/cli-agent"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

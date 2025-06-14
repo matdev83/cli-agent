@@ -1,9 +1,11 @@
 """
 Handles user confirmation prompts for CLI interactions.
 """
+
 from __future__ import annotations
 
 import logging
+
 
 def request_user_confirmation(prompt_message: str) -> bool:
     """
@@ -18,10 +20,10 @@ def request_user_confirmation(prompt_message: str) -> bool:
     print(prompt_message, end=" ", flush=True)
     try:
         user_input = input()
-        return user_input.strip().lower() == 'y'
+        return user_input.strip().lower() == "y"
     except KeyboardInterrupt:
         logging.info("\nConfirmation cancelled by user.")
         return False
-    except EOFError: # Handle cases where stdin is closed unexpectedly
+    except EOFError:  # Handle cases where stdin is closed unexpectedly
         logging.info("\nConfirmation input stream closed.")
         return False

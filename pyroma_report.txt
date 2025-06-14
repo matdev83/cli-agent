@@ -1,0 +1,17 @@
+------------------------------
+Checking .
+Getting metadata for wheel...
+Found cli-agent
+------------------------------
+Your package does not have classifiers data.
+The classifiers should specify what Python versions you support.
+Your package does not have keywords data.
+Your package does not have author data.
+Your package does not have author_email data.
+Your package should have a 'url' field with a link to the project home page, or a 'project_urls' field, with a dictionary of links, or both.
+Your package does neither have a license field nor any license classifiers.
+Specifying a development status in the classifiers gives users a hint of how stable your software is.
+------------------------------
+Final rating: 4/10
+Stilton
+------------------------------

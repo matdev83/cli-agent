@@ -64,4 +64,3 @@ class Memory:
 
         scored.sort(key=lambda s: s[0], reverse=True)
         return [m for _, m in scored[:top_k]]
-

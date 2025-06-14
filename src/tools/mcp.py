@@ -3,12 +3,13 @@ from __future__ import annotations
 from typing import Dict, Any
 from .tool_protocol import Tool
 
-class UseMCPTool(Tool): # Renamed to UseMCPTool
+
+class UseMCPTool(Tool):  # Renamed to UseMCPTool
     """A tool to request usage of a tool provided by a connected MCP server."""
 
     @property
     def name(self) -> str:
-        return "use_mcp_tool" # Tool name for LLM remains snake_case
+        return "use_mcp_tool"  # Tool name for LLM remains snake_case
 
     @property
     def description(self) -> str:
@@ -22,7 +23,7 @@ class UseMCPTool(Tool): # Renamed to UseMCPTool
         return {
             "server_name": "The name of the MCP server providing the tool.",
             "tool_name": "The name of the tool to execute.",
-            "arguments": "A JSON object string containing the tool's input parameters."
+            "arguments": "A JSON object string containing the tool's input parameters.",
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -33,14 +34,16 @@ class UseMCPTool(Tool): # Renamed to UseMCPTool
         """
         server_name = params.get("server_name")
         tool_name = params.get("tool_name")
-        arguments = params.get("arguments") # arguments is a JSON string
+        arguments = params.get("arguments")  # arguments is a JSON string
 
         missing = []
         if not server_name:
             missing.append("server_name")
         if not tool_name:
             missing.append("tool_name")
-        if arguments is None: # Explicitly check for None, as an empty JSON string "" or "{}" is valid.
+        if (
+            arguments is None
+        ):  # Explicitly check for None, as an empty JSON string "" or "{}" is valid.
             missing.append("arguments")
 
         if missing:
@@ -48,12 +51,13 @@ class UseMCPTool(Tool): # Renamed to UseMCPTool
 
         return f"Success: UseMCPTool called. Server: '{server_name}', Tool: '{tool_name}', Args: '{arguments}'. Full MCP interaction pending."
 
-class AccessMCPResourceTool(Tool): # Renamed to AccessMCPResourceTool
+
+class AccessMCPResourceTool(Tool):  # Renamed to AccessMCPResourceTool
     """A tool to request access to a resource provided by a connected MCP server."""
 
     @property
     def name(self) -> str:
-        return "access_mcp_resource" # Tool name for LLM remains snake_case
+        return "access_mcp_resource"  # Tool name for LLM remains snake_case
 
     @property
     def description(self) -> str:
@@ -66,7 +70,7 @@ class AccessMCPResourceTool(Tool): # Renamed to AccessMCPResourceTool
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "server_name": "The name of the MCP server providing the resource.",
-            "uri": "The URI identifying the specific resource to access."
+            "uri": "The URI identifying the specific resource to access.",
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -81,7 +85,7 @@ class AccessMCPResourceTool(Tool): # Renamed to AccessMCPResourceTool
         missing = []
         if not server_name:
             missing.append("server_name")
-        if not uri: # URI can be an empty string, but None means it's missing
+        if not uri:  # URI can be an empty string, but None means it's missing
             missing.append("uri")
 
         if missing:

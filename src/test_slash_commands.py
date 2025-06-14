@@ -1,17 +1,17 @@
 import unittest
 from unittest.mock import MagicMock
-import argparse # For creating a dummy cli_args namespace
+import argparse  # For creating a dummy cli_args namespace
 
 # Assuming slash_commands.py and cli.py are in the same src directory
 # and cli.py's AgentCliContext is the one used.
 from slash_commands import RefreshCommand, SlashCommandRegistry, HelpCommand, ModelCommand
-from cli import AgentCliContext # Using AgentCliContext from cli.py
-from file_cache import FileCache # For type hinting and mocking
+from cli import AgentCliContext  # Using AgentCliContext from cli.py
+from file_cache import FileCache  # For type hinting and mocking
+
 
 class TestRefreshCommand(unittest.TestCase):
-
     def setUp(self):
-        self.mock_cli_args = argparse.Namespace(cwd=".") # Dummy args
+        self.mock_cli_args = argparse.Namespace(cwd=".")  # Dummy args
         self.mock_display_update_func = MagicMock()
         self.mock_file_cache = MagicMock(spec=FileCache)
 
@@ -20,7 +20,7 @@ class TestRefreshCommand(unittest.TestCase):
             cli_args_namespace=self.mock_cli_args,
             display_update_func=self.mock_display_update_func,
             file_cache_instance=self.mock_file_cache,
-            agent_instance=None # Not needed for this command
+            agent_instance=None,  # Not needed for this command
         )
         self.refresh_command = RefreshCommand()
 
@@ -36,7 +36,7 @@ class TestRefreshCommand(unittest.TestCase):
         self.assertEqual(result, expected_success_msg)
 
     def test_refresh_command_handles_no_file_cache_in_context(self):
-        self.agent_context.file_cache = None # Simulate missing file_cache
+        self.agent_context.file_cache = None  # Simulate missing file_cache
 
         result = self.refresh_command.execute([], self.agent_context)
 
@@ -46,7 +46,7 @@ class TestRefreshCommand(unittest.TestCase):
         self.mock_file_cache.refresh.assert_not_called()
 
     def test_refresh_command_handles_invalid_file_cache_object(self):
-        self.agent_context.file_cache = object() # Not a FileCache instance
+        self.agent_context.file_cache = object()  # Not a FileCache instance
 
         result = self.refresh_command.execute([], self.agent_context)
 
@@ -71,25 +71,26 @@ class TestRefreshCommand(unittest.TestCase):
         self.assertGreater(len(self.refresh_command.description), 0)
         self.assertEqual(self.refresh_command.usage_examples, ["/refresh"])
 
+
 class TestSlashCommandRegistry(unittest.TestCase):
     def setUp(self):
         self.registry = SlashCommandRegistry()
         self.mock_agent_context = MagicMock()
 
     def test_register_and_get_command(self):
-        cmd = RefreshCommand() # Using RefreshCommand as a concrete example
+        cmd = RefreshCommand()  # Using RefreshCommand as a concrete example
         self.registry.register(cmd)
         self.assertIs(self.registry.get_command("refresh"), cmd)
 
     def test_register_duplicate_command_raises_error(self):
         cmd1 = RefreshCommand()
-        cmd2 = RefreshCommand() # Another instance, but same name
+        cmd2 = RefreshCommand()  # Another instance, but same name
         self.registry.register(cmd1)
         with self.assertRaisesRegex(ValueError, "Command 'refresh' is already registered."):
             self.registry.register(cmd2)
 
     def test_register_command_empty_name_raises_error(self):
-        cmd = MagicMock(spec=RefreshCommand) # Use a real command type for spec
+        cmd = MagicMock(spec=RefreshCommand)  # Use a real command type for spec
         cmd.name = ""
         with self.assertRaisesRegex(ValueError, "Command name cannot be empty."):
             self.registry.register(cmd)
@@ -126,7 +127,7 @@ class TestSlashCommandRegistry(unittest.TestCase):
 
     def test_get_all_commands(self):
         cmd1 = RefreshCommand()
-        cmd2 = ModelCommand() # Another concrete command
+        cmd2 = ModelCommand()  # Another concrete command
         self.registry.register(cmd1)
         self.registry.register(cmd2)
 
@@ -134,6 +135,7 @@ class TestSlashCommandRegistry(unittest.TestCase):
         self.assertIn(cmd1, all_cmds)
         self.assertIn(cmd2, all_cmds)
         self.assertEqual(len(all_cmds), 2)
+
 
 # It might be good to have a small test for HelpCommand too,
 # as its constructor takes the registry.
@@ -146,8 +148,8 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_help_command_with_commands(self):
         registry = SlashCommandRegistry()
-        registry.register(RefreshCommand()) # Example command
-        registry.register(ModelCommand())   # Another one
+        registry.register(RefreshCommand())  # Example command
+        registry.register(ModelCommand())  # Another one
 
         help_cmd = HelpCommand(registry)
         result = help_cmd.execute([], None)
@@ -159,5 +161,5 @@ class TestHelpCommand(unittest.TestCase):
         self.assertTrue(result.startswith("Available commands:\n"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
