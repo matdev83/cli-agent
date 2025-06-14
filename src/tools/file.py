@@ -181,7 +181,7 @@ class ReplaceInFileTool(Tool):
             blocks = _parse_diff_blocks(diff_str)  # Helper function handles format errors
 
             modified_text = original_text
-            # matching_strictness: 100 for exact, otherwise case-insensitive literal search.
+            # matching_strictness: 100 for exact, otherwise case-insensitive regex search.
             matching_strictness = getattr(agent_tools_instance, "matching_strictness", 100)
             exact_match = (matching_strictness == 100)
 
@@ -191,27 +191,24 @@ class ReplaceInFileTool(Tool):
                     if search in modified_text:
                         modified_text = modified_text.replace(search, replace, 1)
                         found = True
-                else:  # Case-insensitive literal search via regex
+                else:  # Case-insensitive regex search
                     try:
-                        # Escape 'search' string to treat it as a literal, then compile with IGNORECASE
-                        regex = re.compile(re.escape(search), re.IGNORECASE)
+                        regex = re.compile(search, re.IGNORECASE)
                         match_obj = regex.search(modified_text)
                         if match_obj:
-                            # Perform replacement using the compiled regex
                             modified_text = regex.sub(replace, modified_text, count=1)
                             found = True
                     except re.error as e:
-                        # This error is for issues compiling the escaped search string,
-                        # which should be rare but possible if 'search' is extremely complex
-                        # or re.escape has unforeseen interactions.
-                        return f"Error compiling regex for search block {i + 1} (searching for literal '{search[:30]}...'): {e}"
+                        return (
+                            f"Error compiling regex for search block {i + 1}: {e}"
+                        )
 
                 if not found:
                     max_preview = 30
                     search_preview = search[:max_preview].replace("\n", "\\n") + (
                         "..." if len(search) > max_preview else ""
                     )
-                    match_type_msg = "exact" if exact_match else "case-insensitive literal"
+                    match_type_msg = "exact" if exact_match else "case-insensitive"
                     # It's important to return here, as subsequent blocks might depend on this one.
                     return (
                         f"Error: Search block {i + 1} (starting with '{search_preview}') "
