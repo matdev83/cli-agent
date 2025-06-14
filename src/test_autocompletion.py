@@ -3,17 +3,17 @@ from unittest.mock import MagicMock
 
 from prompt_toolkit.completion import CompleteEvent, Completion
 from prompt_toolkit.document import Document
-from prompt_toolkit.formatted_text import to_plain_text # Import for checking display_meta
+from prompt_toolkit.formatted_text import to_plain_text  # Import for checking display_meta
 
 from src.autocompletion import AtMentionCompleter
-from src.file_cache import FileCache # For type hinting and creating mock spec
+from src.file_cache import FileCache  # For type hinting and creating mock spec
+
 
 class TestAtMentionCompleter(unittest.TestCase):
-
     def setUp(self):
         self.mock_file_cache = MagicMock(spec=FileCache)
         self.completer = AtMentionCompleter(file_cache=self.mock_file_cache)
-        self.complete_event = CompleteEvent() # Dummy event
+        self.complete_event = CompleteEvent()  # Dummy event
 
     def _get_completions_list(self, text_before_cursor: str) -> list[Completion]:
         document = Document(text=text_before_cursor, cursor_position=len(text_before_cursor))
@@ -21,9 +21,11 @@ class TestAtMentionCompleter(unittest.TestCase):
 
     def test_no_file_cache(self):
         completer_no_cache = AtMentionCompleter(file_cache=None)
-        completions = list(completer_no_cache.get_completions(
-            Document(text="@some", cursor_position=5), self.complete_event
-        ))
+        completions = list(
+            completer_no_cache.get_completions(
+                Document(text="@some", cursor_position=5), self.complete_event
+            )
+        )
         self.assertEqual(completions, [])
 
     def test_no_at_symbol(self):
@@ -42,7 +44,6 @@ class TestAtMentionCompleter(unittest.TestCase):
         completions = self._get_completions_list("@ ")
         self.assertEqual(completions, [])
 
-
     def test_empty_file_cache(self):
         self.mock_file_cache.get_paths.return_value = []
         completions = self._get_completions_list("@pa")
@@ -54,14 +55,14 @@ class TestAtMentionCompleter(unittest.TestCase):
 
         self.assertEqual(len(completions), 1)
         self.assertEqual(completions[0].text, "path/to/file1.txt")
-        self.assertEqual(completions[0].start_position, -len("path/to")) # Replaces "path/to"
+        self.assertEqual(completions[0].start_position, -len("path/to"))  # Replaces "path/to"
         self.assertEqual(to_plain_text(completions[0].display_meta), "file mention")
 
     def test_multiple_completion_matches(self):
         self.mock_file_cache.get_paths.return_value = [
             "src/file_cache.py",
             "src/cli.py",
-            "docs/README.md"
+            "docs/README.md",
         ]
         completions = self._get_completions_list("@src/")
 
@@ -85,17 +86,16 @@ class TestAtMentionCompleter(unittest.TestCase):
 
     def test_case_insensitive_matching(self):
         self.mock_file_cache.get_paths.return_value = ["Path/To/File1.TXT", "path/ANOTHER.PY"]
-        completions = self._get_completions_list("@path/to") # Lowercase partial
+        completions = self._get_completions_list("@path/to")  # Lowercase partial
 
         self.assertEqual(len(completions), 1)
-        self.assertEqual(completions[0].text, "Path/To/File1.TXT") # Original casing
+        self.assertEqual(completions[0].text, "Path/To/File1.TXT")  # Original casing
         self.assertEqual(completions[0].start_position, -len("path/to"))
 
-        completions_upper = self._get_completions_list("@PATH/AN") # Uppercase partial
+        completions_upper = self._get_completions_list("@PATH/AN")  # Uppercase partial
         self.assertEqual(len(completions_upper), 1)
         self.assertEqual(completions_upper[0].text, "path/ANOTHER.PY")
         self.assertEqual(completions_upper[0].start_position, -len("PATH/AN"))
-
 
     def test_completion_with_text_after_cursor(self):
         # The completer should only care about text before cursor for generating completions
@@ -112,7 +112,7 @@ class TestAtMentionCompleter(unittest.TestCase):
         self.mock_file_cache.get_paths.return_value = ["some/path.txt"]
 
         # Case 1: Space after @mention part - word is just "@some/pa"
-        completions_space_after = self._get_completions_list("@some/pa ")
+        self._get_completions_list("@some/pa ")
         # Here, get_word_before_cursor(WORD=True) if cursor is at end would be empty or just space.
         # Let's refine how _get_completions_list calls Document to simulate typing.
         # If user typed "@some/pa " and then hits tab, word_before_cursor might be considered empty.
@@ -122,15 +122,18 @@ class TestAtMentionCompleter(unittest.TestCase):
         # If text is "@some/pa", word_before_cursor is "@some/pa".
 
         document_at_end_of_word = Document(text="@some/pa", cursor_position=len("@some/pa"))
-        completions_at_end = list(self.completer.get_completions(document_at_end_of_word, self.complete_event))
+        completions_at_end = list(
+            self.completer.get_completions(document_at_end_of_word, self.complete_event)
+        )
         self.assertEqual(len(completions_at_end), 1)
         self.assertEqual(completions_at_end[0].text, "some/path.txt")
 
         # If cursor is after a space following the word, get_word_before_cursor is empty.
         document_after_space = Document(text="@some/pa ", cursor_position=len("@some/pa "))
-        completions_after_space = list(self.completer.get_completions(document_after_space, self.complete_event))
+        completions_after_space = list(
+            self.completer.get_completions(document_after_space, self.complete_event)
+        )
         self.assertEqual(completions_after_space, [])
-
 
     def test_special_characters_in_partial_path(self):
         # Test if partial path with characters like '-' or '.' works
@@ -145,5 +148,20 @@ class TestAtMentionCompleter(unittest.TestCase):
         self.assertEqual(completions_dot[0].text, "project-alpha/src/my-file.v1.0.py")
         self.assertEqual(completions_dot[0].start_position, -len("project-alpha/src/my-file.v1"))
 
-if __name__ == '__main__':
+    def test_partial_match_with_some_non_matching_paths(self):
+        self.mock_file_cache.get_paths.return_value = [
+            "src/common/file1.txt",
+            "src/specific/other.py",
+            "src/common/file2.log",
+        ]
+        completions = self._get_completions_list("@src/common")
+        self.assertEqual(len(completions), 2)
+        texts = sorted([c.text for c in completions])
+        self.assertEqual(texts, ["src/common/file1.txt", "src/common/file2.log"])
+        for comp in completions:
+            if comp.text == "src/common/file1.txt":
+                self.assertEqual(comp.start_position, -len("src/common"))
+
+
+if __name__ == "__main__":
     unittest.main()

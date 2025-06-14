@@ -1,12 +1,13 @@
 import os
 import platform
+
 # import re # No longer needed for regex replacements
 from typing import Iterable, Dict, Any
 from src.tools.tool_protocol import Tool
-from jinja2 import Template # Import Jinja2 Template
+from jinja2 import Template  # Import Jinja2 Template
 
 # Jinja2 compatible template string
-_SYSTEM_PROMPT_TEMPLATE_JINJA = """
+_SYSTEM_PROMPT_TEMPLATE_JINJA = r"""
 You are Cline, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.
 
 ====
@@ -107,7 +108,7 @@ You have access to two tools for working with files: **write_to_file** and **rep
 4. Use the final state of the modified file (returned by the tool) as the reference for subsequent operations.
 
 ====
- 
+
 ACT MODE V.S. PLAN MODE
 In each user message, the environment_details will specify the current mode. There are two modes:
 - ACT MODE: In this mode, you have access to all tools EXCEPT the plan_mode_respond tool.
@@ -116,7 +117,7 @@ In each user message, the environment_details will specify the current mode. The
  - In PLAN MODE, the goal is to gather information and get context to create a detailed plan for accomplishing the task, which the user will review and approve before they switch you to ACT MODE to implement the solution.
 
 ====
- 
+
 CAPABILITIES
 - You have access to tools that let you interact with the user's system. These tools help you effectively accomplish a wide range of tasks, such as writing code, making edits or improvements to existing files, understanding the current state of a project, performing system operations, and much more.
 - When the user initially gives you a task, a recursive list of all filepaths in the current working directory ('{{ cwd }}') will be included in environment_details.
@@ -175,8 +176,9 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
 5. User may provide feedback for improvements. DO NOT end responses with questions or offers for further assistance.
 """
 
+
 # The _format_parameter and generate_tools_documentation functions remain the same
-def _format_parameter(name: str, description: str, cwd: str, ptype: str = "string", required: bool = False) -> str:
+def _format_parameter(name: str, description: str, cwd: str, ptype: str = "string") -> str:
     """Formats a single tool parameter for display."""
     # name = param.get("name", "unknown_param") # No longer needed
     # ptype = param.get("type", "string") # Defaulted in signature
@@ -186,20 +188,22 @@ def _format_parameter(name: str, description: str, cwd: str, ptype: str = "strin
     # Then render as Jinja template
     desc_template = Template(processed_desc)
     desc = desc_template.render(cwd=cwd)
-    # required = param.get("required", False) # Defaulted in signature
     # For now, we'll assume the description will clarify if required, or default to optional.
     # The new parameters_schema doesn't explicitly carry 'type' or 'required'.
     # We'll default type to 'string' and required to False (optional).
     # Descriptions should be clear if a param is effectively required.
-    req_str = "(optional)" # Defaulting to optional as schema doesn't specify
+    req_str = "(optional)"  # Defaulting to optional as schema doesn't specify
     return f"- {name}: ({ptype}, {req_str}) {desc}"
+
 
 def generate_tools_documentation(tools_list: Iterable[Tool], cwd: str) -> str:
     """Generates the # Tools section documentation from a list of Tool instances."""
     doc_parts = []
     for tool in tools_list:
         # First, replace ${cwd} style placeholders
-        raw_tool_description = tool.description.replace("${cwd}", cwd).replace("${cwd.toPosix()}", cwd)
+        raw_tool_description = tool.description.replace("${cwd}", cwd).replace(
+            "${cwd.toPosix()}", cwd
+        )
         # Then, render the tool description as a Jinja template
         tool_description_template = Template(raw_tool_description)
         description = tool_description_template.render(cwd=cwd)
@@ -212,19 +216,25 @@ def generate_tools_documentation(tools_list: Iterable[Tool], cwd: str) -> str:
                 # Assuming default type 'string' and required=False for now,
                 # as this info is not in the new simple parameters_schema.
                 # The description itself should clarify if required.
-                doc_parts.append(_format_parameter(param_name, param_desc, cwd, ptype="string", required=False))
+                doc_parts.append(_format_parameter(param_name, param_desc, cwd, ptype="string"))
         else:
             doc_parts.append("Parameters: None")
 
         # Usage section: defaulting type to 'string' as it's not in parameters_schema
-        usage_params = "\n".join(f"<{name}>string</{name}>" for name in tool.parameters_schema.keys()) if tool.parameters_schema else ""
+        usage_params = (
+            "\n".join(f"<{name}>string</{name}>" for name in tool.parameters_schema.keys())
+            if tool.parameters_schema
+            else ""
+        )
         doc_parts.append("Usage:")
         doc_parts.append(f"<{tool.name}>\n{usage_params}\n</{tool.name}>")
         doc_parts.append("")
     return "\n".join(doc_parts)
 
+
 # Store the template as a global variable
 PROMPT_TEMPLATE = Template(_SYSTEM_PROMPT_TEMPLATE_JINJA)
+
 
 def get_system_prompt(
     tools: Iterable[Tool],
@@ -232,11 +242,11 @@ def get_system_prompt(
     supports_browser_use: bool = False,
     # browser_settings is not directly used in the Jinja template shown, but can be passed in context if needed
     browser_settings: dict | None = None,
-    mcp_servers_documentation: str = "(No MCP servers currently connected)"
+    mcp_servers_documentation: str = "(No MCP servers currently connected)",
 ) -> str:
     """Return the system prompt customized for the runtime options and available tools using Jinja2."""
 
-    tools_docs = generate_tools_documentation(tools, cwd) # CWD passed here for tool desc if needed
+    tools_docs = generate_tools_documentation(tools, cwd)  # CWD passed here for tool desc if needed
 
     context = {
         "tools_documentation": tools_docs,
@@ -247,30 +257,47 @@ def get_system_prompt(
         "supports_browser_use": supports_browser_use,
         "mcp_servers_documentation": mcp_servers_documentation,
         # browser_settings could be added to context if template uses it, e.g. {{ browser_settings.viewport.width }}
-        "browser_settings": browser_settings if browser_settings else {}
+        "browser_settings": browser_settings if browser_settings else {},
     }
 
     return PROMPT_TEMPLATE.render(context).strip()
 
+
 # Example usage (for testing this module independently):
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Dummy tools for testing
     class DummyTool(Tool):
         def __init__(self, name, description, parameters_schema):
             self._name = name
             self._description = description
-            self._parameters_schema = parameters_schema # Updated name
+            self._parameters_schema = parameters_schema  # Updated name
+
         @property
-        def name(self) -> str: return self._name
+        def name(self) -> str:
+            return self._name
+
         @property
-        def description(self) -> str: return self._description
+        def description(self) -> str:
+            return self._description
+
         @property
-        def parameters_schema(self) -> Dict[str, str]: return self._parameters_schema # Updated name
-        def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str: return "executed" # Updated param
+        def parameters_schema(self) -> Dict[str, str]:
+            return self._parameters_schema  # Updated name
+
+        def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
+            return "executed"  # Updated param
 
     example_tools = [
-        DummyTool("read_file", "Reads a file from {{ cwd }}/path.", {"path": "Path to read from {{ cwd }}"}),
-        DummyTool("execute_command", "Executes a command.", {"command": "The command", "requires_approval": "Needs approval"})
+        DummyTool(
+            "read_file",
+            "Reads a file from {{ cwd }}/path.",
+            {"path": "Path to read from {{ cwd }}"},
+        ),
+        DummyTool(
+            "execute_command",
+            "Executes a command.",
+            {"command": "The command", "requires_approval": "Needs approval"},
+        ),
     ]
     # Ensure Jinja2 is installed if running this directly: pip install Jinja2
     try:

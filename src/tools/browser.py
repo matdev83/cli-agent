@@ -16,6 +16,7 @@ from .tool_protocol import Tool
 # However, to maintain browser state (launched page), agent_memory is better.
 # Let's assume agent_memory will hold 'playwright_sync_instance', 'playwright_browser_context', 'playwright_page'
 
+
 class BrowserActionTool(Tool):
     """A tool to interact with a web browser using Playwright."""
 
@@ -43,25 +44,31 @@ class BrowserActionTool(Tool):
             "action": "Action to perform (e.g., launch, click, type, scroll_down, scroll_up, close)",
             "url": "URL for the 'launch' action (optional)",
             "coordinate": "x,y coordinates for 'click' (optional)",
-            "text": "Text for 'type' (optional)"
+            "text": "Text for 'type' (optional)",
         }
 
     def _get_playwright_page(self, agent_tools_instance: Any) -> Optional[Page]:
-        if agent_tools_instance and hasattr(agent_tools_instance, 'playwright_page'):
+        if agent_tools_instance and hasattr(agent_tools_instance, "playwright_page"):
             return agent_tools_instance.playwright_page
         return None
 
     def _get_playwright_context(self, agent_tools_instance: Any) -> Optional[BrowserContext]:
-        if agent_tools_instance and hasattr(agent_tools_instance, 'playwright_browser_context'):
+        if agent_tools_instance and hasattr(agent_tools_instance, "playwright_browser_context"):
             return agent_tools_instance.playwright_browser_context
         return None
 
     def _get_playwright_sync_instance(self, agent_tools_instance: Any) -> Optional[Playwright]:
-        if agent_tools_instance and hasattr(agent_tools_instance, 'playwright_sync_instance'):
+        if agent_tools_instance and hasattr(agent_tools_instance, "playwright_sync_instance"):
             return agent_tools_instance.playwright_sync_instance
         return None
 
-    def _set_playwright_state(self, agent_tools_instance: Any, sync_instance: Optional[Playwright] = None, context: Optional[BrowserContext] = None, page: Optional[Page] = None):
+    def _set_playwright_state(
+        self,
+        agent_tools_instance: Any,
+        sync_instance: Optional[Playwright] = None,
+        context: Optional[BrowserContext] = None,
+        page: Optional[Page] = None,
+    ):
         if agent_tools_instance:
             # Allow setting None to clear state
             agent_tools_instance.playwright_sync_instance = sync_instance
@@ -77,7 +84,9 @@ class BrowserActionTool(Tool):
         """
         action = params.get("action")
         if not action:
-            return json.dumps({"status": "error", "message": "Missing required parameter 'action'."})
+            return json.dumps(
+                {"status": "error", "message": "Missing required parameter 'action'."}
+            )
 
         # For screenshotting (stubbed for now)
         screenshot_data = "screenshot_data_not_implemented"
@@ -86,7 +95,9 @@ class BrowserActionTool(Tool):
             if action == "launch":
                 url = params.get("url")
                 if not url:
-                    return json.dumps({"status": "error", "message": "Missing 'url' for 'launch' action."})
+                    return json.dumps(
+                        {"status": "error", "message": "Missing 'url' for 'launch' action."}
+                    )
                 if sync_playwright is None:
                     return json.dumps({"status": "error", "message": "Playwright not installed"})
 
@@ -95,7 +106,7 @@ class BrowserActionTool(Tool):
                 if existing_context:
                     try:
                         existing_context.close()
-                    except Exception: # Ignore errors on closing old context
+                    except Exception:  # Ignore errors on closing old context
                         pass
                 existing_sync_instance = self._get_playwright_sync_instance(agent_tools_instance)
                 if existing_sync_instance:
@@ -108,24 +119,25 @@ class BrowserActionTool(Tool):
                 print("[DEBUG] Attempting to start Playwright...")
                 p_sync = sync_playwright().start()
                 print(f"[DEBUG] p_sync type: {type(p_sync)}")
-                if hasattr(p_sync, '_mock_name'):
+                if hasattr(p_sync, "_mock_name"):
                     print(f"[DEBUG] p_sync mock name: {p_sync._mock_name}")
-                elif hasattr(p_sync, 'name'):
+                elif hasattr(p_sync, "name"):
                     print(f"[DEBUG] p_sync name: {p_sync.name}")
 
-
                 print(f"[DEBUG] p_sync.chromium type: {type(p_sync.chromium)}")
-                if hasattr(p_sync.chromium, '_mock_name'):
+                if hasattr(p_sync.chromium, "_mock_name"):
                     print(f"[DEBUG] p_sync.chromium mock name: {p_sync.chromium._mock_name}")
-                elif hasattr(p_sync.chromium, 'name'):
+                elif hasattr(p_sync.chromium, "name"):
                     print(f"[DEBUG] p_sync.chromium name: {p_sync.chromium.name}")
 
-                print(f"[DEBUG] Is p_sync.chromium.launch callable? {callable(p_sync.chromium.launch)}")
+                print(
+                    f"[DEBUG] Is p_sync.chromium.launch callable? {callable(p_sync.chromium.launch)}"
+                )
 
-                browser = p_sync.chromium.launch(headless=True) # Consider headless option
+                browser = p_sync.chromium.launch(headless=True)  # Consider headless option
                 print("[DEBUG] Browser launched.")
                 context = browser.new_context(
-                    viewport={'width': self.VIEWPORT_WIDTH, 'height': self.VIEWPORT_HEIGHT}
+                    viewport={"width": self.VIEWPORT_WIDTH, "height": self.VIEWPORT_HEIGHT}
                 )
                 page = context.new_page()
                 page.goto(url)
@@ -133,7 +145,13 @@ class BrowserActionTool(Tool):
                 self._set_playwright_state(agent_tools_instance, p_sync, context, page)
 
                 # Screenshot logic would go here. For now, just a message.
-                return json.dumps({"status": "success", "message": f"Browser launched at {url}.", "screenshot": screenshot_data})
+                return json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"Browser launched at {url}.",
+                        "screenshot": screenshot_data,
+                    }
+                )
 
             elif action == "close":
                 context = self._get_playwright_context(agent_tools_instance)
@@ -150,43 +168,73 @@ class BrowserActionTool(Tool):
             # Actions requiring an active page
             page = self._get_playwright_page(agent_tools_instance)
             if not page:
-                return json.dumps({"status": "error", "message": "Browser not launched or page not available."})
+                return json.dumps(
+                    {"status": "error", "message": "Browser not launched or page not available."}
+                )
 
             if action == "click":
                 coordinate_str = params.get("coordinate")
                 if not coordinate_str:
-                    return json.dumps({"status": "error", "message": "Missing 'coordinate' for 'click' action."})
+                    return json.dumps(
+                        {"status": "error", "message": "Missing 'coordinate' for 'click' action."}
+                    )
                 try:
-                    x_str, y_str = coordinate_str.split(',')
+                    x_str, y_str = coordinate_str.split(",")
                     x, y = int(x_str), int(y_str)
                 except ValueError:
-                    return json.dumps({"status": "error", "message": "Invalid coordinate format. Expected 'x,y'."})
+                    return json.dumps(
+                        {"status": "error", "message": "Invalid coordinate format. Expected 'x,y'."}
+                    )
 
                 page.mouse.click(x, y)
                 # Screenshot logic
-                return json.dumps({"status": "success", "message": f"Clicked at {x},{y}.", "screenshot": screenshot_data})
+                return json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"Clicked at {x},{y}.",
+                        "screenshot": screenshot_data,
+                    }
+                )
 
             elif action == "type":
                 text_to_type = params.get("text")
-                if text_to_type is None: # Allow empty string for typing
-                    return json.dumps({"status": "error", "message": "Missing 'text' for 'type' action."})
+                if text_to_type is None:  # Allow empty string for typing
+                    return json.dumps(
+                        {"status": "error", "message": "Missing 'text' for 'type' action."}
+                    )
 
                 page.keyboard.type(text_to_type)
                 # Screenshot logic
-                return json.dumps({"status": "success", "message": f"Typed text: '{text_to_type}'.", "screenshot": screenshot_data})
+                return json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"Typed text: '{text_to_type}'.",
+                        "screenshot": screenshot_data,
+                    }
+                )
 
             elif action == "scroll_down":
                 page.evaluate("window.scrollBy(0, window.innerHeight)")
                 # Screenshot logic
-                return json.dumps({"status": "success", "message": "Scrolled down.", "screenshot": screenshot_data})
+                return json.dumps(
+                    {
+                        "status": "success",
+                        "message": "Scrolled down.",
+                        "screenshot": screenshot_data,
+                    }
+                )
 
             elif action == "scroll_up":
                 page.evaluate("window.scrollBy(0, -window.innerHeight)")
                 # Screenshot logic
-                return json.dumps({"status": "success", "message": "Scrolled up.", "screenshot": screenshot_data})
+                return json.dumps(
+                    {"status": "success", "message": "Scrolled up.", "screenshot": screenshot_data}
+                )
 
             else:
-                return json.dumps({"status": "error", "message": f"Unknown browser action: '{action}'."})
+                return json.dumps(
+                    {"status": "error", "message": f"Unknown browser action: '{action}'."}
+                )
 
         except Exception as e:
             # Attempt to clean up playwright resources on error
@@ -195,7 +243,7 @@ class BrowserActionTool(Tool):
                 try:
                     current_context.close()
                 except Exception:
-                    pass # best effort
+                    pass  # best effort
             current_sync_instance = self._get_playwright_sync_instance(agent_tools_instance)
             if current_sync_instance:
                 try:

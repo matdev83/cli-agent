@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import re
 import fnmatch
-import json # For ListFilesTool and SearchFilesTool output
+import json  # For ListFilesTool and SearchFilesTool output
 from pathlib import Path
 from typing import List, Dict, Any
 from .tool_protocol import Tool
+
 
 # --- Helper function for ReplaceInFileTool ---
 def _parse_diff_blocks(diff: str) -> List[tuple[str, str]]:
@@ -24,8 +25,11 @@ def _parse_diff_blocks(diff: str) -> List[tuple[str, str]]:
 
     # If the diff string is not empty but no blocks were found, it's a format error.
     if not blocks and diff.strip():
-        raise ValueError("No valid diff blocks found. Ensure the format is: ------- SEARCH...=======...+++++++ REPLACE")
+        raise ValueError(
+            "No valid diff blocks found. Ensure the format is: ------- SEARCH...=======...+++++++ REPLACE"
+        )
     return blocks
+
 
 # --- Utility for path resolution ---
 def _resolve_path(path_str: str, agent_tools_instance: Any = None) -> Path:
@@ -39,13 +43,15 @@ def _resolve_path(path_str: str, agent_tools_instance: Any = None) -> Path:
     if p.is_absolute():
         return p.resolve()
 
-    base_dir = Path(os.getcwd()) # Default base directory
-    if agent_tools_instance and hasattr(agent_tools_instance, 'cwd') and agent_tools_instance.cwd:
+    base_dir = Path(os.getcwd())  # Default base directory
+    if agent_tools_instance and hasattr(agent_tools_instance, "cwd") and agent_tools_instance.cwd:
         base_dir = Path(agent_tools_instance.cwd)
 
     return (base_dir / p).resolve()
 
+
 # --- Tool Implementations ---
+
 
 class ReadFileTool(Tool):
     @property
@@ -58,9 +64,7 @@ class ReadFileTool(Tool):
 
     @property
     def parameters_schema(self) -> Dict[str, str]:
-        return {
-            "path": "The relative or absolute path to the file to be read."
-        }
+        return {"path": "The relative or absolute path to the file to be read."}
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         file_path_str = params.get("path")
@@ -95,7 +99,7 @@ class WriteToFileTool(Tool):
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "path": "The relative or absolute path to the file to be written.",
-            "content": "The content to write to the file."
+            "content": "The content to write to the file.",
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -125,14 +129,16 @@ class ReplaceInFileTool(Tool):
 
     @property
     def description(self) -> str:
-        return ("Applies one or more SEARCH/REPLACE diff blocks to a file. "
-                "Each block must follow the format: ------- SEARCH\\n(lines to search)\\n=======\\n(lines to replace)\\n+++++++ REPLACE")
+        return (
+            "Applies one or more SEARCH/REPLACE diff blocks to a file. "
+            "Each block must follow the format: ------- SEARCH\\n(lines to search)\\n=======\\n(lines to replace)\\n+++++++ REPLACE"
+        )
 
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "path": "The relative or absolute path to the file to be modified.",
-            "diff": "A string containing one or more diff blocks in the specified format."
+            "diff": "A string containing one or more diff blocks in the specified format.",
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -141,7 +147,7 @@ class ReplaceInFileTool(Tool):
 
         if not file_path_str:
             return "Error: Missing required parameter 'path'."
-        if diff_str is None: # diff can be an empty string (no-op)
+        if diff_str is None:  # diff can be an empty string (no-op)
             return "Error: Missing required parameter 'diff'."
 
         try:
@@ -154,22 +160,26 @@ class ReplaceInFileTool(Tool):
 
             original_text = abs_file_path.read_text(encoding="utf-8")
 
-            if not diff_str.strip(): # If diff is empty or whitespace, it's a no-op
+            if not diff_str.strip():  # If diff is empty or whitespace, it's a no-op
                 return f"Warning: 'diff' was empty. No changes made to file {str(abs_file_path)}."
 
-            blocks = _parse_diff_blocks(diff_str) # Helper function handles format errors
+            blocks = _parse_diff_blocks(diff_str)  # Helper function handles format errors
 
             modified_text = original_text
-            matching_strictness = getattr(agent_tools_instance, 'matching_strictness', 100)
+            matching_strictness = getattr(agent_tools_instance, "matching_strictness", 100)
 
             for i, (search, replace) in enumerate(blocks):
                 if matching_strictness == 100:
                     if search not in modified_text:
                         max_preview = 30
-                        search_preview = search[:max_preview].replace('\n', '\\n') + ('...' if len(search) > max_preview else '')
-                        return (f"Error: Search block {i+1} (starting with '{search_preview}') "
-                                f"not found in the current state of the file {str(abs_file_path)} (exact match). "
-                                "Ensure blocks are ordered correctly and match the file content.")
+                        search_preview = search[:max_preview].replace("\n", "\\n") + (
+                            "..." if len(search) > max_preview else ""
+                        )
+                        return (
+                            f"Error: Search block {i + 1} (starting with '{search_preview}') "
+                            f"not found in the current state of the file {str(abs_file_path)} (exact match). "
+                            "Ensure blocks are ordered correctly and match the file content."
+                        )
                     modified_text = modified_text.replace(search, replace, 1)
                 else:
                     # Case-insensitive matching
@@ -177,18 +187,21 @@ class ReplaceInFileTool(Tool):
                         regex = re.compile(search, re.IGNORECASE)
                         if not regex.search(modified_text):
                             max_preview = 30
-                            search_preview = search[:max_preview].replace('\n', '\\n') + ('...' if len(search) > max_preview else '')
-                            return (f"Error: Search block {i+1} (starting with '{search_preview}') "
-                                    f"not found in the current state of the file {str(abs_file_path)} (case-insensitive match). "
-                                    "Ensure blocks are ordered correctly and match the file content.")
+                            search_preview = search[:max_preview].replace("\n", "\\n") + (
+                                "..." if len(search) > max_preview else ""
+                            )
+                            return (
+                                f"Error: Search block {i + 1} (starting with '{search_preview}') "
+                                f"not found in the current state of the file {str(abs_file_path)} (case-insensitive match). "
+                                "Ensure blocks are ordered correctly and match the file content."
+                            )
                         modified_text = regex.sub(replace, modified_text, count=1)
                     except re.error as e:
-                        return f"Error compiling regex for search block {i+1}: {e}"
-
+                        return f"Error compiling regex for search block {i + 1}: {e}"
 
             abs_file_path.write_text(modified_text, encoding="utf-8")
             return f"File {str(abs_file_path)} modified successfully with {len(blocks)} block(s)."
-        except ValueError as ve: # Catch errors from _parse_diff_blocks
+        except ValueError as ve:  # Catch errors from _parse_diff_blocks
             return f"Error processing diff for {file_path_str}: {ve}"
         except Exception as e:
             return f"Error replacing in file {file_path_str}: {e}"
@@ -207,7 +220,7 @@ class ListFilesTool(Tool):
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "path": "The relative or absolute path to the directory to list.",
-            "recursive": "Whether to list files recursively. Defaults to False."
+            "recursive": "Whether to list files recursively. Defaults to False.",
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -217,7 +230,7 @@ class ListFilesTool(Tool):
         if not dir_path_str:
             return "Error: Missing required parameter 'path'."
 
-        recursive = False # Default value
+        recursive = False  # Default value
         if recursive_param is not None:
             if isinstance(recursive_param, bool):
                 recursive = recursive_param
@@ -262,16 +275,18 @@ class SearchFilesTool(Tool):
 
     @property
     def description(self) -> str:
-        return ("Searches for a regex pattern in files within a directory. "
-                "Can filter by file pattern (glob). Returns a JSON list of match objects. "
-                "This tool uses Python's `re` module for regular expression matching.")
+        return (
+            "Searches for a regex pattern in files within a directory. "
+            "Can filter by file pattern (glob). Returns a JSON list of match objects. "
+            "This tool uses Python's `re` module for regular expression matching."
+        )
 
     @property
     def parameters_schema(self) -> Dict[str, str]:
         return {
             "path": "The relative or absolute path to the directory to search within.",
             "regex": "The Python regex to search for within file lines.",
-            "file_pattern": "Optional glob pattern to filter files (e.g., '*.py', 'test_*.py'). Defaults to all files ('*')."
+            "file_pattern": "Optional glob pattern to filter files (e.g., '*.py', 'test_*.py'). Defaults to all files ('*').",
         }
 
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
@@ -314,21 +329,25 @@ class SearchFilesTool(Tool):
                                 if pattern.search(line):
                                     matches.append(
                                         {
-                                            "file": (file_path.relative_to(abs_dir_path)).as_posix(),
+                                            "file": (
+                                                file_path.relative_to(abs_dir_path)
+                                            ).as_posix(),
                                             "line": lineno,
                                             "content": line.rstrip("\n"),
                                         }
                                     )
-                    except Exception: # Skip files that cannot be opened or read
+                    except Exception:  # Skip files that cannot be opened or read
                         pass
 
             return json.dumps(matches)
         except Exception as e:
             return f"Error searching files in {path_str}: {e}"
 
+
 # --- Wrapper functions for old tests ---
 # Ensure json is imported if not already (it is used by ListFilesTool and SearchFilesTool's execute, but wrappers parse it)
 # import json # Already imported at the top
+
 
 def read_file(path: str, agent_tools_instance: Any = None) -> str:
     tool = ReadFileTool()
@@ -340,30 +359,39 @@ def read_file(path: str, agent_tools_instance: Any = None) -> str:
         raise ValueError(result)
     return result
 
+
 def write_to_file(path: str, content: str, agent_tools_instance: Any = None) -> None:
     tool = WriteToFileTool()
-    result = tool.execute({"path": path, "content": content}, agent_tools_instance=agent_tools_instance)
+    result = tool.execute(
+        {"path": path, "content": content}, agent_tools_instance=agent_tools_instance
+    )
     if result.startswith("Error:"):
         raise ValueError(result)
     # Original function had no return, so None is fine.
+
 
 def replace_in_file(path: str, diff_blocks: str, agent_tools_instance: Any = None) -> None:
     tool = ReplaceInFileTool()
     # The test 'test_replace_in_file' uses a diff format "------- SEARCH...+++++++ REPLACE"
     # The tool's _parse_diff_blocks method now expects "------- SEARCH...+++++++ REPLACE"
     # The wrapper will now pass the diff_blocks directly.
-    result = tool.execute({"path": path, "diff": diff_blocks}, agent_tools_instance=agent_tools_instance)
+    result = tool.execute(
+        {"path": path, "diff": diff_blocks}, agent_tools_instance=agent_tools_instance
+    )
 
     # The test 'test_replace_in_file_not_found' expects ValueError if search block not found.
     # The tool's execute method returns a string like "Error: Search block ... not found..."
     if result.startswith("Error:") and "Search block" in result and "not found" in result:
-        raise ValueError(result) # Make it a ValueError for the test
-    elif result.startswith("Error:"): # Other errors reported by the tool
-        raise RuntimeError(result) # Or a more specific custom error
+        raise ValueError(result)  # Make it a ValueError for the test
+    elif result.startswith("Error:"):  # Other errors reported by the tool
+        raise RuntimeError(result)  # Or a more specific custom error
+
 
 def list_files(path: str, recursive: bool = False, agent_tools_instance: Any = None) -> List[str]:
     tool = ListFilesTool()
-    result_str = tool.execute({"path": path, "recursive": recursive}, agent_tools_instance=agent_tools_instance)
+    result_str = tool.execute(
+        {"path": path, "recursive": recursive}, agent_tools_instance=agent_tools_instance
+    )
     if result_str.startswith("Error:"):
         raise ValueError(result_str)
     # The test 'test_list_files' expects a list of strings.
@@ -371,12 +399,17 @@ def list_files(path: str, recursive: bool = False, agent_tools_instance: Any = N
     loaded_json = json.loads(result_str)
     return loaded_json
 
-def search_files(path: str, regex: str, file_pattern: str = "*", agent_tools_instance: Any = None) -> List[Dict[str, Any]]:
+
+def search_files(
+    path: str, regex: str, file_pattern: str = "*", agent_tools_instance: Any = None
+) -> List[Dict[str, Any]]:
     tool = SearchFilesTool()
     params = {"path": path, "regex": regex}
     # The tool's execute method defaults file_pattern to '*' internally if not provided.
     # So, only add file_pattern to params if it's not the default "*" to avoid redundancy.
-    if file_pattern != "*": # This check ensures we don't override the tool's internal default unless specified.
+    if (
+        file_pattern != "*"
+    ):  # This check ensures we don't override the tool's internal default unless specified.
         params["file_pattern"] = file_pattern
 
     result_str = tool.execute(params, agent_tools_instance=agent_tools_instance)

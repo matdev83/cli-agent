@@ -1,5 +1,6 @@
 from typing import Protocol, Dict, Any
 
+
 class Tool(Protocol):
     """
     Protocol for a tool that the DeveloperAgent can execute.

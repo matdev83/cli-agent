@@ -1,0 +1,1417 @@
+src/__init__.py:1:1: W391 blank line at end of file
+src/agent.py:0:1: WPS232 Found module cognitive complexity that is too high: 39.6 > 8
+src/agent.py:0:1: WPS201 Found module with too many imports: 17 > 12
+src/agent.py:11:1: WPS300 Found local folder import
+src/agent.py:12:1: WPS300 Found local folder import
+src/agent.py:13:1: WPS300 Found local folder import
+src/agent.py:14:1: WPS300 Found local folder import
+src/agent.py:15:1: WPS347 Found vague import that may cause confusion: to_bool
+src/agent.py:22:1: WPS235 Found too many imported names from a module: 18 > 8
+src/agent.py:48:80: E501 line too long (84 > 79 characters)
+src/agent.py:50:80: E501 line too long (82 > 79 characters)
+src/agent.py:56:80: E501 line too long (81 > 79 characters)
+src/agent.py:62:1: WPS230 Found too many public instance attributes: 18 > 6
+src/agent.py:62:1: WPS338 Found incorrect order of methods in a class
+src/agent.py:65:5: WPS211 Found too many arguments: 10 > 5
+src/agent.py:65:5: WPS231 Found function with too much cognitive complexity: 19 > 12
+src/agent.py:65:5: WPS234 Found overly complex annotation: 4 > 3
+src/agent.py:67:9: WPS221 Found line with high Jones Complexity: 15 > 14
+src/agent.py:67:80: E501 line too long (99 > 79 characters)
+src/agent.py:73:80: E501 line too long (80 > 79 characters)
+src/agent.py:83:25: WPS504 Found negated condition
+src/agent.py:83:80: E501 line too long (100 > 79 characters)
+src/agent.py:89:80: E501 line too long (82 > 79 characters)
+src/agent.py:121:44: WPS358 Found a float zero (0.0)
+src/agent.py:144:80: E501 line too long (86 > 79 characters)
+src/agent.py:147:9: WPS229 Found too long ``try`` body length: 2 > 1
+src/agent.py:150:80: E501 line too long (83 > 79 characters)
+src/agent.py:151:80: E501 line too long (80 > 79 characters)
+src/agent.py:158:80: E501 line too long (96 > 79 characters)
+src/agent.py:165:9: WPS111 Found too short name: e < 2
+src/agent.py:169:17: WPS226 Found string literal over-use: :  > 3
+src/agent.py:169:80: E501 line too long (83 > 79 characters)
+src/agent.py:171:80: E501 line too long (81 > 79 characters)
+src/agent.py:175:80: E501 line too long (80 > 79 characters)
+src/agent.py:177:80: E501 line too long (81 > 79 characters)
+src/agent.py:178:9: WPS111 Found too short name: e < 2
+src/agent.py:180:80: E501 line too long (91 > 79 characters)
+src/agent.py:191:33: WPS226 Found string literal over-use: system > 3
+src/agent.py:193:5: WPS615 Found unpythonic getter or setter: set_mode
+src/agent.py:199:5: WPS615 Found unpythonic getter or setter: get_mode
+src/agent.py:218:5: WPS212 Found too many return statements: 14 > 5
+src/agent.py:218:5: WPS210 Found too many local variables: 20 > 5
+src/agent.py:218:5: WPS231 Found function with too much cognitive complexity: 194 > 12
+src/agent.py:223:80: E501 line too long (90 > 79 characters)
+src/agent.py:233:80: E501 line too long (96 > 79 characters)
+src/agent.py:239:9: WPS223 Found too many `elif` branches: 5 > 3
+src/agent.py:243:80: E501 line too long (89 > 79 characters)
+src/agent.py:248:80: E501 line too long (89 > 79 characters)
+src/agent.py:258:46: WPS226 Found string literal over-use: '? (y/n) > 3
+src/agent.py:258:80: E501 line too long (97 > 79 characters)
+src/agent.py:263:45: WPS226 Found string literal over-use: replace_in_file > 3
+src/agent.py:264:41: WPS226 Found string literal over-use: path > 3
+src/agent.py:268:80: E501 line too long (90 > 79 characters)
+src/agent.py:293:80: E501 line too long (92 > 79 characters)
+src/agent.py:305:80: E501 line too long (81 > 79 characters)
+src/agent.py:318:80: E501 line too long (94 > 79 characters)
+src/agent.py:330:80: E501 line too long (84 > 79 characters)
+src/agent.py:335:80: E501 line too long (80 > 79 characters)
+src/agent.py:340:9: WPS229 Found too long ``try`` body length: 4 > 1
+src/agent.py:341:80: E501 line too long (83 > 79 characters)
+src/agent.py:342:80: E501 line too long (85 > 79 characters)
+src/agent.py:343:80: E501 line too long (82 > 79 characters)
+src/agent.py:348:80: E501 line too long (82 > 79 characters)
+src/agent.py:351:80: E501 line too long (87 > 79 characters)
+src/agent.py:353:80: E501 line too long (84 > 79 characters)
+src/agent.py:354:80: E501 line too long (87 > 79 characters)
+src/agent.py:363:80: E501 line too long (82 > 79 characters)
+src/agent.py:369:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:370:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:371:29: WPS220 Found too deep nesting: 28 > 20
+src/agent.py:371:80: E501 line too long (97 > 79 characters)
+src/agent.py:372:29: WPS220 Found too deep nesting: 28 > 20
+src/agent.py:373:80: E501 line too long (87 > 79 characters)
+src/agent.py:375:29: WPS220 Found too deep nesting: 28 > 20
+src/agent.py:375:80: E501 line too long (91 > 79 characters)
+src/agent.py:376:29: WPS220 Found too deep nesting: 28 > 20
+src/agent.py:377:33: WPS220 Found too deep nesting: 32 > 20
+src/agent.py:377:80: E501 line too long (88 > 79 characters)
+src/agent.py:380:33: WPS220 Found too deep nesting: 32 > 20
+src/agent.py:381:33: WPS220 Found too deep nesting: 32 > 20
+src/agent.py:381:80: E501 line too long (80 > 79 characters)
+src/agent.py:385:33: WPS220 Found too deep nesting: 32 > 20
+src/agent.py:389:80: E501 line too long (83 > 79 characters)
+src/agent.py:394:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:394:80: E501 line too long (93 > 79 characters)
+src/agent.py:395:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:396:29: WPS529 Found implicit `.get()` dict usage
+src/agent.py:396:29: WPS220 Found too deep nesting: 28 > 20
+src/agent.py:402:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:402:80: E501 line too long (93 > 79 characters)
+src/agent.py:403:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:404:29: WPS529 Found implicit `.get()` dict usage
+src/agent.py:404:29: WPS220 Found too deep nesting: 28 > 20
+src/agent.py:409:80: E501 line too long (80 > 79 characters)
+src/agent.py:414:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:414:80: E501 line too long (82 > 79 characters)
+src/agent.py:415:80: E501 line too long (96 > 79 characters)
+src/agent.py:418:9: WPS111 Found too short name: e < 2
+src/agent.py:419:80: E501 line too long (80 > 79 characters)
+src/agent.py:420:80: E501 line too long (96 > 79 characters)
+src/agent.py:421:9: WPS111 Found too short name: e < 2
+src/agent.py:424:80: E501 line too long (99 > 79 characters)
+src/agent.py:426:80: E501 line too long (91 > 79 characters)
+src/agent.py:427:9: WPS111 Found too short name: e < 2
+src/agent.py:430:80: E501 line too long (81 > 79 characters)
+src/agent.py:433:80: E501 line too long (83 > 79 characters)
+src/agent.py:435:5: WPS210 Found too many local variables: 7 > 5
+src/agent.py:435:5: WPS213 Found too many expressions: 10 > 9
+src/agent.py:435:5: WPS231 Found function with too much cognitive complexity: 34 > 12
+src/agent.py:444:80: E501 line too long (84 > 79 characters)
+src/agent.py:458:13: WPS225 Found too many `except` cases: 4 > 3
+src/agent.py:458:13: WPS229 Found too long ``try`` body length: 6 > 1
+src/agent.py:461:25: WPS226 Found string literal over-use:  (from mention ' > 3
+src/agent.py:461:25: WPS226 Found string literal over-use: ') > 3
+src/agent.py:461:80: E501 line too long (100 > 79 characters)
+src/agent.py:466:80: E501 line too long (99 > 79 characters)
+src/agent.py:470:63: WPS111 Found too short name: f < 2
+src/agent.py:471:21: WPS110 Found wrong variable name: content
+src/agent.py:473:67: WPS226 Found string literal over-use: content > 3
+src/agent.py:473:80: E501 line too long (86 > 79 characters)
+src/agent.py:476:80: E501 line too long (99 > 79 characters)
+src/agent.py:486:80: E501 line too long (88 > 79 characters)
+src/agent.py:489:13: WPS111 Found too short name: e < 2
+src/agent.py:494:13: WPS111 Found too short name: e < 2
+src/agent.py:503:5: WPS210 Found too many local variables: 23 > 5
+src/agent.py:503:5: WPS213 Found too many expressions: 12 > 9
+src/agent.py:503:5: WPS231 Found function with too much cognitive complexity: 60 > 12
+src/agent.py:504:80: E501 line too long (80 > 79 characters)
+src/agent.py:506:80: E501 line too long (91 > 79 characters)
+src/agent.py:510:80: E501 line too long (83 > 79 characters)
+src/agent.py:516:80: E501 line too long (81 > 79 characters)
+src/agent.py:526:80: E501 line too long (89 > 79 characters)
+src/agent.py:528:80: E501 line too long (84 > 79 characters)
+src/agent.py:539:33: WPS226 Found string literal over-use: user > 3
+src/agent.py:540:9: WPS122 Found all unused variables definition: _i
+src/agent.py:540:13: WPS111 Found too short name: _i < 2
+src/agent.py:549:80: E501 line too long (86 > 79 characters)
+src/agent.py:550:80: E501 line too long (81 > 79 characters)
+src/agent.py:553:80: E501 line too long (80 > 79 characters)
+src/agent.py:565:80: E501 line too long (84 > 79 characters)
+src/agent.py:573:80: E501 line too long (89 > 79 characters)
+src/agent.py:574:80: E501 line too long (82 > 79 characters)
+src/agent.py:576:80: E501 line too long (96 > 79 characters)
+src/agent.py:578:80: E501 line too long (84 > 79 characters)
+src/agent.py:579:80: E501 line too long (80 > 79 characters)
+src/agent.py:586:80: E501 line too long (82 > 79 characters)
+src/agent.py:595:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:598:32: WPS111 Found too short name: p < 2
+src/agent.py:613:80: E501 line too long (80 > 79 characters)
+src/agent.py:618:80: E501 line too long (92 > 79 characters)
+src/agent.py:621:80: E501 line too long (80 > 79 characters)
+src/agent.py:625:80: E501 line too long (89 > 79 characters)
+src/agent.py:627:80: E501 line too long (85 > 79 characters)
+src/agent.py:628:80: E501 line too long (83 > 79 characters)
+src/agent.py:629:80: E501 line too long (80 > 79 characters)
+src/agent.py:632:80: E501 line too long (83 > 79 characters)
+src/agent.py:633:80: E501 line too long (81 > 79 characters)
+src/agent.py:646:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:646:80: E501 line too long (80 > 79 characters)
+src/agent.py:650:25: WPS220 Found too deep nesting: 24 > 20
+src/agent.py:654:80: E501 line too long (97 > 79 characters)
+src/agent.py:666:80: E501 line too long (86 > 79 characters)
+src/agent.py:667:80: E501 line too long (84 > 79 characters)
+src/agent.py:673:17: WPS237 Found a too complex `f` string
+src/agent.py:673:26: WPS226 Found string literal over-use: role > 3
+src/agent.py:673:61: WPS432 Found magic number: 200
+src/agent.py:674:51: WPS432 Found magic number: 200
+src/agent.py:681:13: WPS221 Found line with high Jones Complexity: 18 > 14
+src/agent.py:681:80: E501 line too long (87 > 79 characters)
+src/agent.py:685:79: WPS358 Found a float zero (0.0)
+src/agent.py:685:80: E501 line too long (82 > 79 characters)
+src/agent.py:694:80: E501 line too long (87 > 79 characters)
+src/agent.py:702:10: WPS226 Found string literal over-use: src > 3
+src/agent.py:703:80: E501 line too long (84 > 79 characters)
+src/agent.py:704:80: E501 line too long (92 > 79 characters)
+src/agent.py:717:80: E501 line too long (92 > 79 characters)
+src/agent.py:719:5: WPS229 Found too long ``try`` body length: 6 > 1
+src/agent.py:730:80: E501 line too long (88 > 79 characters)
+src/agent.py:731:80: E501 line too long (81 > 79 characters)
+src/agent.py:740:80: E501 line too long (90 > 79 characters)
+src/agent.py:741:80: E501 line too long (80 > 79 characters)
+src/agent.py:744:80: E501 line too long (90 > 79 characters)
+src/agent.py:745:80: E501 line too long (84 > 79 characters)
+src/agent.py:748:80: E501 line too long (85 > 79 characters)
+src/agent.py:749:80: E501 line too long (80 > 79 characters)
+src/agent.py:750:80: E501 line too long (85 > 79 characters)
+src/agent.py:751:80: E501 line too long (84 > 79 characters)
+src/agent.py:775:5: WPS111 Found too short name: e < 2
+src/agent.py:776:80: E501 line too long (91 > 79 characters)
+src/agent.py:780:9: WPS505 Found nested `try` block
+src/agent.py:783:80: E501 line too long (90 > 79 characters)
+src/agent.py:784:9: WPS420 Found wrong keyword: pass
+src/assistant_message.py:3:1: WPS301 Found dotted raw import: defusedxml.ElementTree
+src/assistant_message.py:8:1: WPS407 Found mutable module constant
+src/assistant_message.py:31:1: WPS407 Found mutable module constant
+src/assistant_message.py:37:5: WPS110 Found wrong variable name: content
+src/assistant_message.py:46:5: WPS110 Found wrong variable name: params
+src/assistant_message.py:53:1: WPS210 Found too many local variables: 16 > 5
+src/assistant_message.py:53:1: WPS213 Found too many expressions: 11 > 9
+src/assistant_message.py:53:1: WPS231 Found function with too much cognitive complexity: 87 > 12
+src/assistant_message.py:58:5: WPS110 Found wrong variable name: result
+src/assistant_message.py:68:80: E501 line too long (83 > 79 characters)
+src/assistant_message.py:71:80: E501 line too long (98 > 79 characters)
+src/assistant_message.py:76:80: E501 line too long (83 > 79 characters)
+src/assistant_message.py:87:13: WPS110 Found wrong variable name: parameters
+src/assistant_message.py:96:80: E501 line too long (96 > 79 characters)
+src/assistant_message.py:98:80: E501 line too long (97 > 79 characters)
+src/assistant_message.py:105:80: E501 line too long (121 > 79 characters)
+src/assistant_message.py:110:17: WPS110 Found wrong variable name: parameters
+src/assistant_message.py:113:80: E501 line too long (93 > 79 characters)
+src/assistant_message.py:114:25: WPS220 Found too deep nesting: 24 > 20
+src/assistant_message.py:115:25: WPS220 Found too deep nesting: 24 > 20
+src/assistant_message.py:116:25: WPS220 Found too deep nesting: 24 > 20
+src/assistant_message.py:117:80: E501 line too long (80 > 79 characters)
+src/assistant_message.py:127:80: E501 line too long (93 > 79 characters)
+src/assistant_message.py:130:80: E501 line too long (90 > 79 characters)
+src/assistant_message.py:139:80: E501 line too long (111 > 79 characters)
+src/assistant_message.py:143:80: E501 line too long (83 > 79 characters)
+src/assistant_message.py:151:80: E501 line too long (80 > 79 characters)
+src/autocompletion.py:10:80: E501 line too long (82 > 79 characters)
+src/autocompletion.py:51:80: E501 line too long (90 > 79 characters)
+src/autocompletion.py:55:80: E501 line too long (92 > 79 characters)
+src/autocompletion.py:60:80: E501 line too long (80 > 79 characters)
+src/cli.py:0:1: WPS232 Found module cognitive complexity that is too high: 9.1 > 8
+src/cli.py:0:1: WPS201 Found module with too many imports: 23 > 12
+src/cli.py:27:1: WPS235 Found too many imported names from a module: 9 > 8
+src/cli.py:57:5: WPS615 Found unpythonic getter or setter: set_mode
+src/cli.py:59:80: E501 line too long (81 > 79 characters)
+src/cli.py:72:80: E501 line too long (80 > 79 characters)
+src/cli.py:73:80: E501 line too long (99 > 79 characters)
+src/cli.py:76:80: E501 line too long (88 > 79 characters)
+src/cli.py:78:47: WPS336 Found explicit string concatenation
+src/cli.py:80:80: E501 line too long (91 > 79 characters)
+src/cli.py:89:80: E501 line too long (94 > 79 characters)
+src/cli.py:107:80: E501 line too long (100 > 79 characters)
+src/cli.py:118:80: E501 line too long (86 > 79 characters)
+src/cli.py:121:80: E501 line too long (92 > 79 characters)
+src/cli.py:123:80: E501 line too long (83 > 79 characters)
+src/cli.py:127:1: WPS213 Found too many expressions: 12 > 9
+src/cli.py:127:1: WPS231 Found function with too much cognitive complexity: 36 > 12
+src/cli.py:138:5: WPS430 Found nested function: _cli_llm_response_callback
+src/cli.py:138:80: E501 line too long (96 > 79 characters)
+src/cli.py:141:17: WPS504 Found negated condition
+src/cli.py:143:22: WPS226 Found string literal over-use: N/A > 3
+src/cli.py:146:17: WPS504 Found negated condition
+src/cli.py:150:24: WPS237 Found a too complex `f` string
+src/cli.py:150:24: WPS504 Found negated condition
+src/cli.py:150:24: WPS226 Found string literal over-use: .6f > 3
+src/cli.py:150:80: E501 line too long (98 > 79 characters)
+src/cli.py:153:17: WPS226 Found string literal over-use: STATS: Model:  > 3
+src/cli.py:169:5: WPS430 Found nested function: _update_ui
+src/cli.py:173:80: E501 line too long (113 > 79 characters)
+src/cli.py:176:80: E501 line too long (86 > 79 characters)
+src/cli.py:181:5: WPS229 Found too long ``try`` body length: 6 > 1
+src/cli.py:187:80: E501 line too long (83 > 79 characters)
+src/cli.py:189:9: WPS110 Found wrong variable name: result
+src/cli.py:191:80: E501 line too long (80 > 79 characters)
+src/cli.py:192:80: E501 line too long (85 > 79 characters)
+src/cli.py:206:80: E501 line too long (86 > 79 characters)
+src/cli.py:208:5: WPS111 Found too short name: e < 2
+src/cli.py:211:80: E501 line too long (87 > 79 characters)
+src/cli.py:212:80: E501 line too long (90 > 79 characters)
+src/cli.py:213:80: E501 line too long (82 > 79 characters)
+src/cli.py:224:1: WPS210 Found too many local variables: 7 > 5
+src/cli.py:224:1: WPS231 Found function with too much cognitive complexity: 32 > 12
+src/cli.py:253:9: WPS430 Found nested function: on_llm_response_callback
+src/cli.py:258:21: WPS504 Found negated condition
+src/cli.py:258:80: E501 line too long (100 > 79 characters)
+src/cli.py:261:21: WPS504 Found negated condition
+src/cli.py:265:28: WPS237 Found a too complex `f` string
+src/cli.py:265:28: WPS504 Found negated condition
+src/cli.py:265:80: E501 line too long (94 > 79 characters)
+src/cli.py:276:80: E501 line too long (97 > 79 characters)
+src/cli.py:281:17: WPS421 Found wrong function call: print
+src/cli.py:290:80: E501 line too long (88 > 79 characters)
+src/cli.py:295:80: E501 line too long (95 > 79 characters)
+src/cli.py:298:80: E501 line too long (96 > 79 characters)
+src/cli.py:300:80: E501 line too long (99 > 79 characters)
+src/cli.py:303:80: E501 line too long (86 > 79 characters)
+src/cli.py:304:80: E501 line too long (80 > 79 characters)
+src/cli.py:306:80: E501 line too long (92 > 79 characters)
+src/cli.py:308:80: E501 line too long (88 > 79 characters)
+src/cli.py:309:80: E501 line too long (85 > 79 characters)
+src/cli.py:310:80: E501 line too long (101 > 79 characters)
+src/cli.py:311:80: E501 line too long (88 > 79 characters)
+src/cli.py:316:80: E501 line too long (84 > 79 characters)
+src/cli.py:317:80: E501 line too long (113 > 79 characters)
+src/cli.py:320:5: WPS110 Found wrong variable name: result
+src/cli.py:326:1: WPS210 Found too many local variables: 16 > 5
+src/cli.py:326:1: WPS213 Found too many expressions: 51 > 9
+src/cli.py:326:1: WPS231 Found function with too much cognitive complexity: 38 > 12
+src/cli.py:333:80: E501 line too long (88 > 79 characters)
+src/cli.py:334:80: E501 line too long (106 > 79 characters)
+src/cli.py:338:80: E501 line too long (86 > 79 characters)
+src/cli.py:342:16: WPS226 Found string literal over-use: store_true > 3
+src/cli.py:350:80: E501 line too long (86 > 79 characters)
+src/cli.py:368:80: E501 line too long (128 > 79 characters)
+src/cli.py:385:17: WPS432 Found magic number: 120.0
+src/cli.py:392:80: E501 line too long (94 > 79 characters)
+src/cli.py:413:80: E501 line too long (101 > 79 characters)
+src/cli.py:414:5: WPS229 Found too long ``try`` body length: 2 > 1
+src/cli.py:417:80: E501 line too long (110 > 79 characters)
+src/cli.py:419:5: WPS111 Found too short name: e < 2
+src/cli.py:421:80: E501 line too long (90 > 79 characters)
+src/cli.py:423:80: E501 line too long (92 > 79 characters)
+src/cli.py:424:80: E501 line too long (108 > 79 characters)
+src/cli.py:428:5: WPS229 Found too long ``try`` body length: 8 > 1
+src/cli.py:434:80: E501 line too long (84 > 79 characters)
+src/cli.py:438:80: E501 line too long (82 > 79 characters)
+src/cli.py:441:5: WPS111 Found too short name: e < 2
+src/cli.py:443:9: WPS421 Found wrong function call: print
+src/cli.py:455:80: E501 line too long (106 > 79 characters)
+src/cli.py:458:80: E501 line too long (83 > 79 characters)
+src/cli.py:464:80: E501 line too long (91 > 79 characters)
+src/cli.py:471:80: E501 line too long (94 > 79 characters)
+src/cli.py:479:80: E501 line too long (100 > 79 characters)
+src/cli.py:482:80: E501 line too long (83 > 79 characters)
+src/cli.py:508:5: WPS430 Found nested function: _
+src/cli.py:510:80: E501 line too long (97 > 79 characters)
+src/cli.py:526:80: E501 line too long (85 > 79 characters)
+src/cli.py:528:80: E501 line too long (91 > 79 characters)
+src/cli.py:530:80: E501 line too long (98 > 79 characters)
+src/cli.py:532:80: E501 line too long (90 > 79 characters)
+src/cli.py:536:80: E501 line too long (91 > 79 characters)
+src/cli.py:545:80: E501 line too long (95 > 79 characters)
+src/cli.py:550:80: E501 line too long (104 > 79 characters)
+src/cli.py:551:5: WPS229 Found too long ``try`` body length: 3 > 1
+src/cli.py:552:80: E501 line too long (94 > 79 characters)
+src/cli.py:556:5: WPS111 Found too short name: e < 2
+src/cli.py:556:80: E501 line too long (92 > 79 characters)
+src/cli.py:559:80: E501 line too long (80 > 79 characters)
+src/cli.py:563:80: E501 line too long (92 > 79 characters)
+src/cli.py:565:80: E501 line too long (90 > 79 characters)
+src/cli.py:567:80: E501 line too long (83 > 79 characters)
+src/cli.py:570:80: E501 line too long (90 > 79 characters)
+src/cli.py:574:5: WPS210 Found too many local variables: 6 > 5
+src/cli.py:574:5: WPS213 Found too many expressions: 11 > 9
+src/cli.py:574:5: WPS231 Found function with too much cognitive complexity: 13 > 12
+src/cli.py:574:5: WPS430 Found nested function: accept_input_handler
+src/cli.py:578:80: E501 line too long (81 > 79 characters)
+src/cli.py:579:9: WPS122 Found all unused variables definition: _ui_update_func
+src/cli.py:582:13: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:582:13: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:591:17: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:591:17: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:597:17: WPS504 Found negated condition
+src/cli.py:598:21: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:598:21: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:598:80: E501 line too long (97 > 79 characters)
+src/cli.py:601:21: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:601:21: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:610:17: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:610:17: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:612:80: E501 line too long (86 > 79 characters)
+src/cli.py:614:80: E501 line too long (84 > 79 characters)
+src/cli.py:618:13: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:618:13: WPS121 Found usage of a variable marked as unused: _ui_update_func
+src/cli.py:621:80: E501 line too long (82 > 79 characters)
+src/cli.py:622:80: E501 line too long (83 > 79 characters)
+src/cli.py:624:80: E501 line too long (83 > 79 characters)
+src/cli.py:628:80: E501 line too long (81 > 79 characters)
+src/cli.py:643:80: E501 line too long (82 > 79 characters)
+src/cli.py:649:5: WPS229 Found too long ``try`` body length: 2 > 1
+src/cli.py:652:5: WPS111 Found too short name: e < 2
+src/cli.py:654:9: WPS421 Found wrong function call: print
+src/cli.py:658:80: E501 line too long (86 > 79 characters)
+src/cli.py:659:80: E501 line too long (90 > 79 characters)
+src/cli.py:660:80: E501 line too long (96 > 79 characters)
+src/cli.py:661:80: E501 line too long (86 > 79 characters)
+src/cli.py:662:80: E501 line too long (92 > 79 characters)
+src/confirmations.py:15:80: E501 line too long (89 > 79 characters)
+src/confirmations.py:20:5: WPS421 Found wrong function call: print
+src/confirmations.py:21:5: WPS229 Found too long ``try`` body length: 2 > 1
+src/confirmations.py:22:22: WPS421 Found wrong function call: input
+src/file_cache.py:6:1: WPS407 Found mutable module constant
+src/file_cache.py:6:80: E501 line too long (96 > 79 characters)
+src/file_cache.py:7:1: WPS407 Found mutable module constant
+src/file_cache.py:10:1: WPS338 Found incorrect order of methods in a class
+src/file_cache.py:22:80: E501 line too long (80 > 79 characters)
+src/file_cache.py:31:80: E501 line too long (101 > 79 characters)
+src/file_cache.py:33:80: E501 line too long (89 > 79 characters)
+src/file_cache.py:34:80: E501 line too long (84 > 79 characters)
+src/file_cache.py:48:5: WPS210 Found too many local variables: 7 > 5
+src/file_cache.py:52:80: E501 line too long (87 > 79 characters)
+src/file_cache.py:53:80: E501 line too long (81 > 79 characters)
+src/file_cache.py:60:80: E501 line too long (81 > 79 characters)
+src/file_cache.py:62:13: WPS362 Found assignment to a subscript slice
+src/file_cache.py:62:34: WPS111 Found too short name: d < 2
+src/file_cache.py:62:80: E501 line too long (80 > 79 characters)
+src/file_cache.py:72:80: E501 line too long (86 > 79 characters)
+src/file_cache.py:73:80: E501 line too long (80 > 79 characters)
+src/file_cache.py:78:80: E501 line too long (83 > 79 characters)
+src/file_cache.py:86:80: E501 line too long (117 > 79 characters)
+src/file_cache.py:108:42: WPS226 Found string literal over-use: w > 3
+src/file_cache.py:108:50: WPS111 Found too short name: f < 2
+src/file_cache.py:109:17: WPS226 Found string literal over-use: test > 3
+src/file_cache.py:110:50: WPS111 Found too short name: f < 2
+src/file_cache.py:112:57: WPS111 Found too short name: f < 2
+src/file_cache.py:114:67: WPS111 Found too short name: f < 2
+src/file_cache.py:116:58: WPS111 Found too short name: f < 2
+src/file_cache.py:118:60: WPS111 Found too short name: f < 2
+src/file_cache.py:122:5: WPS421 Found wrong function call: print
+src/file_cache.py:124:9: WPS421 Found wrong function call: print
+src/file_cache.py:127:61: WPS111 Found too short name: f < 2
+src/file_cache.py:131:5: WPS421 Found wrong function call: print
+src/file_cache.py:133:9: WPS421 Found wrong function call: print
+src/file_cache.py:141:5: WPS421 Found wrong function call: print
+src/file_cache.py:141:80: E501 line too long (94 > 79 characters)
+src/file_cache.py:143:5: WPS421 Found wrong function call: print
+src/file_cache.py:143:80: E501 line too long (88 > 79 characters)
+src/file_cache.py:145:80: E501 line too long (95 > 79 characters)
+src/file_cache.py:146:5: WPS421 Found wrong function call: print
+src/file_cache.py:147:80: E501 line too long (103 > 79 characters)
+src/file_cache.py:151:80: E501 line too long (86 > 79 characters)
+src/file_cache.py:152:5: WPS421 Found wrong function call: print
+src/file_cache.py:157:9: WPS421 Found wrong function call: print
+src/llm.py:0:1: WPS232 Found module cognitive complexity that is too high: 20.0 > 8
+src/llm.py:16:80: E501 line too long (89 > 79 characters)
+src/llm.py:28:9: WPS110 Found wrong variable name: data
+src/llm.py:31:35: WPS110 Found wrong variable name: item
+src/llm.py:41:72: WPS432 Found magic number: 20
+src/llm.py:41:80: E501 line too long (84 > 79 characters)
+src/llm.py:41:81: WPS358 Found a float zero (0.0)
+src/llm.py:44:80: E501 line too long (87 > 79 characters)
+src/llm.py:56:80: E501 line too long (82 > 79 characters)
+src/llm.py:68:5: WPS212 Found too many return statements: 8 > 5
+src/llm.py:68:5: WPS210 Found too many local variables: 10 > 5
+src/llm.py:68:5: WPS213 Found too many expressions: 19 > 9
+src/llm.py:68:5: WPS231 Found function with too much cognitive complexity: 116 > 12
+src/llm.py:74:80: E501 line too long (97 > 79 characters)
+src/llm.py:77:75: WPS111 Found too short name: m < 2
+src/llm.py:77:80: E501 line too long (89 > 79 characters)
+src/llm.py:79:80: E501 line too long (94 > 79 characters)
+src/llm.py:81:12: WPS459 Found comparison with float or complex number
+src/llm.py:81:27: WPS432 Found magic number: 0.7
+src/llm.py:81:80: E501 line too long (85 > 79 characters)
+src/llm.py:90:13: WPS225 Found too many `except` cases: 4 > 3
+src/llm.py:90:13: WPS229 Found too long ``try`` body length: 6 > 1
+src/llm.py:95:17: WPS110 Found wrong variable name: content
+src/llm.py:99:21: WPS110 Found wrong variable name: content
+src/llm.py:102:35: WPS358 Found a float zero (0.0)
+src/llm.py:103:80: E501 line too long (91 > 79 characters)
+src/llm.py:104:25: WPS505 Found nested `try` block
+src/llm.py:104:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:105:29: WPS220 Found too deep nesting: 28 > 20
+src/llm.py:105:80: E501 line too long (82 > 79 characters)
+src/llm.py:106:33: WPS220 Found too deep nesting: 32 > 20
+src/llm.py:108:33: WPS220 Found too deep nesting: 32 > 20
+src/llm.py:108:47: WPS358 Found a float zero (0.0)
+src/llm.py:109:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:110:29: WPS220 Found too deep nesting: 28 > 20
+src/llm.py:110:43: WPS358 Found a float zero (0.0)
+src/llm.py:115:25: WPS505 Found nested `try` block
+src/llm.py:115:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:116:29: WPS220 Found too deep nesting: 28 > 20
+src/llm.py:117:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:118:29: WPS220 Found too deep nesting: 28 > 20
+src/llm.py:118:43: WPS358 Found a float zero (0.0)
+src/llm.py:119:80: E501 line too long (118 > 79 characters)
+src/llm.py:120:80: E501 line too long (81 > 79 characters)
+src/llm.py:121:25: WPS505 Found nested `try` block
+src/llm.py:121:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:122:29: WPS220 Found too deep nesting: 28 > 20
+src/llm.py:123:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:124:29: WPS220 Found too deep nesting: 28 > 20
+src/llm.py:124:43: WPS358 Found a float zero (0.0)
+src/llm.py:126:21: WPS430 Found nested function: _to_int
+src/llm.py:126:33: WPS110 Found wrong variable name: val
+src/llm.py:127:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:130:80: E501 line too long (91 > 79 characters)
+src/llm.py:131:80: E501 line too long (99 > 79 characters)
+src/llm.py:136:34: WPS204 Found overused expression: LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0); used 7 > 4
+src/llm.py:136:80: E501 line too long (93 > 79 characters)
+src/llm.py:136:90: WPS358 Found a float zero (0.0)
+src/llm.py:140:13: WPS111 Found too short name: e < 2
+src/llm.py:141:33: WPS237 Found a too complex `f` string
+src/llm.py:141:33: WPS226 Found string literal over-use: / > 3
+src/llm.py:141:33: WPS226 Found string literal over-use: :  > 3
+src/llm.py:141:64: WPS204 Found overused expression: attempt + 1; used 8 > 7
+src/llm.py:141:64: WPS204 Found overused expression: attempt + 1; used 8 > 4
+src/llm.py:141:80: E501 line too long (96 > 79 characters)
+src/llm.py:143:80: E501 line too long (87 > 79 characters)
+src/llm.py:144:28: WPS204 Found overused expression: LLMResponse(content=None, usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0)); used 6 > 4
+src/llm.py:146:80: E501 line too long (91 > 79 characters)
+src/llm.py:146:87: WPS358 Found a float zero (0.0)
+src/llm.py:150:80: E501 line too long (80 > 79 characters)
+src/llm.py:152:21: WPS505 Found nested `try` block
+src/llm.py:153:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:155:25: WPS220 Found too deep nesting: 24 > 20
+src/llm.py:156:80: E501 line too long (121 > 79 characters)
+src/llm.py:160:30: WPS226 Found string literal over-use: Waiting  > 3
+src/llm.py:160:30: WPS226 Found string literal over-use: .2f > 3
+src/llm.py:162:13: WPS111 Found too short name: e < 2
+src/llm.py:164:21: WPS237 Found a too complex `f` string
+src/llm.py:164:80: E501 line too long (109 > 79 characters)
+src/llm.py:167:36: WPS432 Found magic number: 500
+src/llm.py:167:61: WPS432 Found magic number: 429
+src/llm.py:169:80: E501 line too long (96 > 79 characters)
+src/llm.py:173:80: E501 line too long (91 > 79 characters)
+src/llm.py:173:87: WPS358 Found a float zero (0.0)
+src/llm.py:178:80: E501 line too long (93 > 79 characters)
+src/llm.py:182:80: E501 line too long (91 > 79 characters)
+src/llm.py:182:87: WPS358 Found a float zero (0.0)
+src/llm.py:188:80: E501 line too long (94 > 79 characters)
+src/llm.py:191:13: WPS111 Found too short name: e < 2
+src/llm.py:192:33: WPS237 Found a too complex `f` string
+src/llm.py:192:80: E501 line too long (100 > 79 characters)
+src/llm.py:194:80: E501 line too long (91 > 79 characters)
+src/llm.py:197:80: E501 line too long (91 > 79 characters)
+src/llm.py:197:87: WPS358 Found a float zero (0.0)
+src/llm.py:200:80: E501 line too long (98 > 79 characters)
+src/llm.py:202:13: WPS111 Found too short name: e < 2
+src/llm.py:202:80: E501 line too long (95 > 79 characters)
+src/llm.py:204:21: WPS237 Found a too complex `f` string
+src/llm.py:204:80: E501 line too long (106 > 79 characters)
+src/llm.py:207:80: E501 line too long (87 > 79 characters)
+src/llm.py:210:80: E501 line too long (91 > 79 characters)
+src/llm.py:210:87: WPS358 Found a float zero (0.0)
+src/llm.py:212:56: WPS432 Found magic number: 30
+src/llm.py:212:80: E501 line too long (92 > 79 characters)
+src/llm.py:213:80: E501 line too long (98 > 79 characters)
+src/llm.py:218:80: E501 line too long (92 > 79 characters)
+src/llm.py:218:89: WPS358 Found a float zero (0.0)
+src/llm_protocol.py:13:19: WPS358 Found a float zero (0.0)
+src/llm_protocol.py:20:5: WPS110 Found wrong variable name: content
+src/llm_protocol.py:26:80: E501 line too long (93 > 79 characters)
+src/llm_protocol.py:32:80: E501 line too long (88 > 79 characters)
+src/llm_protocol.py:33:80: E501 line too long (86 > 79 characters)
+src/memory.py:10:1: WPS338 Found incorrect order of methods in a class
+src/memory.py:18:38: WPS110 Found wrong variable name: content
+src/memory.py:20:44: WPS226 Found string literal over-use: content > 3
+src/memory.py:24:43: WPS110 Found wrong variable name: content
+src/memory.py:28:5: WPS615 Found unpythonic getter or setter: get_history
+src/memory.py:32:5: WPS615 Found unpythonic getter or setter: get_file_context
+src/memory.py:38:5: WPS210 Found too many local variables: 9 > 5
+src/memory.py:49:80: E501 line too long (86 > 79 characters)
+src/memory.py:51:24: WPS336 Found explicit string concatenation
+src/memory.py:51:80: E501 line too long (84 > 79 characters)
+src/memory.py:53:80: E501 line too long (80 > 79 characters)
+src/memory.py:55:5: WPS210 Found too many local variables: 6 > 5
+src/memory.py:56:80: E501 line too long (81 > 79 characters)
+src/memory.py:58:9: WPS234 Found overly complex annotation: 4 > 3
+src/memory.py:65:32: WPS111 Found too short name: s < 2
+src/memory.py:66:26: WPS111 Found too short name: m < 2
+src/mentions.py:4:80: E501 line too long (80 > 79 characters)
+src/mentions.py:6:80: E501 line too long (82 > 79 characters)
+src/mentions.py:9:80: E501 line too long (90 > 79 characters)
+src/mentions.py:11:80: E501 line too long (81 > 79 characters)
+src/mentions.py:18:80: E501 line too long (99 > 79 characters)
+src/prompts/commands.py:5:5: WPS462 Wrong multiline string usage
+src/prompts/commands.py:6:80: E501 line too long (273 > 79 characters)
+src/prompts/commands.py:7:80: E501 line too long (151 > 79 characters)
+src/prompts/commands.py:12:80: E501 line too long (316 > 79 characters)
+src/prompts/commands.py:13:80: E501 line too long (149 > 79 characters)
+src/prompts/commands.py:16:80: E501 line too long (125 > 79 characters)
+src/prompts/commands.py:17:80: E501 line too long (172 > 79 characters)
+src/prompts/commands.py:18:80: E501 line too long (169 > 79 characters)
+src/prompts/commands.py:19:80: E501 line too long (208 > 79 characters)
+src/prompts/commands.py:20:80: E501 line too long (96 > 79 characters)
+src/prompts/commands.py:21:80: E501 line too long (474 > 79 characters)
+src/prompts/commands.py:28:80: E501 line too long (88 > 79 characters)
+src/prompts/commands.py:33:5: WPS462 Wrong multiline string usage
+src/prompts/commands.py:34:80: E501 line too long (301 > 79 characters)
+src/prompts/commands.py:35:80: E501 line too long (151 > 79 characters)
+src/prompts/commands.py:40:80: E501 line too long (356 > 79 characters)
+src/prompts/commands.py:41:80: E501 line too long (170 > 79 characters)
+src/prompts/commands.py:42:80: E501 line too long (149 > 79 characters)
+src/prompts/commands.py:45:80: E501 line too long (130 > 79 characters)
+src/prompts/commands.py:46:80: E501 line too long (225 > 79 characters)
+src/prompts/commands.py:47:80: E501 line too long (181 > 79 characters)
+src/prompts/commands.py:48:80: E501 line too long (182 > 79 characters)
+src/prompts/commands.py:49:80: E501 line too long (208 > 79 characters)
+src/prompts/commands.py:50:80: E501 line too long (96 > 79 characters)
+src/prompts/commands.py:51:80: E501 line too long (474 > 79 characters)
+src/prompts/commands.py:95:5: WPS462 Wrong multiline string usage
+src/prompts/commands.py:96:80: E501 line too long (290 > 79 characters)
+src/prompts/commands.py:97:80: E501 line too long (227 > 79 characters)
+src/prompts/commands.py:102:80: E501 line too long (375 > 79 characters)
+src/prompts/commands.py:103:80: E501 line too long (271 > 79 characters)
+src/prompts/commands.py:106:80: E501 line too long (379 > 79 characters)
+src/prompts/commands.py:107:80: E501 line too long (319 > 79 characters)
+src/prompts/commands.py:108:80: E501 line too long (282 > 79 characters)
+src/prompts/commands.py:109:80: E501 line too long (456 > 79 characters)
+src/prompts/commands.py:110:80: E501 line too long (257 > 79 characters)
+src/prompts/commands.py:111:80: E501 line too long (170 > 79 characters)
+src/prompts/commands.py:124:80: E501 line too long (101 > 79 characters)
+src/prompts/commands.py:148:80: E501 line too long (95 > 79 characters)
+src/prompts/commands.py:153:5: WPS462 Wrong multiline string usage
+src/prompts/commands.py:154:80: E501 line too long (609 > 79 characters)
+src/prompts/commands.py:155:80: E501 line too long (372 > 79 characters)
+src/prompts/commands.py:161:80: E501 line too long (303 > 79 characters)
+src/prompts/commands.py:165:80: E501 line too long (92 > 79 characters)
+src/prompts/commands.py:168:80: E501 line too long (88 > 79 characters)
+src/prompts/commands.py:175:80: E501 line too long (83 > 79 characters)
+src/prompts/commands.py:176:80: E501 line too long (80 > 79 characters)
+src/prompts/commands.py:179:80: E501 line too long (88 > 79 characters)
+src/prompts/system.py:11:80: E501 line too long (154 > 79 characters)
+src/prompts/system.py:17:80: E501 line too long (303 > 79 characters)
+src/prompts/system.py:21:80: E501 line too long (189 > 79 characters)
+src/prompts/system.py:35:80: E501 line too long (85 > 79 characters)
+src/prompts/system.py:42:80: E501 line too long (119 > 79 characters)
+src/prompts/system.py:43:80: E501 line too long (456 > 79 characters)
+src/prompts/system.py:44:80: E501 line too long (280 > 79 characters)
+src/prompts/system.py:46:80: E501 line too long (215 > 79 characters)
+src/prompts/system.py:47:80: E501 line too long (95 > 79 characters)
+src/prompts/system.py:48:80: E501 line too long (97 > 79 characters)
+src/prompts/system.py:49:80: E501 line too long (95 > 79 characters)
+src/prompts/system.py:51:80: E501 line too long (173 > 79 characters)
+src/prompts/system.py:53:80: E501 line too long (155 > 79 characters)
+src/prompts/system.py:59:80: E501 line too long (254 > 79 characters)
+src/prompts/system.py:65:80: E501 line too long (178 > 79 characters)
+src/prompts/system.py:69:80: E501 line too long (161 > 79 characters)
+src/prompts/system.py:77:80: E501 line too long (216 > 79 characters)
+src/prompts/system.py:83:80: E501 line too long (131 > 79 characters)
+src/prompts/system.py:97:80: E501 line too long (122 > 79 characters)
+src/prompts/system.py:100:80: E501 line too long (107 > 79 characters)
+src/prompts/system.py:101:80: E501 line too long (88 > 79 characters)
+src/prompts/system.py:102:80: E501 line too long (212 > 79 characters)
+src/prompts/system.py:106:80: E501 line too long (90 > 79 characters)
+src/prompts/system.py:108:80: E501 line too long (110 > 79 characters)
+src/prompts/system.py:111:1: W293 blank line contains whitespace
+src/prompts/system.py:113:80: E501 line too long (97 > 79 characters)
+src/prompts/system.py:114:80: E501 line too long (89 > 79 characters)
+src/prompts/system.py:115:80: E501 line too long (182 > 79 characters)
+src/prompts/system.py:116:80: E501 line too long (81 > 79 characters)
+src/prompts/system.py:117:80: E501 line too long (221 > 79 characters)
+src/prompts/system.py:120:1: W293 blank line contains whitespace
+src/prompts/system.py:122:80: E501 line too long (300 > 79 characters)
+src/prompts/system.py:123:80: E501 line too long (165 > 79 characters)
+src/prompts/system.py:124:80: E501 line too long (104 > 79 characters)
+src/prompts/system.py:128:80: E501 line too long (81 > 79 characters)
+src/prompts/system.py:129:80: E501 line too long (80 > 79 characters)
+src/prompts/system.py:135:80: E501 line too long (98 > 79 characters)
+src/prompts/system.py:137:80: E501 line too long (82 > 79 characters)
+src/prompts/system.py:138:80: E501 line too long (82 > 79 characters)
+src/prompts/system.py:139:80: E501 line too long (100 > 79 characters)
+src/prompts/system.py:140:80: E501 line too long (92 > 79 characters)
+src/prompts/system.py:142:80: E501 line too long (106 > 79 characters)
+src/prompts/system.py:143:80: E501 line too long (81 > 79 characters)
+src/prompts/system.py:146:80: E501 line too long (216 > 79 characters)
+src/prompts/system.py:148:80: E501 line too long (107 > 79 characters)
+src/prompts/system.py:151:80: E501 line too long (86 > 79 characters)
+src/prompts/system.py:167:80: E501 line too long (113 > 79 characters)
+src/prompts/system.py:169:80: E501 line too long (82 > 79 characters)
+src/prompts/system.py:170:80: E501 line too long (94 > 79 characters)
+src/prompts/system.py:174:80: E501 line too long (106 > 79 characters)
+src/prompts/system.py:176:80: E501 line too long (116 > 79 characters)
+src/prompts/system.py:180:80: E501 line too long (82 > 79 characters)
+src/prompts/system.py:181:80: E501 line too long (91 > 79 characters)
+src/prompts/system.py:187:80: E501 line too long (88 > 79 characters)
+src/prompts/system.py:191:80: E501 line too long (93 > 79 characters)
+src/prompts/system.py:199:1: WPS210 Found too many local variables: 8 > 5
+src/prompts/system.py:200:80: E501 line too long (84 > 79 characters)
+src/prompts/system.py:219:80: E501 line too long (96 > 79 characters)
+src/prompts/system.py:223:80: E501 line too long (85 > 79 characters)
+src/prompts/system.py:225:13: WPS221 Found line with high Jones Complexity: 15 > 14
+src/prompts/system.py:225:80: E501 line too long (91 > 79 characters)
+src/prompts/system.py:243:80: E501 line too long (111 > 79 characters)
+src/prompts/system.py:247:80: E501 line too long (103 > 79 characters)
+src/prompts/system.py:249:80: E501 line too long (100 > 79 characters)
+src/prompts/system.py:259:80: E501 line too long (116 > 79 characters)
+src/prompts/system.py:287:27: WPS110 Found wrong variable name: params
+src/prompts/system.py:287:80: E501 line too long (84 > 79 characters)
+src/prompts/system.py:303:5: WPS229 Found too long ``try`` body length: 2 > 1
+src/prompts/system.py:304:80: E501 line too long (99 > 79 characters)
+src/prompts/system.py:305:9: WPS421 Found wrong function call: print
+src/prompts/system.py:307:9: WPS421 Found wrong function call: print
+src/prompts/system.py:308:5: WPS111 Found too short name: e < 2
+src/prompts/system.py:309:9: WPS421 Found wrong function call: print
+src/slash_commands.py:0:1: WPS202 Found too many module members: 10 > 7
+src/slash_commands.py:7:80: E501 line too long (81 > 79 characters)
+src/slash_commands.py:10:80: E501 line too long (108 > 79 characters)
+src/slash_commands.py:11:80: E501 line too long (106 > 79 characters)
+src/slash_commands.py:24:9: WPS420 Found wrong keyword: pass
+src/slash_commands.py:30:9: WPS420 Found wrong keyword: pass
+src/slash_commands.py:36:9: WPS420 Found wrong keyword: pass
+src/slash_commands.py:39:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:51:9: WPS420 Found wrong keyword: pass
+src/slash_commands.py:80:5: WPS231 Found function with too much cognitive complexity: 13 > 12
+src/slash_commands.py:80:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:87:80: E501 line too long (82 > 79 characters)
+src/slash_commands.py:92:80: E501 line too long (82 > 79 characters)
+src/slash_commands.py:93:80: E501 line too long (89 > 79 characters)
+src/slash_commands.py:94:80: E501 line too long (86 > 79 characters)
+src/slash_commands.py:97:80: E501 line too long (85 > 79 characters)
+src/slash_commands.py:98:80: E501 line too long (134 > 79 characters)
+src/slash_commands.py:99:80: E501 line too long (81 > 79 characters)
+src/slash_commands.py:100:80: E501 line too long (102 > 79 characters)
+src/slash_commands.py:102:17: WPS420 Found wrong keyword: pass
+src/slash_commands.py:106:80: E501 line too long (94 > 79 characters)
+src/slash_commands.py:107:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:108:80: E501 line too long (117 > 79 characters)
+src/slash_commands.py:129:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:131:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:133:9: WPS229 Found too long ``try`` body length: 2 > 1
+src/slash_commands.py:144:80: E501 line too long (128 > 79 characters)
+src/slash_commands.py:159:80: E501 line too long (81 > 79 characters)
+src/slash_commands.py:165:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:167:80: E501 line too long (84 > 79 characters)
+src/slash_commands.py:173:80: E501 line too long (110 > 79 characters)
+src/slash_commands.py:188:80: E501 line too long (87 > 79 characters)
+src/slash_commands.py:194:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:201:80: E501 line too long (108 > 79 characters)
+src/slash_commands.py:204:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:219:80: E501 line too long (92 > 79 characters)
+src/slash_commands.py:225:5: WPS231 Found function with too much cognitive complexity: 16 > 12
+src/slash_commands.py:225:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:231:80: E501 line too long (94 > 79 characters)
+src/slash_commands.py:232:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:242:80: E501 line too long (84 > 79 characters)
+src/slash_commands.py:247:9: WPS229 Found too long ``try`` body length: 5 > 1
+src/slash_commands.py:250:80: E501 line too long (85 > 79 characters)
+src/slash_commands.py:251:80: E501 line too long (97 > 79 characters)
+src/slash_commands.py:253:80: E501 line too long (89 > 79 characters)
+src/slash_commands.py:254:9: WPS111 Found too short name: e < 2
+src/slash_commands.py:255:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:256:80: E501 line too long (89 > 79 characters)
+src/slash_commands.py:282:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:315:80: E501 line too long (80 > 79 characters)
+src/slash_commands.py:320:80: E501 line too long (115 > 79 characters)
+src/slash_commands.py:324:9: WPS111 Found too short name: e < 2
+src/slash_commands.py:341:80: E501 line too long (100 > 79 characters)
+src/slash_commands.py:356:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:386:80: E501 line too long (128 > 79 characters)
+src/slash_commands.py:392:5: WPS212 Found too many return statements: 11 > 5
+src/slash_commands.py:392:5: WPS210 Found too many local variables: 8 > 5
+src/slash_commands.py:392:5: WPS231 Found function with too much cognitive complexity: 54 > 12
+src/slash_commands.py:392:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:393:80: E501 line too long (95 > 79 characters)
+src/slash_commands.py:394:80: E501 line too long (85 > 79 characters)
+src/slash_commands.py:396:80: E501 line too long (97 > 79 characters)
+src/slash_commands.py:398:80: E501 line too long (85 > 79 characters)
+src/slash_commands.py:399:80: E501 line too long (111 > 79 characters)
+src/slash_commands.py:406:80: E501 line too long (86 > 79 characters)
+src/slash_commands.py:410:24: WPS237 Found a too complex `f` string
+src/slash_commands.py:410:80: E501 line too long (107 > 79 characters)
+src/slash_commands.py:412:24: WPS237 Found a too complex `f` string
+src/slash_commands.py:412:80: E501 line too long (93 > 79 characters)
+src/slash_commands.py:417:29: WPS447 Found alphabet as strings: 0123456789abcdefABCDEF
+src/slash_commands.py:417:58: WPS111 Found too short name: c < 2
+src/slash_commands.py:417:80: E501 line too long (89 > 79 characters)
+src/slash_commands.py:418:48: WPS432 Found magic number: 40
+src/slash_commands.py:422:80: E501 line too long (87 > 79 characters)
+src/slash_commands.py:425:17: WPS229 Found too long ``try`` body length: 3 > 1
+src/slash_commands.py:426:80: E501 line too long (92 > 79 characters)
+src/slash_commands.py:428:25: WPS111 Found too short name: i < 2
+src/slash_commands.py:429:25: WPS220 Found too deep nesting: 24 > 20
+src/slash_commands.py:430:29: WPS220 Found too deep nesting: 28 > 20
+src/slash_commands.py:431:29: WPS220 Found too deep nesting: 28 > 20
+src/slash_commands.py:433:21: WPS504 Found negated condition
+src/slash_commands.py:434:80: E501 line too long (90 > 79 characters)
+src/slash_commands.py:435:80: E501 line too long (108 > 79 characters)
+src/slash_commands.py:436:80: E501 line too long (103 > 79 characters)
+src/slash_commands.py:437:25: WPS220 Found too deep nesting: 24 > 20
+src/slash_commands.py:437:80: E501 line too long (95 > 79 characters)
+src/slash_commands.py:438:25: WPS420 Found wrong keyword: del
+src/slash_commands.py:439:25: WPS220 Found too deep nesting: 24 > 20
+src/slash_commands.py:439:32: WPS237 Found a too complex `f` string
+src/slash_commands.py:439:80: E501 line too long (171 > 79 characters)
+src/slash_commands.py:441:80: E501 line too long (122 > 79 characters)
+src/slash_commands.py:443:25: WPS220 Found too deep nesting: 24 > 20
+src/slash_commands.py:443:32: WPS237 Found a too complex `f` string
+src/slash_commands.py:443:80: E501 line too long (185 > 79 characters)
+src/slash_commands.py:446:28: WPS237 Found a too complex `f` string
+src/slash_commands.py:446:80: E501 line too long (149 > 79 characters)
+src/slash_commands.py:449:21: WPS237 Found a too complex `f` string
+src/slash_commands.py:449:80: E501 line too long (98 > 79 characters)
+src/slash_commands.py:457:80: E501 line too long (81 > 79 characters)
+src/slash_commands.py:466:80: E501 line too long (94 > 79 characters)
+src/slash_commands.py:472:5: WPS212 Found too many return statements: 7 > 5
+src/slash_commands.py:472:5: WPS231 Found function with too much cognitive complexity: 17 > 12
+src/slash_commands.py:472:80: E501 line too long (83 > 79 characters)
+src/slash_commands.py:473:80: E501 line too long (95 > 79 characters)
+src/slash_commands.py:474:80: E501 line too long (85 > 79 characters)
+src/slash_commands.py:486:80: E501 line too long (93 > 79 characters)
+src/slash_commands.py:487:80: E501 line too long (105 > 79 characters)
+src/slash_commands.py:488:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/slash_commands.py:496:80: E501 line too long (128 > 79 characters)
+src/slash_commands.py:497:80: E501 line too long (87 > 79 characters)
+src/slash_commands.py:498:17: WPS420 Found wrong keyword: pass
+src/slash_commands.py:503:80: E501 line too long (152 > 79 characters)
+src/slash_commands.py:510:20: WPS237 Found a too complex `f` string
+src/slash_commands.py:510:80: E501 line too long (145 > 79 characters)
+src/slash_commands.py:512:80: E501 line too long (98 > 79 characters)
+src/slash_commands.py:514:20: WPS237 Found a too complex `f` string
+src/slash_commands.py:514:80: E501 line too long (114 > 79 characters)
+src/slash_commands.py:517:80: E501 line too long (86 > 79 characters)
+src/slash_commands.py:519:80: E501 line too long (84 > 79 characters)
+src/slash_commands.py:522:80: E501 line too long (90 > 79 characters)
+src/test_autocompletion.py:6:1: WPS347 Found vague import that may cause confusion: to_plain_text
+src/test_autocompletion.py:6:80: E501 line too long (91 > 79 characters)
+src/test_autocompletion.py:12:1: WPS214 Found too many methods: 14 > 7
+src/test_autocompletion.py:12:1: WPS338 Found incorrect order of methods in a class
+src/test_autocompletion.py:18:80: E501 line too long (81 > 79 characters)
+src/test_autocompletion.py:19:80: E501 line too long (93 > 79 characters)
+src/test_autocompletion.py:20:80: E501 line too long (82 > 79 characters)
+src/test_autocompletion.py:38:80: E501 line too long (108 > 79 characters)
+src/test_autocompletion.py:53:80: E501 line too long (94 > 79 characters)
+src/test_autocompletion.py:57:26: WPS204 Found overused expression: completions[0]; used 9 > 7
+src/test_autocompletion.py:58:80: E501 line too long (94 > 79 characters)
+src/test_autocompletion.py:59:80: E501 line too long (84 > 79 characters)
+src/test_autocompletion.py:70:36: WPS111 Found too short name: c < 2
+src/test_autocompletion.py:83:80: E501 line too long (87 > 79 characters)
+src/test_autocompletion.py:88:80: E501 line too long (94 > 79 characters)
+src/test_autocompletion.py:89:80: E501 line too long (81 > 79 characters)
+src/test_autocompletion.py:92:80: E501 line too long (85 > 79 characters)
+src/test_autocompletion.py:95:80: E501 line too long (87 > 79 characters)
+src/test_autocompletion.py:101:80: E501 line too long (92 > 79 characters)
+src/test_autocompletion.py:103:80: E501 line too long (93 > 79 characters)
+src/test_autocompletion.py:104:80: E501 line too long (89 > 79 characters)
+src/test_autocompletion.py:116:80: E501 line too long (99 > 79 characters)
+src/test_autocompletion.py:117:80: E501 line too long (83 > 79 characters)
+src/test_autocompletion.py:118:80: E501 line too long (100 > 79 characters)
+src/test_autocompletion.py:119:80: E501 line too long (83 > 79 characters)
+src/test_autocompletion.py:121:80: E501 line too long (82 > 79 characters)
+src/test_autocompletion.py:124:80: E501 line too long (92 > 79 characters)
+src/test_autocompletion.py:126:80: E501 line too long (88 > 79 characters)
+src/test_autocompletion.py:131:80: E501 line too long (89 > 79 characters)
+src/test_autocompletion.py:132:80: E501 line too long (91 > 79 characters)
+src/test_autocompletion.py:134:80: E501 line too long (85 > 79 characters)
+src/test_autocompletion.py:140:80: E501 line too long (91 > 79 characters)
+src/test_autocompletion.py:143:80: E501 line too long (82 > 79 characters)
+src/test_autocompletion.py:146:80: E501 line too long (85 > 79 characters)
+src/test_autocompletion.py:148:80: E501 line too long (86 > 79 characters)
+src/test_autocompletion.py:149:80: E501 line too long (97 > 79 characters)
+src/test_autocompletion.py:151:5: WPS118 Found too long name: test_partial_match_with_some_non_matching_paths > 45
+src/test_autocompletion.py:159:36: WPS111 Found too short name: c < 2
+src/test_autocompletion.py:160:80: E501 line too long (81 > 79 characters)
+src/test_file_cache.py:15:1: WPS214 Found too many methods: 13 > 7
+src/test_file_cache.py:15:1: WPS338 Found incorrect order of methods in a class
+src/test_file_cache.py:39:13: WPS226 Found string literal over-use: file1.txt > 3
+src/test_file_cache.py:49:30: WPS226 Found string literal over-use: subdir > 3
+src/test_file_cache.py:53:80: E501 line too long (89 > 79 characters)
+src/test_file_cache.py:69:80: E501 line too long (87 > 79 characters)
+src/test_file_cache.py:84:80: E501 line too long (86 > 79 characters)
+src/test_file_cache.py:85:80: E501 line too long (85 > 79 characters)
+src/test_file_cache.py:88:26: WPS226 Found string literal over-use: one > 3
+src/test_file_cache.py:106:80: E501 line too long (80 > 79 characters)
+src/test_file_cache.py:133:37: WPS226 Found string literal over-use: file_cache > 3
+src/test_file_cache.py:133:57: WPS226 Found string literal over-use: WARNING > 3
+src/test_file_cache.py:147:80: E501 line too long (86 > 79 characters)
+src/test_file_cache.py:158:80: E501 line too long (90 > 79 characters)
+src/test_file_cache.py:162:13: WPS110 Found wrong variable name: result
+src/test_file_cache.py:165:80: E501 line too long (92 > 79 characters)
+src/test_file_cache.py:180:80: E501 line too long (98 > 79 characters)
+src/test_file_cache.py:191:80: E501 line too long (103 > 79 characters)
+src/test_file_cache.py:221:13: WPS111 Found too short name: p < 2
+src/test_file_cache.py:222:80: E501 line too long (81 > 79 characters)
+src/test_mentions.py:5:1: WPS214 Found too many methods: 8 > 7
+src/test_mentions.py:7:80: E501 line too long (92 > 79 characters)
+src/test_mentions.py:9:80: E501 line too long (92 > 79 characters)
+src/test_mentions.py:12:80: E501 line too long (94 > 79 characters)
+src/test_mentions.py:17:35: WPS342 Found implicit raw string: "@C:\\path\\to\\file.txt"
+src/test_mentions.py:17:64: WPS342 Found implicit raw string: "C:\\path\\to\\file.txt"
+src/test_mentions.py:17:80: E501 line too long (88 > 79 characters)
+src/test_mentions.py:20:35: WPS342 Found implicit raw string: "@D:\\path\\to\\another_file.py"
+src/test_mentions.py:21:14: WPS342 Found implicit raw string: "D:\\path\\to\\another_file.py"
+src/test_mentions.py:24:35: WPS342 Found implicit raw string: "@C:\\path\\with-hyphen\\file.ts"
+src/test_mentions.py:25:14: WPS342 Found implicit raw string: "C:\\path\\with-hyphen\\file.ts"
+src/test_mentions.py:34:35: WPS342 Found implicit raw string: "@C:\\path\\to a file with spaces.docx"
+src/test_mentions.py:35:14: WPS342 Found implicit raw string: "C:\\path\\to a file with spaces.docx"
+src/test_mentions.py:39:16: WPS342 Found implicit raw string: "Please check @/path/to/file.txt and @C:\\another\\path.log"
+src/test_mentions.py:40:80: E501 line too long (102 > 79 characters)
+src/test_mentions.py:41:46: WPS342 Found implicit raw string: "C:\\another\\path.log"
+src/test_mentions.py:45:80: E501 line too long (95 > 79 characters)
+src/test_mentions.py:49:80: E501 line too long (106 > 79 characters)
+src/test_mentions.py:51:80: E501 line too long (118 > 79 characters)
+src/test_mentions.py:52:80: E501 line too long (94 > 79 characters)
+src/test_mentions.py:53:80: E501 line too long (93 > 79 characters)
+src/test_mentions.py:55:80: E501 line too long (96 > 79 characters)
+src/test_mentions.py:60:80: E501 line too long (100 > 79 characters)
+src/test_mentions.py:62:80: E501 line too long (89 > 79 characters)
+src/test_mentions.py:65:80: E501 line too long (81 > 79 characters)
+src/test_mentions.py:66:80: E501 line too long (85 > 79 characters)
+src/test_mentions.py:73:13: WPS342 Found implicit raw string: "Refer to @C:\\Users\\MyUser\\file with space.txt for more."
+src/test_mentions.py:79:41: WPS342 Found implicit raw string: "C:\\Users\\MyUser\\file with space.txt for more."
+src/test_mentions.py:79:80: E501 line too long (90 > 79 characters)
+src/test_slash_commands.py:7:80: E501 line too long (90 > 79 characters)
+src/test_slash_commands.py:30:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:33:80: E501 line too long (87 > 79 characters)
+src/test_slash_commands.py:34:80: E501 line too long (82 > 79 characters)
+src/test_slash_commands.py:38:5: WPS118 Found too long name: test_refresh_command_handles_no_file_cache_in_context > 45
+src/test_slash_commands.py:41:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:43:80: E501 line too long (91 > 79 characters)
+src/test_slash_commands.py:48:5: WPS118 Found too long name: test_refresh_command_handles_invalid_file_cache_object > 45
+src/test_slash_commands.py:51:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:53:80: E501 line too long (95 > 79 characters)
+src/test_slash_commands.py:57:5: WPS118 Found too long name: test_refresh_command_handles_exception_during_refresh > 45
+src/test_slash_commands.py:60:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:63:80: E501 line too long (87 > 79 characters)
+src/test_slash_commands.py:68:5: WPS118 Found too long name: test_refresh_command_name_description_examples > 45
+src/test_slash_commands.py:75:1: WPS214 Found too many methods: 9 > 7
+src/test_slash_commands.py:89:80: E501 line too long (92 > 79 characters)
+src/test_slash_commands.py:93:80: E501 line too long (80 > 79 characters)
+src/test_slash_commands.py:95:80: E501 line too long (81 > 79 characters)
+src/test_slash_commands.py:98:5: WPS118 Found too long name: test_register_command_name_with_space_raises_error > 45
+src/test_slash_commands.py:101:80: E501 line too long (87 > 79 characters)
+src/test_slash_commands.py:105:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:105:80: E501 line too long (86 > 79 characters)
+src/test_slash_commands.py:114:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:114:80: E501 line too long (92 > 79 characters)
+src/test_slash_commands.py:125:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:125:80: E501 line too long (86 > 79 characters)
+src/test_slash_commands.py:126:80: E501 line too long (87 > 79 characters)
+src/test_slash_commands.py:146:9: WPS110 Found wrong variable name: result
+src/test_slash_commands.py:155:9: WPS110 Found wrong variable name: result
+src/tools/__init__.py:0:1: WPS412 Found `__init__.py` module with logic
+src/tools/__init__.py:1:1: WPS300 Found local folder import
+src/tools/__init__.py:2:1: WPS300 Found local folder import
+src/tools/__init__.py:9:1: WPS300 Found local folder import
+src/tools/__init__.py:10:1: WPS300 Found local folder import
+src/tools/__init__.py:13:1: WPS300 Found local folder import
+src/tools/__init__.py:14:1: WPS300 Found local folder import
+src/tools/__init__.py:15:1: WPS300 Found local folder import
+src/tools/__init__.py:27:1: WPS300 Found local folder import
+src/tools/__init__.py:36:1: WPS300 Found local folder import
+src/tools/__init__.py:37:1: WPS300 Found local folder import
+src/tools/__init__.py:39:1: WPS410 Found wrong metadata variable: __all__
+src/tools/browser.py:0:1: WPS232 Found module cognitive complexity that is too high: 10.5 > 8
+src/tools/browser.py:7:80: E501 line too long (85 > 79 characters)
+src/tools/browser.py:10:5: WPS429 Found multiple assign targets
+src/tools/browser.py:12:1: WPS300 Found local folder import
+src/tools/browser.py:14:80: E501 line too long (87 > 79 characters)
+src/tools/browser.py:15:80: E501 line too long (109 > 79 characters)
+src/tools/browser.py:17:80: E501 line too long (113 > 79 characters)
+src/tools/browser.py:20:1: WPS214 Found too many methods: 8 > 7
+src/tools/browser.py:20:1: WPS338 Found incorrect order of methods in a class
+src/tools/browser.py:23:80: E501 line too long (80 > 79 characters)
+src/tools/browser.py:24:5: WPS115 Found upper-case constant in a class: VIEWPORT_WIDTH
+src/tools/browser.py:25:5: WPS115 Found upper-case constant in a class: VIEWPORT_HEIGHT
+src/tools/browser.py:35:80: E501 line too long (94 > 79 characters)
+src/tools/browser.py:37:80: E501 line too long (90 > 79 characters)
+src/tools/browser.py:44:80: E501 line too long (101 > 79 characters)
+src/tools/browser.py:50:80: E501 line too long (80 > 79 characters)
+src/tools/browser.py:51:80: E501 line too long (85 > 79 characters)
+src/tools/browser.py:55:80: E501 line too long (93 > 79 characters)
+src/tools/browser.py:56:80: E501 line too long (96 > 79 characters)
+src/tools/browser.py:60:80: E501 line too long (95 > 79 characters)
+src/tools/browser.py:61:80: E501 line too long (94 > 79 characters)
+src/tools/browser.py:78:5: WPS212 Found too many return statements: 15 > 5
+src/tools/browser.py:78:5: WPS210 Found too many local variables: 18 > 5
+src/tools/browser.py:78:5: WPS213 Found too many expressions: 25 > 9
+src/tools/browser.py:78:5: WPS231 Found function with too much cognitive complexity: 77 > 12
+src/tools/browser.py:78:23: WPS110 Found wrong variable name: params
+src/tools/browser.py:78:80: E501 line too long (80 > 79 characters)
+src/tools/browser.py:88:18: WPS226 Found string literal over-use: status > 3
+src/tools/browser.py:88:28: WPS226 Found string literal over-use: error > 3
+src/tools/browser.py:88:37: WPS226 Found string literal over-use: message > 3
+src/tools/browser.py:88:80: E501 line too long (86 > 79 characters)
+src/tools/browser.py:94:9: WPS229 Found too long ``try`` body length: 4 > 1
+src/tools/browser.py:99:80: E501 line too long (92 > 79 characters)
+src/tools/browser.py:102:80: E501 line too long (97 > 79 characters)
+src/tools/browser.py:105:80: E501 line too long (85 > 79 characters)
+src/tools/browser.py:107:21: WPS505 Found nested `try` block
+src/tools/browser.py:108:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/browser.py:110:25: WPS420 Found wrong keyword: pass
+src/tools/browser.py:110:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/browser.py:111:80: E501 line too long (97 > 79 characters)
+src/tools/browser.py:113:21: WPS505 Found nested `try` block
+src/tools/browser.py:114:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/browser.py:116:25: WPS420 Found wrong keyword: pass
+src/tools/browser.py:116:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/browser.py:117:80: E501 line too long (82 > 79 characters)
+src/tools/browser.py:119:17: WPS421 Found wrong function call: print
+src/tools/browser.py:121:17: WPS421 Found wrong function call: print
+src/tools/browser.py:123:21: WPS421 Found wrong function call: print
+src/tools/browser.py:125:21: WPS421 Found wrong function call: print
+src/tools/browser.py:127:17: WPS421 Found wrong function call: print
+src/tools/browser.py:129:21: WPS421 Found wrong function call: print
+src/tools/browser.py:129:27: WPS237 Found a too complex `f` string
+src/tools/browser.py:129:80: E501 line too long (93 > 79 characters)
+src/tools/browser.py:131:21: WPS421 Found wrong function call: print
+src/tools/browser.py:131:27: WPS237 Found a too complex `f` string
+src/tools/browser.py:131:80: E501 line too long (82 > 79 characters)
+src/tools/browser.py:133:17: WPS421 Found wrong function call: print
+src/tools/browser.py:134:80: E501 line too long (101 > 79 characters)
+src/tools/browser.py:137:80: E501 line too long (91 > 79 characters)
+src/tools/browser.py:138:17: WPS421 Found wrong function call: print
+src/tools/browser.py:140:80: E501 line too long (91 > 79 characters)
+src/tools/browser.py:145:80: E501 line too long (87 > 79 characters)
+src/tools/browser.py:150:35: WPS226 Found string literal over-use: success > 3
+src/tools/browser.py:152:25: WPS226 Found string literal over-use: screenshot > 3
+src/tools/browser.py:158:80: E501 line too long (88 > 79 characters)
+src/tools/browser.py:165:80: E501 line too long (82 > 79 characters)
+src/tools/browser.py:166:80: E501 line too long (86 > 79 characters)
+src/tools/browser.py:172:80: E501 line too long (97 > 79 characters)
+src/tools/browser.py:179:80: E501 line too long (98 > 79 characters)
+src/tools/browser.py:181:17: WPS505 Found nested `try` block
+src/tools/browser.py:181:17: WPS229 Found too long ``try`` body length: 2 > 1
+src/tools/browser.py:183:21: WPS111 Found too short name: x < 2
+src/tools/browser.py:183:24: WPS111 Found too short name: y < 2
+src/tools/browser.py:186:80: E501 line too long (100 > 79 characters)
+src/tools/browser.py:203:80: E501 line too long (91 > 79 characters)
+src/tools/browser.py:231:80: E501 line too long (99 > 79 characters)
+src/tools/browser.py:236:80: E501 line too long (90 > 79 characters)
+src/tools/browser.py:239:9: WPS111 Found too short name: e < 2
+src/tools/browser.py:241:80: E501 line too long (80 > 79 characters)
+src/tools/browser.py:243:17: WPS505 Found nested `try` block
+src/tools/browser.py:246:21: WPS420 Found wrong keyword: pass
+src/tools/browser.py:247:80: E501 line too long (92 > 79 characters)
+src/tools/browser.py:249:17: WPS505 Found nested `try` block
+src/tools/browser.py:252:21: WPS420 Found wrong keyword: pass
+src/tools/browser.py:254:80: E501 line too long (93 > 79 characters)
+src/tools/code.py:0:1: WPS232 Found module cognitive complexity that is too high: 10.6 > 8
+src/tools/code.py:10:1: WPS300 Found local folder import
+src/tools/code.py:15:5: WPS111 Found too short name: p < 2
+src/tools/code.py:20:80: E501 line too long (98 > 79 characters)
+src/tools/code.py:27:1: WPS210 Found too many local variables: 6 > 5
+src/tools/code.py:28:80: E501 line too long (84 > 79 characters)
+src/tools/code.py:29:5: WPS229 Found too long ``try`` body length: 2 > 1
+src/tools/code.py:40:80: E501 line too long (83 > 79 characters)
+src/tools/code.py:46:80: E501 line too long (97 > 79 characters)
+src/tools/code.py:47:80: E501 line too long (89 > 79 characters)
+src/tools/code.py:48:80: E501 line too long (93 > 79 characters)
+src/tools/code.py:51:80: E501 line too long (106 > 79 characters)
+src/tools/code.py:56:80: E501 line too long (92 > 79 characters)
+src/tools/code.py:62:1: WPS210 Found too many local variables: 7 > 5
+src/tools/code.py:72:80: E501 line too long (93 > 79 characters)
+src/tools/code.py:87:80: E501 line too long (89 > 79 characters)
+src/tools/code.py:96:80: E501 line too long (104 > 79 characters)
+src/tools/code.py:97:80: E501 line too long (108 > 79 characters)
+src/tools/code.py:102:80: E501 line too long (99 > 79 characters)
+src/tools/code.py:104:5: WPS212 Found too many return statements: 8 > 5
+src/tools/code.py:104:5: WPS210 Found too many local variables: 8 > 5
+src/tools/code.py:104:5: WPS231 Found function with too much cognitive complexity: 49 > 12
+src/tools/code.py:104:23: WPS110 Found wrong variable name: params
+src/tools/code.py:104:80: E501 line too long (80 > 79 characters)
+src/tools/code.py:105:80: E501 line too long (93 > 79 characters)
+src/tools/code.py:108:32: WPS226 Found string literal over-use: error > 3
+src/tools/code.py:110:9: WPS229 Found too long ``try`` body length: 12 > 1
+src/tools/code.py:114:80: E501 line too long (91 > 79 characters)
+src/tools/code.py:116:80: E501 line too long (93 > 79 characters)
+src/tools/code.py:134:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/code.py:140:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/code.py:141:80: E501 line too long (87 > 79 characters)
+src/tools/code.py:142:33: WPS111 Found too short name: d < 2
+src/tools/code.py:144:29: WPS220 Found too deep nesting: 28 > 20
+src/tools/code.py:147:36: WPS226 Found string literal over-use: message > 3
+src/tools/code.py:147:80: E501 line too long (99 > 79 characters)
+src/tools/code.py:150:80: E501 line too long (87 > 79 characters)
+src/tools/code.py:153:35: WPS110 Found wrong variable name: item
+src/tools/code.py:153:64: WPS111 Found too short name: d < 2
+src/tools/code.py:153:80: E501 line too long (87 > 79 characters)
+src/tools/code.py:158:25: WPS226 Found string literal over-use: results > 3
+src/tools/code.py:159:80: E501 line too long (107 > 79 characters)
+src/tools/code.py:163:80: E501 line too long (83 > 79 characters)
+src/tools/code.py:173:9: WPS111 Found too short name: e < 2
+src/tools/code.py:174:80: E501 line too long (94 > 79 characters)
+src/tools/code.py:178:1: WPS210 Found too many local variables: 6 > 5
+src/tools/code.py:178:1: WPS231 Found function with too much cognitive complexity: 15 > 12
+src/tools/code.py:185:5: WPS110 Found wrong variable name: data
+src/tools/code.py:188:80: E501 line too long (96 > 79 characters)
+src/tools/code.py:189:80: E501 line too long (96 > 79 characters)
+src/tools/code.py:190:37: WPS529 Found implicit `.get()` dict usage
+src/tools/code.py:191:80: E501 line too long (105 > 79 characters)
+src/tools/code.py:193:43: WPS529 Found implicit `.get()` dict usage
+src/tools/code.py:206:26: WPS529 Found implicit `.get()` dict usage
+src/tools/command.py:8:1: WPS300 Found local folder import
+src/tools/command.py:9:1: WPS347 Found vague import that may cause confusion: to_bool
+src/tools/command.py:15:80: E501 line too long (100 > 79 characters)
+src/tools/command.py:16:80: E501 line too long (99 > 79 characters)
+src/tools/command.py:19:5: WPS115 Found upper-case constant in a class: DEFAULT_TIMEOUT
+src/tools/command.py:28:80: E501 line too long (87 > 79 characters)
+src/tools/command.py:29:80: E501 line too long (99 > 79 characters)
+src/tools/command.py:30:80: E501 line too long (116 > 79 characters)
+src/tools/command.py:36:80: E501 line too long (88 > 79 characters)
+src/tools/command.py:37:80: E501 line too long (113 > 79 characters)
+src/tools/command.py:38:80: E501 line too long (126 > 79 characters)
+src/tools/command.py:41:5: WPS212 Found too many return statements: 12 > 5
+src/tools/command.py:41:5: WPS210 Found too many local variables: 12 > 5
+src/tools/command.py:41:5: WPS231 Found function with too much cognitive complexity: 34 > 12
+src/tools/command.py:41:23: WPS110 Found wrong variable name: params
+src/tools/command.py:41:80: E501 line too long (80 > 79 characters)
+src/tools/command.py:42:80: E501 line too long (127 > 79 characters)
+src/tools/command.py:49:18: WPS226 Found string literal over-use: success > 3
+src/tools/command.py:49:36: WPS226 Found string literal over-use: output > 3
+src/tools/command.py:49:80: E501 line too long (92 > 79 characters)
+src/tools/command.py:53:80: E501 line too long (95 > 79 characters)
+src/tools/command.py:57:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/tools/command.py:65:80: E501 line too long (92 > 79 characters)
+src/tools/command.py:72:80: E501 line too long (120 > 79 characters)
+src/tools/command.py:77:9: WPS111 Found too short name: e < 2
+src/tools/command.py:81:80: E501 line too long (155 > 79 characters)
+src/tools/command.py:84:9: WPS111 Found too short name: e < 2
+src/tools/command.py:84:80: E501 line too long (91 > 79 characters)
+src/tools/command.py:88:80: E501 line too long (152 > 79 characters)
+src/tools/command.py:108:80: E501 line too long (144 > 79 characters)
+src/tools/command.py:112:9: WPS229 Found too long ``try`` body length: 6 > 1
+src/tools/command.py:114:80: E501 line too long (97 > 79 characters)
+src/tools/command.py:116:80: E501 line too long (97 > 79 characters)
+src/tools/command.py:127:80: E501 line too long (92 > 79 characters)
+src/tools/command.py:129:80: E501 line too long (86 > 79 characters)
+src/tools/command.py:134:80: E501 line too long (99 > 79 characters)
+src/tools/command.py:143:80: E501 line too long (80 > 79 characters)
+src/tools/command.py:148:80: E501 line too long (95 > 79 characters)
+src/tools/command.py:160:5: WPS110 Found wrong variable name: params
+src/tools/command.py:162:80: E501 line too long (81 > 79 characters)
+src/tools/command.py:164:80: E501 line too long (80 > 79 characters)
+src/tools/command.py:165:5: WPS110 Found wrong variable name: data
+src/tools/command.py:168:80: E501 line too long (96 > 79 characters)
+src/tools/command.py:170:80: E501 line too long (82 > 79 characters)
+src/tools/command.py:171:80: E501 line too long (86 > 79 characters)
+src/tools/command.py:173:80: E501 line too long (114 > 79 characters)
+src/tools/command.py:174:80: E501 line too long (85 > 79 characters)
+src/tools/file.py:0:1: WPS202 Found too many module members: 12 > 7
+src/tools/file.py:9:1: WPS300 Found local folder import
+src/tools/file.py:19:80: E501 line too long (94 > 79 characters)
+src/tools/file.py:23:9: WPS111 Found too short name: m < 2
+src/tools/file.py:26:80: E501 line too long (84 > 79 characters)
+src/tools/file.py:29:80: E501 line too long (106 > 79 characters)
+src/tools/file.py:38:80: E501 line too long (87 > 79 characters)
+src/tools/file.py:42:5: WPS111 Found too short name: p < 2
+src/tools/file.py:47:80: E501 line too long (98 > 79 characters)
+src/tools/file.py:63:80: E501 line too long (89 > 79 characters)
+src/tools/file.py:67:17: WPS226 Found string literal over-use: path > 3
+src/tools/file.py:67:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:69:23: WPS110 Found wrong variable name: params
+src/tools/file.py:69:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:72:20: WPS226 Found string literal over-use: Error: Missing required parameter 'path'. > 3
+src/tools/file.py:74:9: WPS229 Found too long ``try`` body length: 5 > 1
+src/tools/file.py:78:52: WPS204 Found overused expression: str(abs_file_path); used 9 > 7
+src/tools/file.py:80:24: WPS226 Found string literal over-use: Error: Path  > 3
+src/tools/file.py:80:80: E501 line too long (86 > 79 characters)
+src/tools/file.py:82:51: WPS226 Found string literal over-use: utf-8 > 3
+src/tools/file.py:82:63: WPS111 Found too short name: f < 2
+src/tools/file.py:83:17: WPS110 Found wrong variable name: content
+src/tools/file.py:85:9: WPS111 Found too short name: e < 2
+src/tools/file.py:86:20: WPS226 Found string literal over-use: :  > 3
+src/tools/file.py:96:80: E501 line too long (110 > 79 characters)
+src/tools/file.py:102:13: WPS226 Found string literal over-use: content > 3
+src/tools/file.py:105:23: WPS110 Found wrong variable name: params
+src/tools/file.py:105:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:107:9: WPS110 Found wrong variable name: content
+src/tools/file.py:114:9: WPS229 Found too long ``try`` body length: 4 > 1
+src/tools/file.py:118:63: WPS111 Found too short name: f < 2
+src/tools/file.py:121:9: WPS111 Found too short name: e < 2
+src/tools/file.py:134:13: WPS342 Found implicit raw string: "Each block must follow the format: ------- SEARCH\\n(lines to search)\\n=======\\n(lines to replace)\\n+++++++ REPLACE"
+src/tools/file.py:134:80: E501 line too long (132 > 79 characters)
+src/tools/file.py:140:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:141:80: E501 line too long (91 > 79 characters)
+src/tools/file.py:144:5: WPS212 Found too many return statements: 11 > 5
+src/tools/file.py:144:5: WPS210 Found too many local variables: 13 > 5
+src/tools/file.py:144:5: WPS231 Found function with too much cognitive complexity: 57 > 12
+src/tools/file.py:144:23: WPS110 Found wrong variable name: params
+src/tools/file.py:144:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:153:9: WPS229 Found too long ``try`` body length: 11 > 1
+src/tools/file.py:157:52: WPS204 Found overused expression: str(abs_file_path); used 6 > 4
+src/tools/file.py:159:80: E501 line too long (86 > 79 characters)
+src/tools/file.py:163:80: E501 line too long (84 > 79 characters)
+src/tools/file.py:164:80: E501 line too long (98 > 79 characters)
+src/tools/file.py:166:80: E501 line too long (90 > 79 characters)
+src/tools/file.py:169:80: E501 line too long (91 > 79 characters)
+src/tools/file.py:171:17: WPS111 Found too short name: i < 2
+src/tools/file.py:174:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:175:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:175:77: WPS342 Found implicit raw string: "\\n"
+src/tools/file.py:175:80: E501 line too long (86 > 79 characters)
+src/tools/file.py:176:29: WPS509 Found incorrectly nested ternary
+src/tools/file.py:178:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:179:29: WPS237 Found a too complex `f` string
+src/tools/file.py:179:80: E501 line too long (94 > 79 characters)
+src/tools/file.py:180:80: E501 line too long (110 > 79 characters)
+src/tools/file.py:181:80: E501 line too long (93 > 79 characters)
+src/tools/file.py:186:21: WPS505 Found nested `try` block
+src/tools/file.py:186:21: WPS229 Found too long ``try`` body length: 3 > 1
+src/tools/file.py:187:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:188:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:189:29: WPS220 Found too deep nesting: 28 > 20
+src/tools/file.py:190:29: WPS220 Found too deep nesting: 28 > 20
+src/tools/file.py:190:80: E501 line too long (90 > 79 characters)
+src/tools/file.py:190:81: WPS342 Found implicit raw string: "\\n"
+src/tools/file.py:191:33: WPS509 Found incorrectly nested ternary
+src/tools/file.py:193:29: WPS220 Found too deep nesting: 28 > 20
+src/tools/file.py:194:33: WPS237 Found a too complex `f` string
+src/tools/file.py:194:80: E501 line too long (98 > 79 characters)
+src/tools/file.py:195:80: E501 line too long (125 > 79 characters)
+src/tools/file.py:196:80: E501 line too long (97 > 79 characters)
+src/tools/file.py:198:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:198:80: E501 line too long (82 > 79 characters)
+src/tools/file.py:199:21: WPS111 Found too short name: e < 2
+src/tools/file.py:200:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:200:32: WPS237 Found a too complex `f` string
+src/tools/file.py:200:80: E501 line too long (85 > 79 characters)
+src/tools/file.py:203:80: E501 line too long (98 > 79 characters)
+src/tools/file.py:206:9: WPS111 Found too short name: e < 2
+src/tools/file.py:217:80: E501 line too long (123 > 79 characters)
+src/tools/file.py:223:80: E501 line too long (81 > 79 characters)
+src/tools/file.py:226:5: WPS212 Found too many return statements: 6 > 5
+src/tools/file.py:226:5: WPS210 Found too many local variables: 12 > 5
+src/tools/file.py:226:5: WPS231 Found function with too much cognitive complexity: 40 > 12
+src/tools/file.py:226:23: WPS110 Found wrong variable name: params
+src/tools/file.py:226:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:237:80: E501 line too long (99 > 79 characters)
+src/tools/file.py:240:80: E501 line too long (123 > 79 characters)
+src/tools/file.py:242:9: WPS229 Found too long ``try`` body length: 6 > 1
+src/tools/file.py:250:13: WPS110 Found wrong variable name: results
+src/tools/file.py:251:13: WPS504 Found negated condition
+src/tools/file.py:253:50: WPS509 Found incorrectly nested ternary
+src/tools/file.py:253:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:259:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:259:80: E501 line too long (82 > 79 characters)
+src/tools/file.py:260:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:261:80: E501 line too long (88 > 79 characters)
+src/tools/file.py:263:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:263:80: E501 line too long (82 > 79 characters)
+src/tools/file.py:264:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:264:62: WPS336 Found explicit string concatenation
+src/tools/file.py:267:9: WPS111 Found too short name: e < 2
+src/tools/file.py:280:80: E501 line too long (87 > 79 characters)
+src/tools/file.py:281:80: E501 line too long (82 > 79 characters)
+src/tools/file.py:287:80: E501 line too long (87 > 79 characters)
+src/tools/file.py:289:80: E501 line too long (126 > 79 characters)
+src/tools/file.py:292:5: WPS212 Found too many return statements: 7 > 5
+src/tools/file.py:292:5: WPS210 Found too many local variables: 14 > 5
+src/tools/file.py:292:5: WPS231 Found function with too much cognitive complexity: 55 > 12
+src/tools/file.py:292:23: WPS110 Found wrong variable name: params
+src/tools/file.py:292:80: E501 line too long (80 > 79 characters)
+src/tools/file.py:302:9: WPS229 Found too long ``try`` body length: 7 > 1
+src/tools/file.py:310:13: WPS505 Found nested `try` block
+src/tools/file.py:312:13: WPS111 Found too short name: e < 2
+src/tools/file.py:320:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:323:21: WPS505 Found nested `try` block
+src/tools/file.py:323:21: WPS229 Found too long ``try`` body length: 2 > 1
+src/tools/file.py:325:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:326:29: WPS220 Found too deep nesting: 28 > 20
+src/tools/file.py:327:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:327:80: E501 line too long (89 > 79 characters)
+src/tools/file.py:327:88: WPS111 Found too short name: f < 2
+src/tools/file.py:328:29: WPS220 Found too deep nesting: 28 > 20
+src/tools/file.py:329:33: WPS220 Found too deep nesting: 32 > 20
+src/tools/file.py:330:37: WPS220 Found too deep nesting: 36 > 20
+src/tools/file.py:333:80: E501 line too long (83 > 79 characters)
+src/tools/file.py:339:80: E501 line too long (81 > 79 characters)
+src/tools/file.py:340:25: WPS420 Found wrong keyword: pass
+src/tools/file.py:340:25: WPS220 Found too deep nesting: 24 > 20
+src/tools/file.py:343:9: WPS111 Found too short name: e < 2
+src/tools/file.py:348:80: E501 line too long (123 > 79 characters)
+src/tools/file.py:354:5: WPS110 Found wrong variable name: result
+src/tools/file.py:354:80: E501 line too long (84 > 79 characters)
+src/tools/file.py:355:26: WPS226 Found string literal over-use: Error: > 3
+src/tools/file.py:357:80: E501 line too long (82 > 79 characters)
+src/tools/file.py:358:80: E501 line too long (81 > 79 characters)
+src/tools/file.py:363:30: WPS110 Found wrong variable name: content
+src/tools/file.py:363:80: E501 line too long (85 > 79 characters)
+src/tools/file.py:365:5: WPS110 Found wrong variable name: result
+src/tools/file.py:366:80: E501 line too long (85 > 79 characters)
+src/tools/file.py:373:80: E501 line too long (91 > 79 characters)
+src/tools/file.py:375:80: E501 line too long (91 > 79 characters)
+src/tools/file.py:376:80: E501 line too long (89 > 79 characters)
+src/tools/file.py:378:5: WPS110 Found wrong variable name: result
+src/tools/file.py:379:80: E501 line too long (86 > 79 characters)
+src/tools/file.py:382:80: E501 line too long (93 > 79 characters)
+src/tools/file.py:383:80: E501 line too long (92 > 79 characters)
+src/tools/file.py:384:80: E501 line too long (90 > 79 characters)
+src/tools/file.py:390:80: E501 line too long (98 > 79 characters)
+src/tools/file.py:393:80: E501 line too long (89 > 79 characters)
+src/tools/file.py:404:80: E501 line too long (84 > 79 characters)
+src/tools/file.py:407:5: WPS110 Found wrong variable name: params
+src/tools/file.py:408:80: E501 line too long (88 > 79 characters)
+src/tools/file.py:409:80: E501 line too long (90 > 79 characters)
+src/tools/file.py:412:80: E501 line too long (92 > 79 characters)
+src/tools/file.py:415:80: E501 line too long (80 > 79 characters)
+src/tools/mcp.py:4:1: WPS300 Found local folder import
+src/tools/mcp.py:18:80: E501 line too long (126 > 79 characters)
+src/tools/mcp.py:24:13: WPS226 Found string literal over-use: server_name > 3
+src/tools/mcp.py:26:80: E501 line too long (88 > 79 characters)
+src/tools/mcp.py:29:23: WPS110 Found wrong variable name: params
+src/tools/mcp.py:29:80: E501 line too long (80 > 79 characters)
+src/tools/mcp.py:46:80: E501 line too long (85 > 79 characters)
+src/tools/mcp.py:50:20: WPS237 Found a too complex `f` string
+src/tools/mcp.py:52:80: E501 line too long (142 > 79 characters)
+src/tools/mcp.py:56:80: E501 line too long (84 > 79 characters)
+src/tools/mcp.py:66:80: E501 line too long (83 > 79 characters)
+src/tools/mcp.py:72:80: E501 line too long (80 > 79 characters)
+src/tools/mcp.py:76:23: WPS110 Found wrong variable name: params
+src/tools/mcp.py:76:80: E501 line too long (80 > 79 characters)
+src/tools/mcp.py:92:20: WPS237 Found a too complex `f` string
+src/tools/mcp.py:94:80: E501 line too long (125 > 79 characters)
+src/tools/meta_tools.py:0:1: WPS202 Found too many module members: 8 > 7
+src/tools/meta_tools.py:4:1: WPS300 Found local folder import
+src/tools/meta_tools.py:8:80: E501 line too long (89 > 79 characters)
+src/tools/meta_tools.py:17:80: E501 line too long (106 > 79 characters)
+src/tools/meta_tools.py:18:80: E501 line too long (113 > 79 characters)
+src/tools/meta_tools.py:19:80: E501 line too long (106 > 79 characters)
+src/tools/meta_tools.py:25:17: WPS226 Found string literal over-use: context > 3
+src/tools/meta_tools.py:27:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:27:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:28:80: E501 line too long (98 > 79 characters)
+src/tools/meta_tools.py:30:80: E501 line too long (81 > 79 characters)
+src/tools/meta_tools.py:31:80: E501 line too long (85 > 79 characters)
+src/tools/meta_tools.py:32:80: E501 line too long (125 > 79 characters)
+src/tools/meta_tools.py:36:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:45:80: E501 line too long (100 > 79 characters)
+src/tools/meta_tools.py:46:80: E501 line too long (93 > 79 characters)
+src/tools/meta_tools.py:47:80: E501 line too long (115 > 79 characters)
+src/tools/meta_tools.py:54:80: E501 line too long (91 > 79 characters)
+src/tools/meta_tools.py:57:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:57:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:58:80: E501 line too long (116 > 79 characters)
+src/tools/meta_tools.py:60:80: E501 line too long (85 > 79 characters)
+src/tools/meta_tools.py:61:80: E501 line too long (99 > 79 characters)
+src/tools/meta_tools.py:62:80: E501 line too long (95 > 79 characters)
+src/tools/meta_tools.py:63:80: E501 line too long (133 > 79 characters)
+src/tools/meta_tools.py:67:80: E501 line too long (82 > 79 characters)
+src/tools/meta_tools.py:76:80: E501 line too long (87 > 79 characters)
+src/tools/meta_tools.py:77:80: E501 line too long (118 > 79 characters)
+src/tools/meta_tools.py:78:80: E501 line too long (119 > 79 characters)
+src/tools/meta_tools.py:88:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:88:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:89:80: E501 line too long (114 > 79 characters)
+src/tools/meta_tools.py:90:9: WPS110 Found wrong variable name: result
+src/tools/meta_tools.py:92:80: E501 line too long (94 > 79 characters)
+src/tools/meta_tools.py:94:80: E501 line too long (127 > 79 characters)
+src/tools/meta_tools.py:107:80: E501 line too long (94 > 79 characters)
+src/tools/meta_tools.py:108:80: E501 line too long (110 > 79 characters)
+src/tools/meta_tools.py:109:80: E501 line too long (119 > 79 characters)
+src/tools/meta_tools.py:116:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:116:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:117:80: E501 line too long (91 > 79 characters)
+src/tools/meta_tools.py:120:80: E501 line too long (95 > 79 characters)
+src/tools/meta_tools.py:121:80: E501 line too long (107 > 79 characters)
+src/tools/meta_tools.py:134:80: E501 line too long (98 > 79 characters)
+src/tools/meta_tools.py:135:80: E501 line too long (117 > 79 characters)
+src/tools/meta_tools.py:136:80: E501 line too long (83 > 79 characters)
+src/tools/meta_tools.py:143:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:143:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:144:80: E501 line too long (84 > 79 characters)
+src/tools/meta_tools.py:145:80: E501 line too long (99 > 79 characters)
+src/tools/meta_tools.py:146:80: E501 line too long (87 > 79 characters)
+src/tools/meta_tools.py:156:80: E501 line too long (131 > 79 characters)
+src/tools/meta_tools.py:160:80: E501 line too long (83 > 79 characters)
+src/tools/meta_tools.py:162:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:162:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:165:80: E501 line too long (85 > 79 characters)
+src/tools/meta_tools.py:166:80: E501 line too long (129 > 79 characters)
+src/tools/meta_tools.py:176:80: E501 line too long (91 > 79 characters)
+src/tools/meta_tools.py:188:5: WPS210 Found too many local variables: 6 > 5
+src/tools/meta_tools.py:188:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:188:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:202:20: WPS237 Found a too complex `f` string
+src/tools/meta_tools.py:202:80: E501 line too long (105 > 79 characters)
+src/tools/meta_tools.py:209:80: E501 line too long (98 > 79 characters)
+src/tools/meta_tools.py:210:80: E501 line too long (118 > 79 characters)
+src/tools/meta_tools.py:223:80: E501 line too long (99 > 79 characters)
+src/tools/meta_tools.py:229:80: E501 line too long (117 > 79 characters)
+src/tools/meta_tools.py:233:23: WPS110 Found wrong variable name: params
+src/tools/meta_tools.py:233:80: E501 line too long (80 > 79 characters)
+src/tools/meta_tools.py:235:9: WPS110 Found wrong variable name: content
+src/tools/meta_tools.py:235:80: E501 line too long (83 > 79 characters)
+src/tools/meta_tools.py:245:17: WPS237 Found a too complex `f` string
+src/tools/meta_tools.py:245:80: E501 line too long (100 > 79 characters)
+src/tools/meta_tools.py:248:36: WPS432 Found magic number: 50
+src/tools/meta_tools.py:248:42: WPS336 Found explicit string concatenation
+src/tools/meta_tools.py:248:80: E501 line too long (85 > 79 characters)
+src/tools/meta_tools.py:249:80: E501 line too long (89 > 79 characters)
+src/tools/meta_tools.py:251:80: E501 line too long (100 > 79 characters)
+src/tools/tool_protocol.py:28:23: WPS110 Found wrong variable name: params
+src/tools/tool_protocol.py:28:80: E501 line too long (80 > 79 characters)
+src/tools/tool_protocol.py:36:80: E501 line too long (82 > 79 characters)
+src/utils.py:0:1: WPS100 Found wrong module name
+src/utils.py:0:1: WPS232 Found module cognitive complexity that is too high: 10.8 > 8
+src/utils.py:4:80: E501 line too long (80 > 79 characters)
+src/utils.py:10:13: WPS110 Found wrong variable name: value
+src/utils.py:30:80: E501 line too long (100 > 79 characters)
+src/utils.py:31:80: E501 line too long (81 > 79 characters)
+src/utils.py:33:80: E501 line too long (94 > 79 characters)
+src/utils.py:38:80: E501 line too long (86 > 79 characters)
+src/utils.py:44:25: WPS226 Found string literal over-use: .git > 3
+src/utils.py:46:5: WPS229 Found too long ``try`` body length: 7 > 1
+src/utils.py:48:14: WPS226 Found string literal over-use: git > 3
+src/utils.py:54:80: E501 line too long (83 > 79 characters)
+src/utils.py:64:9: WPS221 Found line with high Jones Complexity: 15 > 14
+src/utils.py:64:80: E501 line too long (99 > 79 characters)
+src/utils.py:71:1: WPS210 Found too many local variables: 6 > 5
+src/utils.py:71:1: WPS231 Found function with too much cognitive complexity: 18 > 12
+src/utils.py:80:80: E501 line too long (87 > 79 characters)
+src/utils.py:81:80: E501 line too long (83 > 79 characters)
+src/utils.py:86:23: WPS226 Found string literal over-use:  is not a git repository. > 3
+src/utils.py:88:5: WPS229 Found too long ``try`` body length: 5 > 1
+src/utils.py:89:80: E501 line too long (81 > 79 characters)
+src/utils.py:90:9: WPS110 Found wrong variable name: result
+src/utils.py:90:80: E501 line too long (89 > 79 characters)
+src/utils.py:99:80: E501 line too long (99 > 79 characters)
+src/utils.py:102:5: WPS111 Found too short name: e < 2
+src/utils.py:103:23: WPS226 Found string literal over-use: :  > 3
+src/utils.py:105:5: WPS111 Found too short name: e < 2
+src/utils.py:106:80: E501 line too long (98 > 79 characters)
+src/utils.py:125:80: E501 line too long (82 > 79 characters)
+src/utils.py:128:5: WPS229 Found too long ``try`` body length: 3 > 1
+src/utils.py:130:9: WPS110 Found wrong variable name: result
+src/utils.py:131:80: E501 line too long (85 > 79 characters)
+src/utils.py:134:26: WPS226 Found string literal over-use:  in  > 3
+src/utils.py:134:80: E501 line too long (83 > 79 characters)
+src/utils.py:138:17: WPS237 Found a too complex `f` string
+src/utils.py:138:80: E501 line too long (102 > 79 characters)
+src/utils.py:141:5: WPS111 Found too short name: e < 2
+src/utils.py:143:80: E501 line too long (97 > 79 characters)
+src/utils.py:163:80: E501 line too long (82 > 79 characters)
+src/utils.py:166:5: WPS229 Found too long ``try`` body length: 4 > 1
+src/utils.py:169:9: WPS110 Found wrong variable name: result
+src/utils.py:170:80: E501 line too long (85 > 79 characters)
+src/utils.py:174:80: E501 line too long (113 > 79 characters)
+src/utils.py:179:17: WPS237 Found a too complex `f` string
+src/utils.py:179:80: E501 line too long (115 > 79 characters)
+src/utils.py:182:5: WPS111 Found too short name: e < 2
+src/utils.py:184:80: E501 line too long (103 > 79 characters)
+src/utils.py:189:1: WPS231 Found function with too much cognitive complexity: 13 > 12
+src/utils.py:197:80: E501 line too long (92 > 79 characters)
+src/utils.py:203:5: WPS229 Found too long ``try`` body length: 5 > 1
+src/utils.py:205:9: WPS110 Found wrong variable name: result
+src/utils.py:205:80: E501 line too long (89 > 79 characters)
+src/utils.py:206:80: E501 line too long (84 > 79 characters)
+src/utils.py:207:80: E501 line too long (90 > 79 characters)
+src/utils.py:211:5: WPS111 Found too short name: e < 2
+src/utils.py:219:80: E501 line too long (80 > 79 characters)
+src/utils.py:221:5: WPS111 Found too short name: e < 2
+src/utils.py:222:80: E501 line too long (98 > 79 characters)

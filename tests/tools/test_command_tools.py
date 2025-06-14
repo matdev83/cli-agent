@@ -18,9 +18,9 @@ def test_execute_command_tool_properties():
     assert tool.name == "execute_command"
     assert isinstance(tool.description, str)
     assert tool.parameters_schema == {
-        "command": "The CLI command to execute.",
+        "command": "The command and its arguments to execute (e.g., 'ls -l /tmp').",
         "requires_approval": "A boolean ('true' or 'false') indicating if explicit user approval is needed.",
-        "timeout_seconds": "Optional timeout in seconds for the command execution."
+        "timeout_seconds": f"Optional timeout in seconds for the command execution. Defaults to {ExecuteCommandTool.DEFAULT_TIMEOUT}s."
     }
 
 @patch('subprocess.run')
@@ -39,7 +39,7 @@ def test_execute_command_success(mock_run, tmp_path):
     result = json.loads(result_str)
 
     mock_run.assert_called_once_with(
-        "echo hello", shell=True, text=True, capture_output=True, timeout=None, check=False
+        ["echo", "hello"], shell=False, text=True, capture_output=True, timeout=ExecuteCommandTool.DEFAULT_TIMEOUT, check=False
     )
     assert result == {"success": True, "output": "Success output"}
 
@@ -77,7 +77,7 @@ def test_execute_command_with_specific_timeout(mock_run, tmp_path):
     result = json.loads(result_str)
 
     mock_run.assert_called_once_with(
-        "echo test", shell=True, text=True, capture_output=True, timeout=10, check=False
+        ["echo", "test"], shell=False, text=True, capture_output=True, timeout=10.0, check=False
     )
     assert result == {"success": True, "output": "Output within timeout"}
 

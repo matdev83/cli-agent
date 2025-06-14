@@ -15,8 +15,9 @@ import re
 #   - Optional spaces then end of string.
 #   - Space then another @-mention.
 FILE_MENTION_REGEX = re.compile(
-    r'@([\w.\-\s\/\\]+?)(?=\s+(?:and|or|is|the|a|for|to|in|on|with|by|then)\s|\s*[,;()]|\s*$|\s+@)'
+    r"@([\w.\-\s\/\\]+?)(?=\s+(?:and|or|is|the|a|for|to|in|on|with|by|then)\s|\s*[,;()]|\s*$|\s+@)"
 )
+
 
 def extract_file_mentions(text: str) -> list[str]:
     """

@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import abc
+import logging # Added import for logging
 from typing import List, Optional, Any, Dict
 
 # It's generally better to import specific names if utils is a module
 # For example: from .utils import revert_to_commit, revert_to_state_before_commit
 # However, the prompt asked for `from . import utils`
-from src import utils # Changed to absolute import from src
+from src import utils  # Changed to absolute import from src
 # For type hinting agent_context.agent. DeveloperAgent might cause circular dependency if imported directly.
 # Using 'Any' for now as per instructions, but consider forward reference 'DeveloperAgent' if appropriate.
 # from .agent import DeveloperAgent # Example of potential direct import
+
 
 class SlashCommand(abc.ABC):
     """
@@ -49,6 +51,7 @@ class SlashCommand(abc.ABC):
         """
         pass
 
+
 # Example of how agent_context might be structured (optional, for illustration)
 # class AgentCliContext:
 #     def __init__(self, agent, cli_args, display_update_func):
@@ -56,11 +59,13 @@ class SlashCommand(abc.ABC):
 #         self.cli_args = cli_args
 #         self.display_update_func = display_update_func
 
+
 class ModelCommand(SlashCommand):
     """
     Sets the language model to be used by the agent.
     Example: /model anthropic/claude-3-opus
     """
+
     @property
     def name(self) -> str:
         return "model"
@@ -79,7 +84,7 @@ class ModelCommand(SlashCommand):
 
         model_name = args[0]
 
-        if agent_context and hasattr(agent_context, 'cli_args'):
+        if agent_context and hasattr(agent_context, "cli_args"):
             # In a real scenario, we might want to validate the model_name further
             # or check if it's different from the current one.
             agent_context.cli_args.model = model_name
@@ -103,11 +108,13 @@ class ModelCommand(SlashCommand):
             # to actually change the model. This helps in debugging integration.
             return f"ModelCommand: Would set model to '{model_name}' (agent_context not fully available for update)."
 
+
 class SetTimeoutCommand(SlashCommand):
     """
     Sets the timeout for LLM API calls.
     Example: /set-timeout 60
     """
+
     @property
     def name(self) -> str:
         return "set-timeout"
@@ -131,17 +138,19 @@ class SetTimeoutCommand(SlashCommand):
         except ValueError:
             return "Error: Invalid timeout value. Must be a number."
 
-        if agent_context and hasattr(agent_context, 'cli_args'):
+        if agent_context and hasattr(agent_context, "cli_args"):
             agent_context.cli_args.llm_timeout = timeout_seconds
             return f"LLM timeout set to: {timeout_seconds} seconds."
         else:
             return f"SetTimeoutCommand: Would set timeout to {timeout_seconds}s (agent_context not fully available for update)."
+
 
 class PlanModeCommand(SlashCommand):
     """
     Activates PLAN MODE for the agent.
     (Functionality to be fully implemented as part of MVP Task 3.1)
     """
+
     @property
     def name(self) -> str:
         return "plan"
@@ -157,18 +166,20 @@ class PlanModeCommand(SlashCommand):
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
         # Placeholder for actual mode switching logic
         # This will likely involve setting a flag in agent_context or DeveloperAgent
-        if agent_context and hasattr(agent_context, 'set_mode'):
-            agent_context.set_mode("PLAN") # Assuming a method to set mode
+        if agent_context and hasattr(agent_context, "set_mode"):
+            agent_context.set_mode("PLAN")  # Assuming a method to set mode
             return "Agent switched to PLAN MODE."
         else:
             # MVP Task 3.1: Implement ACT MODE vs. PLAN MODE Logic
             return "PlanModeCommand: PLAN MODE activated (actual mode switching pending full implementation)."
+
 
 class ActModeCommand(SlashCommand):
     """
     Activates ACT MODE for the agent.
     (Functionality to be fully implemented as part of MVP Task 3.1)
     """
+
     @property
     def name(self) -> str:
         return "act"
@@ -183,20 +194,23 @@ class ActModeCommand(SlashCommand):
 
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
         # Placeholder for actual mode switching logic
-        if agent_context and hasattr(agent_context, 'set_mode'):
-            agent_context.set_mode("ACT") # Assuming a method to set mode
+        if agent_context and hasattr(agent_context, "set_mode"):
+            agent_context.set_mode("ACT")  # Assuming a method to set mode
             return "Agent switched to ACT MODE."
         else:
             # MVP Task 3.1: Implement ACT MODE vs. PLAN MODE Logic
             return "ActModeCommand: ACT MODE activated (actual mode switching pending full implementation)."
 
+
 # The AgentCliContext class is now primarily defined and instantiated in cli.py.
 # Slash commands will receive an instance of that context.
+
 
 class RefreshCommand(SlashCommand):
     """
     Re-scans the project directory to update the at-mention autocomplete cache.
     """
+
     @property
     def name(self) -> str:
         return "refresh"
@@ -210,14 +224,22 @@ class RefreshCommand(SlashCommand):
         return ["/refresh"]
 
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
-        if not agent_context or not hasattr(agent_context, 'file_cache') or not agent_context.file_cache:
+        if (
+            not agent_context
+            or not hasattr(agent_context, "file_cache")
+            or not agent_context.file_cache
+        ):
             # Attempt to provide a helpful message even if display_update_func is also missing
             msg = "Error: File cache context not available for refresh command."
-            if agent_context and hasattr(agent_context, 'display_update_func') and agent_context.display_update_func:
+            if (
+                agent_context
+                and hasattr(agent_context, "display_update_func")
+                and agent_context.display_update_func
+            ):
                 agent_context.display_update_func(msg)
             return msg
 
-        if not hasattr(agent_context.file_cache, 'refresh'):
+        if not hasattr(agent_context.file_cache, "refresh"):
             msg = "Error: File cache object is invalid or does not support refresh."
             if agent_context.display_update_func:
                 agent_context.display_update_func(msg)
@@ -229,7 +251,7 @@ class RefreshCommand(SlashCommand):
             # The refresh method itself logs details, so this is a summary for the UI
             success_msg = f"File cache refreshed successfully. Found {len(updated_paths)} files."
             agent_context.display_update_func(success_msg)
-            return success_msg # Return for potential direct printing if UI update fails
+            return success_msg  # Return for potential direct printing if UI update fails
         except Exception as e:
             # import traceback # Would be useful for full debugging in local env
             # err_msg = f"Error during file cache refresh: {e}\n{traceback.format_exc()}"
@@ -243,6 +265,7 @@ class SlashCommandRegistry:
     """
     Manages the registration and execution of slash commands.
     """
+
     def __init__(self):
         self._commands: Dict[str, SlashCommand] = {}
 
@@ -260,7 +283,7 @@ class SlashCommandRegistry:
             raise ValueError(f"Command '{command.name}' is already registered.")
         if not command.name:
             raise ValueError("Command name cannot be empty.")
-        if ' ' in command.name:
+        if " " in command.name:
             raise ValueError("Command name cannot contain spaces.")
 
         self._commands[command.name] = command
@@ -278,7 +301,9 @@ class SlashCommandRegistry:
         """
         return self._commands.get(name)
 
-    def execute_command(self, name: str, args: List[str], agent_context: Any = None) -> Optional[str]:
+    def execute_command(
+        self, name: str, args: List[str], agent_context: Any = None
+    ) -> Optional[str]:
         """
         Executes a registered command by its name.
 
@@ -293,7 +318,7 @@ class SlashCommandRegistry:
         """
         command = self.get_command(name)
         if not command:
-            return f"Error: Unknown command '/{name}'. Type /help for available commands." # Future: /help command
+            return f"Error: Unknown command '/{name}'. Type /help for available commands."  # Future: /help command
 
         try:
             return command.execute(args, agent_context)
@@ -313,7 +338,8 @@ class HelpCommand(SlashCommand):
     """
     Displays help information for available slash commands.
     """
-    def __init__(self, registry: SlashCommandRegistry): # HelpCommand takes registry in constructor
+
+    def __init__(self, registry: SlashCommandRegistry):  # HelpCommand takes registry in constructor
         self._registry = registry
 
     @property
@@ -351,6 +377,7 @@ class UndoCommand(SlashCommand):
     """
     Reverts file changes based on auto-commits made during the session.
     """
+
     @property
     def name(self) -> str:
         return "undo"
@@ -364,12 +391,12 @@ class UndoCommand(SlashCommand):
         return ["/undo", "/undo <commit_id>"]
 
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
-        if not agent_context or not hasattr(agent_context, 'agent') or not agent_context.agent:
+        if not agent_context or not hasattr(agent_context, "agent") or not agent_context.agent:
             return "Error: Agent context not available or not initialized correctly."
 
         # Using Any for agent type hint as per instructions, ideally this would be DeveloperAgent
         agent = agent_context.agent
-        if not hasattr(agent, 'session_commit_history') or not hasattr(agent, 'cwd'):
+        if not hasattr(agent, "session_commit_history") or not hasattr(agent, "cwd"):
             return "Error: Agent instance is not correctly configured (missing session_commit_history or cwd)."
 
         if len(args) == 0:
@@ -388,7 +415,9 @@ class UndoCommand(SlashCommand):
         elif len(args) == 1:
             commit_id_to_undo = args[0]
             # Optional: Basic validation for commit_id_to_undo
-            if not all(c in "0123456789abcdefABCDEF" for c in commit_id_to_undo) or not (4 <= len(commit_id_to_undo) <= 40):
+            if not all(c in "0123456789abcdefABCDEF" for c in commit_id_to_undo) or not (
+                4 <= len(commit_id_to_undo) <= 40
+            ):
                 return f"Error: Invalid commit ID format: {commit_id_to_undo}."
 
             success = utils.revert_to_state_before_commit(agent.cwd, commit_id_to_undo)
@@ -417,7 +446,9 @@ class UndoCommand(SlashCommand):
                     # Should not happen if using enumerate, but as a fallback.
                     return f"Successfully reverted to the state before commit {commit_id_to_undo[:7]}. (Commit not found in current session history)"
             else:
-                return f"Error: Failed to revert to the state before commit {commit_id_to_undo[:7]}."
+                return (
+                    f"Error: Failed to revert to the state before commit {commit_id_to_undo[:7]}."
+                )
         else:
             return "Error: /undo accepts 0 or 1 argument (commit_id)."
 
@@ -426,6 +457,7 @@ class UndoAllCommand(SlashCommand):
     """
     Reverts all auto-committed changes made during the current CLI agent session.
     """
+
     @property
     def name(self) -> str:
         return "undo-all"
@@ -439,13 +471,15 @@ class UndoAllCommand(SlashCommand):
         return ["/undo-all"]
 
     def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
-        if not agent_context or not hasattr(agent_context, 'agent') or not agent_context.agent:
+        if not agent_context or not hasattr(agent_context, "agent") or not agent_context.agent:
             return "Error: Agent context not available or not initialized correctly."
 
         agent = agent_context.agent
-        if not hasattr(agent, 'session_commit_history') or \
-           not hasattr(agent, 'initial_session_head_commit_hash') or \
-           not hasattr(agent, 'cwd'):
+        if (
+            not hasattr(agent, "session_commit_history")
+            or not hasattr(agent, "initial_session_head_commit_hash")
+            or not hasattr(agent, "cwd")
+        ):
             return "Error: Agent instance is not correctly configured."
 
         if not agent.session_commit_history:
@@ -453,11 +487,17 @@ class UndoAllCommand(SlashCommand):
             # For now, if no session commits, nothing to "undo-all" from session perspective.
             # However, user might have made manual commits. This command is about session's auto-commits.
             try:
-                current_head = utils.subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=agent.cwd, text=True).strip()
-                if agent.initial_session_head_commit_hash and current_head == agent.initial_session_head_commit_hash:
+                current_head = utils.subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], cwd=agent.cwd, text=True
+                ).strip()
+                if (
+                    agent.initial_session_head_commit_hash
+                    and current_head == agent.initial_session_head_commit_hash
+                ):
                     return "No auto-commits in the current session to undo. Repository is already at the initial session state."
-            except Exception: # Ignore if git check fails, proceed to standard message
-                pass
+            except Exception as e:  # Ignore if git check fails, proceed to standard message
+                logging.warning(f"Failed to get current git HEAD for undo-all check: {e}")
+                # Proceeding to standard message as per original logic
             return "No auto-commits recorded in the current session to undo."
 
         initial_hash = agent.initial_session_head_commit_hash
@@ -474,6 +514,7 @@ class UndoAllCommand(SlashCommand):
             # If initial_hash was a specific commit, and it's gone (e.g. rebase), this might fail.
             # Or if repo became dirty.
             return f"Error: Failed to revert all session changes to the initial session state {initial_hash[:7]}."
+
 
 # Registration of commands (assuming a global registry instance as per common pattern)
 # This part might be in cli.py or another central place.

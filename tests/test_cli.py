@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import argparse
 from unittest.mock import patch, MagicMock, ANY
@@ -79,11 +81,11 @@ def common_test_setup_for_main_invocation(mock_app_class_ref, mock_text_area_cla
     # 1. Call common_test_setup.
     # 2. Call main(flags_argv). This sets up mock_input_field_instance.accept_handler.
     # 3. global_captured_input_field_text_setter(task_to_simulate).
-    # 4. mock_input_field_instance.accept_handler(None) # Call the handler.
+    # 4. mock_input_field_instance.accept_handler() # Call the handler.
 
     # The accept_handler is set in main using `partial`.
     # `mock_input_field_instance.accept_handler` will hold this `partial` object.
-    # So, `mock_input_field_instance.accept_handler(None)` will correctly call the
+    # So, `mock_input_field_instance.accept_handler()` will correctly call the
     # `_accept_input_handler` with `current_app` and `dc_ref` bound.
 
 # --- Adapted Existing Tests ---
@@ -109,7 +111,7 @@ def test_cli_approval_flags_defaults(mock_run_agent, mock_app_class, mock_text_a
     global_captured_input_field_text_setter(task_to_simulate)
     # Retrieve the handler that main() set up on the mock_input_field_instance
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None) # Simulate Enter press, Buffer obj is not used by handler
+    handler_to_call() # Simulate Enter press
 
     mock_run_agent.assert_called_once()
     called_kwargs = mock_run_agent.call_args[1]
@@ -146,7 +148,7 @@ def test_cli_approval_flags_set(mock_run_agent, mock_app_class, mock_text_area_c
         main(current_flags_argv)
         global_captured_input_field_text_setter(task_to_simulate + f"_{flag_to_set_true}")
         handler_to_call = mock_text_area_class.return_value.accept_handler
-        handler_to_call(None)
+        handler_to_call()
 
         mock_run_agent.assert_called_once()
         called_kwargs = mock_run_agent.call_args[1]
@@ -180,7 +182,7 @@ def test_cli_legacy_auto_approve_with_new_flags(mock_run_agent, mock_app_class, 
     main(flags_argv)
     global_captured_input_field_text_setter(task_to_simulate)
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None)
+    handler_to_call()
 
     mock_run_agent.assert_called_once()
     cli_args_ns = mock_run_agent.call_args[1].get("cli_args")
@@ -210,7 +212,7 @@ def test_cli_disable_git_auto_commits_flag(mock_run_agent, mock_app_class, mock_
     main(flags_argv)
     global_captured_input_field_text_setter(task_to_simulate)
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None)
+    handler_to_call()
 
     mock_run_agent.assert_called_once()
     cli_args_ns = mock_run_agent.call_args[1].get("cli_args")
@@ -239,8 +241,8 @@ def test_cli_llm_timeout_argument_provided(mock_openrouter_constructor, mock_app
         global_captured_input_field_text_setter(task_to_simulate)
         handler_to_call = mock_text_area_class.return_value.accept_handler
         # This call will eventually try to instantiate OpenRouterLLM via run_agent_and_update_display -> run_agent
-        handler_to_call(None)
-
+        handler_to_call()
+    # Assert that OpenRouterLLM was instantiated with the correct timeout
     mock_openrouter_constructor.assert_called_once_with(model="some/model", api_key="test_key", timeout=60.5)
 
 
@@ -259,8 +261,8 @@ def test_cli_llm_timeout_argument_default(mock_openrouter_constructor, mock_app_
         main(flags_argv)
         global_captured_input_field_text_setter(task_to_simulate)
         handler_to_call = mock_text_area_class.return_value.accept_handler
-        handler_to_call(None)
-
+        handler_to_call()
+    # Assert that OpenRouterLLM was instantiated with the default timeout
     mock_openrouter_constructor.assert_called_once_with(model="some/model", api_key="test_key", timeout=120.0)
 
 
@@ -283,8 +285,9 @@ def test_cli_llm_timeout_with_mock_model(mock_openrouter_constructor, mock_mockl
     main(flags_argv)
     global_captured_input_field_text_setter(task_to_simulate)
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None)
-
+    handler_to_call()
+    # Assert that MockLLM was instantiated (meaning OpenRouterLLM was not)
+    # And that timeout was not passed to MockLLM if it doesn't accept it.
     mock_openrouter_constructor.assert_not_called()
     # Assert that MockLLM's from_file was called. We don't check __init__ for timeout.
     mock_mockllm_constructor.from_file.assert_called_once_with(str(resp_file))
@@ -324,7 +327,7 @@ def test_cli_basic(mock_app_class, mock_text_area_class, mock_ftc_class, tmp_pat
     global_captured_input_field_text_setter(task_to_simulate)
     handler_to_call = mock_text_area_class.return_value.accept_handler
     # This call will now synchronously execute run_agent_and_update_display -> run_agent
-    exit_code = handler_to_call(None)
+    exit_code = handler_to_call()
     # The handler itself returns True/None, not the exit_code from main.
     # The exit_code of the app is from app.run() which is mocked.
     # We are checking side effects (file written, stdout).
@@ -365,7 +368,7 @@ def test_command_exit(mock_app_class, mock_text_area_class, mock_ftc_class, tmp_
 
     global_captured_input_field_text_setter("/exit")
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None)
+    handler_to_call()
 
     # Assert that app.exit() was called
     global_mock_app_instance.exit.assert_called_once_with(result=0)
@@ -389,7 +392,7 @@ def test_command_stop(mock_stop_event, mock_app_class, mock_text_area_class, moc
 
     global_captured_input_field_text_setter("/stop")
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None)
+    handler_to_call()
 
     # Assert that stop_agent_event.set() was called
     mock_stop_event.set.assert_called_once()
@@ -413,7 +416,7 @@ def test_task_submission_calls_agent_updater(mock_stop_event, mock_run_agent_upd
 
     global_captured_input_field_text_setter(task_to_submit)
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None)
+    handler_to_call()
 
     # Assert stop_agent_event.clear() was called
     mock_stop_event.clear.assert_called_once()
@@ -440,16 +443,9 @@ def test_task_submission_calls_agent_updater(mock_stop_event, mock_run_agent_upd
 
 # Add constants that were in cli.py if they are used by tests and not imported.
 # For example, if APPROVAL_ARGS_FLAGS was not automatically available via `from src import cli`.
-# However, `cli.APPROVAL_ARGS_FLAGS` implies it is.
 # Make sure APPROVAL_ARGS_FLAGS and OTHER_FLAGS are defined in cli.py at the module level
 # or imported into tests/test_cli.py if they are needed here.
 # Based on `cli.APPROVAL_ARGS_FLAGS` they are expected to be found in the imported cli module.
-
-# To make APPROVAL_ARGS_FLAGS and OTHER_FLAGS available to tests if they are not top-level in cli.py:
-# If they are defined inside a function in cli.py, tests can't see them.
-# Assuming they are module-level constants in cli.py based on current usage.
-# If not, this test file would need to define them or import them differently.
-# The `from src import cli` should make `cli.APPROVAL_ARGS_FLAGS` work if it's a global in cli.py.
 # The current cli.py does not have these as module level globals.
 # They are defined in test_cli.py itself in the original code.
 # So, I need to add them back here.
@@ -468,34 +464,7 @@ cli.OTHER_FLAGS = ["disable_git_auto_commits"]
 # Ideally, these constants should be defined in one place (e.g. cli.py at module level).
 # If they were removed from cli.py, this is a workaround. If they are still there, this is redundant.
 # Looking at the original tests/test_cli.py, these lists were defined directly in the test module.
-# So, let's define them here directly for clarity and to avoid modifying the `cli` module object.
-
-APPROVAL_ARGS_FLAGS_TEST = [
-    "allow_read_files",
-    "allow_edit_files",
-    "allow_execute_safe_commands",
-    "allow_execute_all_commands",
-    "allow_use_browser",
-    "allow_use_mcp",
-]
-OTHER_FLAGS_TEST = ["disable_git_auto_commits"]
-
-# And update tests to use these local constants:
-# Example: in test_cli_approval_flags_defaults:
-# for arg_name in APPROVAL_ARGS_FLAGS_TEST:
-# ... and so on for other tests.
-# For now, I'll assume the `cli.APPROVAL_ARGS_FLAGS` will work as I've effectively added them to the module for the test session.
-# This is a bit of a hack. Cleaner would be to ensure they are properly defined in cli.py or imported.
-# Given the problem statement, I'll stick to modifying test_cli.py only.
-# The original test_cli.py had these lists defined locally, so that's the pattern I should follow if they are not in src/cli.py.
-# I will remove the `cli.APPROVAL_ARGS_FLAGS = ...` and define them locally.
-# This was a misunderstanding of where they were defined. Let's remove the hack.
-# The tests will fail if these are not found.
-# The original `tests/test_cli.py` had them defined locally.
 # So, I should ensure this overwritten version also defines them if they are not importable from `src.cli`.
-# Let's assume they *are* in `src.cli` as module level constants for now.
-# If `pytest` fails due to `AttributeError: module 'src.cli' has no attribute 'APPROVAL_ARGS_FLAGS'`,
-# then these lists need to be defined in this test file.
 # The prompt for this subtask did not include `src/cli.py`'s content, so I'm inferring.
 # The *original* `tests/test_cli.py` I was shown *did* define them locally. I should follow that.
 
@@ -662,7 +631,7 @@ def test_cli_mock_llm_cost_display_and_accumulation(
     # Simulate task input and submission
     global_captured_input_field_text_setter(task_to_simulate)
     handler_to_call = mock_text_area_class.return_value.accept_handler
-    handler_to_call(None) # This will trigger run_agent_and_update_display -> run_agent
+    handler_to_call() # This will trigger run_agent_and_update_display -> run_agent
 
     # --- Assertions ---
     # We need to find the calls to mock_update_display_text_safely that contain "STATS:"
