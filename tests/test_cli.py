@@ -6,10 +6,12 @@ from unittest.mock import patch, MagicMock, ANY
 
 import pytest # Import pytest for fixtures if needed, though not strictly for these examples
 
-# Make sure src.cli can be imported. If tests are run via `python -m pytest`, this should be fine.
+# Make sure src.cli can be इंपोर्टेंट. If tests are run via `python -m pytest`, this should be fine.
 # If not, sys.path manipulations might be needed, but try to avoid.
 from src import cli
 from src.cli import main # main is the entry point we are testing directly or indirectly
+import os
+from src.llm_protocol import LLMResponse, LLMUsageInfo
 
 # --- Helper for Test Setup ---
 
@@ -327,7 +329,7 @@ def test_cli_basic(mock_app_class, mock_text_area_class, mock_ftc_class, tmp_pat
     global_captured_input_field_text_setter(task_to_simulate)
     handler_to_call = mock_text_area_class.return_value.accept_handler
     # This call will now synchronously execute run_agent_and_update_display -> run_agent
-    exit_code = handler_to_call()
+    handler_to_call()
     # The handler itself returns True/None, not the exit_code from main.
     # The exit_code of the app is from app.run() which is mocked.
     # We are checking side effects (file written, stdout).
@@ -481,9 +483,9 @@ OTHER_FLAGS = ["disable_git_auto_commits"]
 
 # And ensure tests use these local definitions, not cli.APPROVAL_ARGS_FLAGS
 # The tests already use them without `cli.` prefix, so they should pick up these local ones.
-import os # Moved to top
-from unittest.mock import patch, MagicMock # Moved to top, F811 should be resolved
-from src.llm_protocol import LLMResponse, LLMUsageInfo # Moved to top
+# import os # Moved to top (already moved above)
+# from unittest.mock import patch # Moved to top (already moved above)
+# from src.llm_protocol import LLMResponse, LLMUsageInfo # Moved to top (already moved above)
 
 # This matches the original test file's structure.
 

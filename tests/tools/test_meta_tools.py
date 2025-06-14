@@ -103,7 +103,7 @@ def test_report_bug_tool_stub_only_required_params():
         "steps_to_reproduce": "1. Click button."
     }
     # Optional params will be missing from the params dict if not provided
-    expected_params_in_message = params.copy() # What the tool will receive
+    params.copy() # What the tool will receive
 
     result = tool.execute(params, agent_tools_instance=None)
     assert "ReportBugTool called" in result

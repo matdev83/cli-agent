@@ -56,6 +56,8 @@ class OpenRouterLLM(LLMWrapper):  # Indicate conformance to the protocol
     def __init__(self, model: str, api_key: str, timeout: Optional[float] = None):
         self.model = model
         self.timeout = timeout
+        # TODO: Consider adding a staticmethod for default_empty_llm_response if not in protocol
+        self._default_empty_response = LLMResponse(content=None, usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0))
         self._client = OpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
@@ -87,6 +89,10 @@ class OpenRouterLLM(LLMWrapper):  # Indicate conformance to the protocol
         base_delay = 1.0  # seconds
 
         for attempt in range(max_retries):
+            should_retry = False
+            current_delay = base_delay * (2**attempt)  # Default exponential backoff for this attempt
+            log_error_type = "Unknown error" # Placeholder for specific error type in logs
+
             try:
                 response = self._client.chat.completions.create(
                     **request_params, timeout=self.timeout
@@ -98,122 +104,102 @@ class OpenRouterLLM(LLMWrapper):  # Indicate conformance to the protocol
                 if response.choices and response.choices[0].message:
                     content = response.choices[0].message.content
 
-                if hasattr(response, "usage") and response.usage:
-                    parsed_cost = 0.0
-                    if hasattr(response.usage, "cost") and response.usage.cost is not None:
-                        try:
-                            if isinstance(response.usage.cost, (int, float, str)):
-                                parsed_cost = float(response.usage.cost)
-                            else:
-                                parsed_cost = 0.0
-                        except (TypeError, ValueError):
-                            parsed_cost = 0.0
-                    elif (
-                        hasattr(response.usage, "total_cost")
-                        and response.usage.total_cost is not None
-                    ):
-                        try:
-                            parsed_cost = float(response.usage.total_cost)
-                        except (TypeError, ValueError):
-                            parsed_cost = 0.0
-                    # As a fallback, check if the cost is directly on the response object (less common for OpenAI SDK)
-                    elif hasattr(response, "cost") and response.cost is not None:
-                        try:
-                            parsed_cost = float(response.cost)
-                        except (TypeError, ValueError):
-                            parsed_cost = 0.0
-
-                    def _to_int(val: Any) -> int:
-                        return int(val) if isinstance(val, (int, float)) else 0
-
-                    usage_info = LLMUsageInfo(
-                        prompt_tokens=_to_int(getattr(response.usage, "prompt_tokens", 0)),
-                        completion_tokens=_to_int(getattr(response.usage, "completion_tokens", 0)),
-                        cost=parsed_cost,
-                    )
-                else:
-                    # If no usage info in response, create a default one
-                    usage_info = LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0)
-
+                usage_info = self._parse_usage_info(response)
                 return LLMResponse(content=content, usage=usage_info)
 
             except RateLimitError as e:
-                logging.warning(f"Rate limit error on attempt {attempt + 1}/{max_retries}: {e}")
-                if attempt + 1 >= max_retries:
-                    logging.error("Max retries reached for rate limit error. Failing.")
-                    return LLMResponse(
-                        content=None,
-                        usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0),
-                    )
-
+                log_error_type = "Rate limit error"
+                logging.warning(f"{log_error_type} on attempt {attempt + 1}/{max_retries}: {e}")
+                should_retry = True
                 retry_after_header = e.response.headers.get("Retry-After")
-                delay = base_delay * (2**attempt)  # Default exponential backoff
                 if retry_after_header:
                     try:
-                        delay = float(retry_after_header)
+                        current_delay = float(retry_after_header)
                     except ValueError:
                         logging.warning(
                             f"Could not parse Retry-After header value: {retry_after_header}. Using exponential backoff."
                         )
-
-                delay = min(delay, 60)  # Cap delay at 60 seconds
-                logging.info(f"Waiting {delay:.2f} seconds before retrying.")
-                time.sleep(delay)
+                current_delay = min(current_delay, 60)  # Cap delay
             except APIStatusError as e:
-                logging.warning(
-                    f"API status error on attempt {attempt + 1}/{max_retries}: {e.status_code} - {e.message}"
-                )
-                # Client-side errors (4xx other than 429) are not retried
-                if e.status_code < 500 and e.status_code != 429:
-                    logging.error(
-                        f"Client-side API error {e.status_code} not typically retried. Failing."
-                    )
-                    return LLMResponse(
-                        content=None,
-                        usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0),
-                    )
-
-                if attempt + 1 >= max_retries:
-                    logging.error(
-                        f"Max retries reached for API status error {e.status_code}. Failing."
-                    )
-                    return LLMResponse(
-                        content=None,
-                        usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0),
-                    )
-
-                # For 5xx server errors and 429 rate limit, retry
-                delay = min(base_delay * (2**attempt), 60)
-                logging.info(
-                    f"Waiting {delay:.2f} seconds before retrying for status {e.status_code}."
-                )
-                time.sleep(delay)
+                log_error_type = f"API status error ({e.status_code})"
+                logging.warning(f"{log_error_type} on attempt {attempt + 1}/{max_retries}: {e.message}")
+                # Do not retry client-side errors (4xx) other than 429 (RateLimitError)
+                if 400 <= e.status_code < 500 and e.status_code != 429:
+                    logging.error(f"Client-side {log_error_type} not retried. Failing.")
+                    # Assuming LLMResponse.default_empty() is available or will be added
+                    return LLMResponse(content=None, usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0))
+                should_retry = True
+                current_delay = min(current_delay, 60)  # Cap delay
             except APIConnectionError as e:
-                logging.warning(f"API connection error on attempt {attempt + 1}/{max_retries}: {e}")
-                if attempt + 1 >= max_retries:
-                    logging.error("Max retries reached for API connection error. Failing.")
-                    return LLMResponse(
-                        content=None,
-                        usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0),
-                    )
-                delay = min(base_delay * (2**attempt), 60)
-                logging.info(f"Waiting {delay:.2f} seconds before retrying for connection error.")
-                time.sleep(delay)
-            except Exception as e:  # Catch-all for other unexpected errors during the API call
+                log_error_type = "API connection error"
+                logging.warning(f"{log_error_type} on attempt {attempt + 1}/{max_retries}: {e}")
+                should_retry = True
+                current_delay = min(current_delay, 60)  # Cap delay
+            except Exception as e:
+                log_error_type = "Unexpected error"
+                # Log with exc_info=True for unexpected errors to get traceback
                 logging.error(
-                    f"Unexpected error calling OpenRouter API on attempt {attempt + 1}/{max_retries}: {e}"
+                    f"{log_error_type} calling OpenRouter API on attempt {attempt + 1}/{max_retries}: {e}",
+                    exc_info=True
                 )
-                if attempt + 1 >= max_retries:
-                    logging.error("Max retries reached for unexpected error. Failing.")
-                    return LLMResponse(
-                        content=None,
-                        usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0),
-                    )
-                delay = min(base_delay * (2**attempt), 30)  # Shorter cap for general errors
-                logging.info(f"Waiting {delay:.2f} seconds before retrying for unexpected error.")
-                time.sleep(delay)
+                should_retry = True # Decide if all unexpected errors are retryable
+                current_delay = min(current_delay, 30)  # Shorter cap for general errors
 
-        logging.error("All retries failed after multiple attempts.")
-        return LLMResponse(
-            content=None, usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0)
+            if should_retry and attempt + 1 < max_retries:
+                logging.info(f"Waiting {current_delay:.2f} seconds before retrying for {log_error_type}.")
+                time.sleep(current_delay)
+            elif should_retry: # Last attempt failed
+                logging.error(f"Max retries reached for {log_error_type}. Failing.")
+                # Assuming LLMResponse.default_empty() is available or will be added
+                return LLMResponse(content=None, usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0))
+            # If should_retry is False, the error was non-retryable and already handled.
+            # Loop will exit or specific error block returned. This path implies non-retryable error handled inside except.
+
+        # Fallback if loop completes (e.g. if should_retry was false on last attempt in a way not returning directly)
+        # This typically indicates all retries failed or a non-retryable error occurred.
+        logging.error("All retries failed or a non-retryable error occurred after multiple attempts.")
+        return self._default_empty_response
+
+    @staticmethod
+    def _parse_usage_info(response_obj: Any) -> LLMUsageInfo:
+        """Parses usage information from an OpenRouter API response object."""
+        # Ensure response_obj and response_obj.usage are not None
+        if not hasattr(response_obj, "usage") or not response_obj.usage:
+            return LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0)
+
+        usage_data = response_obj.usage
+        parsed_cost = 0.0
+
+        # Potential sources of cost information, in order of preference
+        cost_sources_values = [
+            getattr(usage_data, "cost", None),
+            getattr(usage_data, "total_cost", None),
+        ]
+        # Fallback: check cost directly on the response object itself if not found in usage_data
+        # This is less standard for OpenAI SDK but included for robustness from original logic.
+        if not any(cs is not None for cs in cost_sources_values): # only if not found in usage_data
+             cost_sources_values.append(getattr(response_obj, "cost", None))
+
+
+        for cost_val in cost_sources_values:
+            if cost_val is not None:
+                try:
+                    parsed_cost = float(cost_val)
+                    if parsed_cost >= 0: # Found a valid, non-negative cost
+                        break
+                except (TypeError, ValueError):
+                    continue  # Try next source if current one is not a valid float
+
+        def _to_int_internal(val: Any) -> int:
+            if val is None:
+                return 0
+            try:
+                return int(val)
+            except (TypeError, ValueError):
+                return 0
+
+        return LLMUsageInfo(
+            prompt_tokens=_to_int_internal(getattr(usage_data, "prompt_tokens", 0)),
+            completion_tokens=_to_int_internal(getattr(usage_data, "completion_tokens", 0)),
+            cost=parsed_cost,
         )

@@ -50,6 +50,23 @@ def _resolve_path(path_str: str, agent_tools_instance: Any = None) -> Path:
     return (base_dir / p).resolve()
 
 
+# --- Path Validation Helpers ---
+def _validate_path_is_existing_file(path: Path) -> str | None:
+    """Checks if the path exists and is a file. Returns error message or None."""
+    if not path.exists():
+        return f"Error: File not found at {str(path)}"
+    if not path.is_file():
+        return f"Error: Path {str(path)} is a directory, not a file."
+    return None
+
+def _validate_path_is_existing_directory(path: Path) -> str | None:
+    """Checks if the path exists and is a directory. Returns error message or None."""
+    if not path.exists():
+        return f"Error: Directory not found at {str(path)}"
+    if not path.is_dir():
+        return f"Error: Path {str(path)} is not a directory."
+    return None
+
 # --- Tool Implementations ---
 
 
@@ -74,10 +91,9 @@ class ReadFileTool(Tool):
         try:
             abs_file_path = _resolve_path(file_path_str, agent_tools_instance)
 
-            if not abs_file_path.exists():
-                return f"Error: File not found at {str(abs_file_path)}"
-            if not abs_file_path.is_file():
-                return f"Error: Path {str(abs_file_path)} is a directory, not a file."
+            validation_error = _validate_path_is_existing_file(abs_file_path)
+            if validation_error:
+                return validation_error
 
             with abs_file_path.open("r", encoding="utf-8") as f:
                 content = f.read()
@@ -153,10 +169,9 @@ class ReplaceInFileTool(Tool):
         try:
             abs_file_path = _resolve_path(file_path_str, agent_tools_instance)
 
-            if not abs_file_path.exists():
-                return f"Error: File not found at {str(abs_file_path)}"
-            if not abs_file_path.is_file():
-                return f"Error: Path {str(abs_file_path)} is a directory, not a file."
+            validation_error = _validate_path_is_existing_file(abs_file_path)
+            if validation_error:
+                return validation_error
 
             original_text = abs_file_path.read_text(encoding="utf-8")
 
@@ -166,38 +181,45 @@ class ReplaceInFileTool(Tool):
             blocks = _parse_diff_blocks(diff_str)  # Helper function handles format errors
 
             modified_text = original_text
+            # matching_strictness: 100 for exact, otherwise case-insensitive literal search.
             matching_strictness = getattr(agent_tools_instance, "matching_strictness", 100)
+            exact_match = (matching_strictness == 100)
 
             for i, (search, replace) in enumerate(blocks):
-                if matching_strictness == 100:
-                    if search not in modified_text:
-                        max_preview = 30
-                        search_preview = search[:max_preview].replace("\n", "\\n") + (
-                            "..." if len(search) > max_preview else ""
-                        )
-                        return (
-                            f"Error: Search block {i + 1} (starting with '{search_preview}') "
-                            f"not found in the current state of the file {str(abs_file_path)} (exact match). "
-                            "Ensure blocks are ordered correctly and match the file content."
-                        )
-                    modified_text = modified_text.replace(search, replace, 1)
-                else:
-                    # Case-insensitive matching
+                found = False
+                if exact_match:
+                    if search in modified_text:
+                        modified_text = modified_text.replace(search, replace, 1)
+                        found = True
+                else:  # Case-insensitive literal search via regex
                     try:
-                        regex = re.compile(search, re.IGNORECASE)
-                        if not regex.search(modified_text):
-                            max_preview = 30
-                            search_preview = search[:max_preview].replace("\n", "\\n") + (
-                                "..." if len(search) > max_preview else ""
-                            )
-                            return (
-                                f"Error: Search block {i + 1} (starting with '{search_preview}') "
-                                f"not found in the current state of the file {str(abs_file_path)} (case-insensitive match). "
-                                "Ensure blocks are ordered correctly and match the file content."
-                            )
-                        modified_text = regex.sub(replace, modified_text, count=1)
+                        # Escape 'search' string to treat it as a literal, then compile with IGNORECASE
+                        regex = re.compile(re.escape(search), re.IGNORECASE)
+                        match_obj = regex.search(modified_text)
+                        if match_obj:
+                            # Perform replacement using the compiled regex
+                            modified_text = regex.sub(replace, modified_text, count=1)
+                            found = True
                     except re.error as e:
-                        return f"Error compiling regex for search block {i + 1}: {e}"
+                        # This error is for issues compiling the escaped search string,
+                        # which should be rare but possible if 'search' is extremely complex
+                        # or re.escape has unforeseen interactions.
+                        return f"Error compiling regex for search block {i + 1} (searching for literal '{search[:30]}...'): {e}"
+
+                if not found:
+                    max_preview = 30
+                    search_preview = search[:max_preview].replace("\n", "\\n") + (
+                        "..." if len(search) > max_preview else ""
+                    )
+                    match_type_msg = "exact" if exact_match else "case-insensitive literal"
+                    # It's important to return here, as subsequent blocks might depend on this one.
+                    return (
+                        f"Error: Search block {i + 1} (starting with '{search_preview}') "
+                        f"not found in the current state of the file {str(abs_file_path)} ({match_type_msg} match). "
+                        "Ensure blocks are ordered correctly and match the file content. "
+                        "If the content was recently modified by another tool or a previous block, "
+                        "the search text might need adjustment."
+                    )
 
             abs_file_path.write_text(modified_text, encoding="utf-8")
             return f"File {str(abs_file_path)} modified successfully with {len(blocks)} block(s)."
@@ -242,10 +264,9 @@ class ListFilesTool(Tool):
         try:
             abs_dir_path = _resolve_path(dir_path_str, agent_tools_instance)
 
-            if not abs_dir_path.exists():
-                return f"Error: Directory not found at {str(abs_dir_path)}"
-            if not abs_dir_path.is_dir():
-                return f"Error: Path {str(abs_dir_path)} is not a directory."
+            validation_error = _validate_path_is_existing_directory(abs_dir_path)
+            if validation_error:
+                return validation_error
 
             results: List[str] = []
             if not recursive:
@@ -259,6 +280,8 @@ class ListFilesTool(Tool):
                         rel_path = (current_root / name).relative_to(abs_dir_path)
                         results.append(rel_path.as_posix())
                     # Add directories relative to abs_dir_path, ensuring they end with /
+                    # os.walk provides directory names at the current level.
+                    # These are made relative to the initial abs_dir_path for consistent output.
                     for name in dirs:
                         rel_path = (current_root / name).relative_to(abs_dir_path)
                         results.append(rel_path.as_posix() + "/")
@@ -302,10 +325,9 @@ class SearchFilesTool(Tool):
         try:
             abs_dir_path = _resolve_path(path_str, agent_tools_instance)
 
-            if not abs_dir_path.exists():
-                return f"Error: Directory not found at {str(abs_dir_path)}"
-            if not abs_dir_path.is_dir():
-                return f"Error: Path {str(abs_dir_path)} is not a directory."
+            validation_error = _validate_path_is_existing_directory(abs_dir_path)
+            if validation_error:
+                return validation_error
 
             try:
                 pattern = re.compile(regex_str)
