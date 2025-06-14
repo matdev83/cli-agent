@@ -107,12 +107,11 @@ def test_get_commit_history_non_git_directory(tmp_path: Path):
     history = get_commit_history(str(non_git_dir))
     assert history == []
 
-def test_get_commit_history_subprocess_error(git_repo: Path, mocker):
-    mocker.patch("subprocess.check_output", side_effect=subprocess.CalledProcessError(1, "cmd", stderr="git error"))
+def test_get_commit_history_subprocess_error(git_repo: Path, monkeypatch):
+    monkeypatch.setattr(subprocess, "check_output", lambda *a, **k: (_ for _ in ()).throw(subprocess.CalledProcessError(1, "cmd", stderr="git error")))
     history = get_commit_history(str(git_repo))
     assert history == []
-
-    mocker.patch("subprocess.check_output", side_effect=Exception("Some other error"))
+    monkeypatch.setattr(subprocess, "check_output", lambda *a, **k: (_ for _ in ()).throw(Exception("Some other error")))
     history = get_commit_history(str(git_repo))
     assert history == []
 
@@ -278,21 +277,21 @@ def test_get_initial_commit_non_git_directory(tmp_path: Path):
     non_git_dir.mkdir()
     assert get_initial_commit(str(non_git_dir)) is None
 
-def test_get_initial_commit_subprocess_error(git_repo, mocker):
+def test_get_initial_commit_subprocess_error(git_repo, monkeypatch):
     # Test CalledProcessError
-    mocker.patch("subprocess.check_output", side_effect=subprocess.CalledProcessError(1, "cmd", stderr="git error"))
+    monkeypatch.setattr(subprocess, "check_output", lambda *a, **k: (_ for _ in ()).throw(subprocess.CalledProcessError(1, "cmd", stderr="git error")))
     assert get_initial_commit(str(git_repo)) is None
 
     # Test general Exception
-    mocker.patch("subprocess.check_output", side_effect=Exception("Some other error"))
+    monkeypatch.setattr(subprocess, "check_output", lambda *a, **k: (_ for _ in ()).throw(Exception("Some other error")))
     assert get_initial_commit(str(git_repo)) is None
 
     # Test specific error message "does not have any commits yet"
-    mocker.patch("subprocess.check_output", side_effect=subprocess.CalledProcessError(1, "cmd", stderr="fatal: your current branch 'master' does not have any commits yet"))
+    monkeypatch.setattr(subprocess, "check_output", lambda *a, **k: (_ for _ in ()).throw(subprocess.CalledProcessError(1, "cmd", stderr="fatal: your current branch 'master' does not have any commits yet")))
     assert get_initial_commit(str(git_repo)) is None
 
     # Test specific error message "bad default revision 'HEAD'"
-    mocker.patch("subprocess.check_output", side_effect=subprocess.CalledProcessError(128, "cmd", stderr="fatal: bad default revision 'HEAD'")) # 128 is common for this
+    monkeypatch.setattr(subprocess, "check_output", lambda *a, **k: (_ for _ in ()).throw(subprocess.CalledProcessError(128, "cmd", stderr="fatal: bad default revision 'HEAD'")))
     assert get_initial_commit(str(git_repo)) is None
 
 # Example of how to run pytest from python, can be useful for debugging

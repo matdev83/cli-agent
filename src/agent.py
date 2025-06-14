@@ -349,7 +349,7 @@ class DeveloperAgent:
                 self.memory.add_message("system", ADMONISHMENT_MESSAGE)
                 self.consecutive_tool_errors = 0 # Reset after admonishing
 
-            llm_response_obj: Optional[LLMResponse] = self.send_message(self.history)
+            llm_response_obj = self.send_message(self.history)
 
             if llm_response_obj is None:
                 # This is an LLM failure, not a tool error from the LLM's perspective.
@@ -361,15 +361,15 @@ class DeveloperAgent:
                 #    self.history.append({"role": "assistant", "content": "Error: LLM did not provide a response object."})
                 return no_reply_message
 
-            # Accumulate cost if usage information is available
-            if llm_response_obj.usage:
-                self.current_session_cost += llm_response_obj.usage.cost
-
-            # Call the callback HERE, after cost update and before content processing
-            if self.on_llm_response_callback and llm_response_obj: # Ensure llm_response_obj is not None
-                self.on_llm_response_callback(llm_response_obj, self.model_name, self.current_session_cost)
-
-            assistant_response_content: Optional[str] = llm_response_obj.content
+            assistant_response_content: Optional[str]
+            if isinstance(llm_response_obj, LLMResponse):
+                if llm_response_obj.usage:
+                    self.current_session_cost += llm_response_obj.usage.cost
+                if self.on_llm_response_callback:
+                    self.on_llm_response_callback(llm_response_obj, self.model_name, self.current_session_cost)
+                assistant_response_content = llm_response_obj.content
+            else:  # assume plain string for backward compatibility
+                assistant_response_content = llm_response_obj
 
             if assistant_response_content is None:
                 # LLM responded, but with no actual text content.
@@ -384,7 +384,7 @@ class DeveloperAgent:
             self.memory.add_message("assistant", assistant_response_content)
 
             # Parse the assistant's message content for tool calls
-            parsed_responses = parse_assistant_message(assistant_response_content, self.tools_map, self.cli_args)
+            parsed_responses = parse_assistant_message(assistant_response_content)
 
             text_content_parts = []
             malformed_tool_error_this_turn = False
@@ -400,9 +400,9 @@ class DeveloperAgent:
 
             if not tool_uses:
                 # Pure text response from LLM
-                if not malformed_tool_error_this_turn: # If it was a pure text response AND not a malformed tool error
+                if not malformed_tool_error_this_turn and final_text_response:
                     self.consecutive_tool_errors = 0
-                return final_text_response if final_text_response else "No further action taken."
+                return final_text_response
 
             # If there are tool uses, process the first one
             tool_to_run = tool_uses[0]

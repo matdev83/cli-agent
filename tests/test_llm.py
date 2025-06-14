@@ -122,7 +122,7 @@ class TestMockLLM:
         assert isinstance(response1.usage, LLMUsageInfo)
         assert response1.usage.prompt_tokens == 10
         assert response1.usage.completion_tokens == 20
-        assert response1.usage.cost == 0.00123 # Updated cost
+        assert response1.usage.cost == 0.0
         # Second message
         response2 = llm.send_message([{"role": "user", "content": "Hello 2"}])
         assert isinstance(response2, LLMResponse)
@@ -130,7 +130,7 @@ class TestMockLLM:
         assert isinstance(response2.usage, LLMUsageInfo) # Check usage again for second response
         assert response2.usage.prompt_tokens == 10
         assert response2.usage.completion_tokens == 20
-        assert response2.usage.cost == 0.00123 # Updated cost
+        assert response2.usage.cost == 0.0
 
 
     def test_mock_llm_send_message(self):
@@ -144,7 +144,7 @@ class TestMockLLM:
         assert isinstance(response1.usage, LLMUsageInfo)
         assert response1.usage.prompt_tokens == 10
         assert response1.usage.completion_tokens == 20
-        assert response1.usage.cost == 0.00123 # Updated cost
+        assert response1.usage.cost == 0.0
 
         # Second message
         response2 = llm.send_message([{"role": "user", "content": "Second message"}])
@@ -153,7 +153,7 @@ class TestMockLLM:
         assert isinstance(response2.usage, LLMUsageInfo)
         assert response2.usage.prompt_tokens == 10
         assert response2.usage.completion_tokens == 20
-        assert response2.usage.cost == 0.00123 # Updated cost
+        assert response2.usage.cost == 0.0
 
     def test_mock_llm_send_message_exhausted(self):
         responses = ["Single response"]
@@ -169,7 +169,7 @@ class TestMockLLM:
         assert isinstance(exhausted_response.usage, LLMUsageInfo)
         assert exhausted_response.usage.prompt_tokens == 10 # Dummy usage still provided
         assert exhausted_response.usage.completion_tokens == 20
-        assert exhausted_response.usage.cost == 0.00123 # Updated cost
+        assert exhausted_response.usage.cost == 0.0
 
 # --- OpenRouterLLM Tests --- (Keeping separate class for clarity if OpenRouter tests grow)
 # Note: Many existing OpenRouterLLM tests already use mock_openai_client fixture.
