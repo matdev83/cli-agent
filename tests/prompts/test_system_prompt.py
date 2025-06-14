@@ -1,7 +1,6 @@
-import pytest
 import platform
 import os
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 from src.prompts.system import get_system_prompt, generate_tools_documentation
 from src.tools.tool_protocol import Tool

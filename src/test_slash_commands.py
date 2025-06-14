@@ -1,10 +1,10 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 import argparse # For creating a dummy cli_args namespace
 
 # Assuming slash_commands.py and cli.py are in the same src directory
 # and cli.py's AgentCliContext is the one used.
-from slash_commands import RefreshCommand, SlashCommandRegistry, HelpCommand, ModelCommand, SetTimeoutCommand, PlanModeCommand, ActModeCommand, UndoCommand, UndoAllCommand
+from slash_commands import RefreshCommand, SlashCommandRegistry, HelpCommand, ModelCommand
 from cli import AgentCliContext # Using AgentCliContext from cli.py
 from file_cache import FileCache # For type hinting and mocking
 

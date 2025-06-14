@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 # Adjust import path if necessary, assuming src is a package or in PYTHONPATH
-from file_cache import FileCache, DEFAULT_IGNORE_DIRS, DEFAULT_IGNORE_FILES
+from file_cache import FileCache, DEFAULT_IGNORE_DIRS
 
 # Suppress logging output during tests unless specifically testing for it
 logging.basicConfig(level=logging.CRITICAL)

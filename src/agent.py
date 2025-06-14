@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import os
-import json
 import traceback
 import logging # Added import
-from typing import Callable, Dict, List, Any, Optional
+from typing import Callable, Dict, List, Optional
 import argparse # For type hinting cli_args
 from pathlib import Path
 import subprocess # Added for initial commit hash
@@ -78,13 +77,20 @@ class DeveloperAgent:
         self.model_name: str = self.cli_args.model if hasattr(self.cli_args, 'model') and self.cli_args.model else "unknown_model"
         self.on_llm_response_callback = on_llm_response_callback # Store callback
         # Ensure default values for flags if cli_args is minimal or None
-        if not hasattr(self.cli_args, 'auto_approve'): self.cli_args.auto_approve = False
-        if not hasattr(self.cli_args, 'allow_read_files'): self.cli_args.allow_read_files = False
-        if not hasattr(self.cli_args, 'allow_edit_files'): self.cli_args.allow_edit_files = False
-        if not hasattr(self.cli_args, 'allow_execute_safe_commands'): self.cli_args.allow_execute_safe_commands = False
-        if not hasattr(self.cli_args, 'allow_execute_all_commands'): self.cli_args.allow_execute_all_commands = False
-        if not hasattr(self.cli_args, 'allow_use_browser'): self.cli_args.allow_use_browser = False
-        if not hasattr(self.cli_args, 'allow_use_mcp'): self.cli_args.allow_use_mcp = False
+        if not hasattr(self.cli_args, 'auto_approve'):
+            self.cli_args.auto_approve = False
+        if not hasattr(self.cli_args, 'allow_read_files'):
+            self.cli_args.allow_read_files = False
+        if not hasattr(self.cli_args, 'allow_edit_files'):
+            self.cli_args.allow_edit_files = False
+        if not hasattr(self.cli_args, 'allow_execute_safe_commands'):
+            self.cli_args.allow_execute_safe_commands = False
+        if not hasattr(self.cli_args, 'allow_execute_all_commands'):
+            self.cli_args.allow_execute_all_commands = False
+        if not hasattr(self.cli_args, 'allow_use_browser'):
+            self.cli_args.allow_use_browser = False
+        if not hasattr(self.cli_args, 'allow_use_mcp'):
+            self.cli_args.allow_use_mcp = False
         if not hasattr(self.cli_args, 'disable_git_auto_commits'):
             self.cli_args.disable_git_auto_commits = disable_git_auto_commits
 
@@ -222,10 +228,14 @@ class DeveloperAgent:
         elif tool_name in ["read_file", "list_files", "search_files", "list_code_definition_names"]:
             path_param = tool_params.get("path", "Unknown path")
             prompt_verb = "reading/listing/searching"
-            if tool_name == "read_file": prompt_verb = "reading file"
-            elif tool_name == "list_files": prompt_verb = "listing directory"
-            elif tool_name == "search_files": prompt_verb = "searching files in"
-            elif tool_name == "list_code_definition_names": prompt_verb = "listing code definitions in"
+            if tool_name == "read_file":
+                prompt_verb = "reading file"
+            elif tool_name == "list_files":
+                prompt_verb = "listing directory"
+            elif tool_name == "search_files":
+                prompt_verb = "searching files in"
+            elif tool_name == "list_code_definition_names":
+                prompt_verb = "listing code definitions in"
 
             if self.cli_args.allow_read_files or self.cli_args.auto_approve:
                 proceed_with_tool = True
@@ -605,7 +615,7 @@ if __name__ == '__main__':
         assert agent_exhaustion_test.history[-2]["role"] == "assistant"
         assert agent_exhaustion_test.history[-2]["content"] == "" # Assistant's empty response
 
-    except Exception as e:
+    except Exception:
         assert agent_exhaustion_test.history[-1]["role"] == "system"
 
     except Exception as e:

@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 from typing import Dict, cast
@@ -34,7 +33,7 @@ for i, item in enumerate(history):
     print(msg['content'])
     print("-" * 30)
 
-print(f"\n--- Final Result ---")
+print("\n--- Final Result ---")
 print(result)
 
 # Clean up temporary directory

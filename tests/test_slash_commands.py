@@ -51,7 +51,7 @@ def mock_display_update_func(message: str):
     pass
 
 # Helper to create a default AgentCliContext
-def create_default_context(initial_args: Optional[dict] = None) -> AgentCliContext:
+def create_default_context(initial_args: Optional[dict] = None, file_cache_instance: Optional[Any] = None) -> AgentCliContext:
     parser = argparse.ArgumentParser()
     # Add arguments that our commands might interact with
     parser.add_argument("--model", default="mock_default_model")
@@ -66,7 +66,10 @@ def create_default_context(initial_args: Optional[dict] = None) -> AgentCliConte
             default_initial_args.append(str(v))
 
     cli_ns = parser.parse_args(default_initial_args if default_initial_args else [])
-    return AgentCliContext(cli_args_namespace=cli_ns, display_update_func=mock_display_update_func)
+    # If no file_cache_instance is provided, default to None or a MagicMock
+    # For simplicity in this diff, let's assume None is acceptable for most of these tests.
+    # Tests requiring a real FileCache might need to pass it explicitly.
+    return AgentCliContext(cli_args_namespace=cli_ns, display_update_func=mock_display_update_func, file_cache_instance=file_cache_instance)
 
 class TestSlashCommandRegistry:
     def test_register_command(self):
@@ -117,7 +120,7 @@ class TestSlashCommandRegistry:
 
     def test_execute_unknown_command(self):
         registry = SlashCommandRegistry()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache by default
         result = registry.execute_command("unknown", [], context)
         assert "Error: Unknown command '/unknown'" in result
 
@@ -135,14 +138,14 @@ class TestSlashCommandRegistry:
 class TestModelCommand:
     def test_model_command_execution(self):
         command = ModelCommand()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = command.execute(["new_model_name"], context)
         assert result == "Model set to: new_model_name"
         assert context.cli_args.model == "new_model_name"
 
     def test_model_command_no_args(self):
         command = ModelCommand()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = command.execute([], context)
         assert "Error: Missing model name" in result
         assert context.cli_args.model == "mock_default_model" # Should not change
@@ -150,7 +153,7 @@ class TestModelCommand:
     def test_model_command_mock_model_no_responses_file_warning(self):
         command = ModelCommand()
         # Simulate context where responses_file is not set initially
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         context.cli_args.responses_file = None # Explicitly set to None
 
         result = command.execute(["mock"], context)
@@ -165,27 +168,27 @@ class TestModelCommand:
 class TestSetTimeoutCommand:
     def test_set_timeout_command_execution(self):
         command = SetTimeoutCommand()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = command.execute(["300.5"], context)
         assert result == "LLM timeout set to: 300.5 seconds."
         assert context.cli_args.llm_timeout == 300.5
 
     def test_set_timeout_command_no_args(self):
         command = SetTimeoutCommand()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = command.execute([], context)
         assert "Error: Missing timeout value" in result
         assert context.cli_args.llm_timeout == 120.0 # Default, should not change
 
     def test_set_timeout_command_invalid_value(self):
         command = SetTimeoutCommand()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = command.execute(["abc"], context)
         assert "Error: Invalid timeout value. Must be a number." in result
 
     def test_set_timeout_command_negative_value(self):
         command = SetTimeoutCommand()
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = command.execute(["-50"], context)
         assert "Error: Timeout must be a positive number." in result
 
@@ -198,7 +201,7 @@ class TestSetTimeoutCommand:
 class TestPlanModeCommand:
     def test_plan_mode_command_execution(self):
         command = PlanModeCommand()
-        context = create_default_context() # Basic context
+        context = create_default_context() # Basic context, pass None for file_cache
         # Mock the set_mode method for this test
         def mock_set_mode(mode_name):
             context.mode = mode_name
@@ -217,7 +220,7 @@ class TestPlanModeCommand:
 class TestActModeCommand:
     def test_act_mode_command_execution(self):
         command = ActModeCommand()
-        context = create_default_context() # Basic context
+        context = create_default_context() # Basic context, pass None for file_cache
         def mock_set_mode(mode_name):
             context.mode = mode_name
         context.set_mode = mock_set_mode
@@ -260,7 +263,7 @@ class TestHelpCommand:
         help_cmd = HelpCommand(registry)
         registry.register(help_cmd)
 
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         # result = help_cmd.execute([], context) # Direct execution
         result = registry.execute_command("help", [], context) # Execution via registry
 
@@ -305,7 +308,7 @@ class TestHelpCommand:
         registry.register(cmd_a) # Register a second
         registry.register(help_cmd) # Register help
 
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = registry.execute_command("help", [], context)
 
         assert result is not None
@@ -345,7 +348,7 @@ class TestHelpCommand:
         registry.register(cmd_c_no_ex)
         registry.register(help_cmd)
 
-        context = create_default_context()
+        context = create_default_context() # Pass None for file_cache
         result = registry.execute_command("help", [], context)
 
         assert result is not None

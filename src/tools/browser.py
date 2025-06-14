@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path # Not strictly needed for this initial impl, but good practice
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 try:  # Optional Playwright import so tests don't require heavy dependency
     from playwright.sync_api import sync_playwright, Page, BrowserContext, Playwright
@@ -109,13 +108,17 @@ class BrowserActionTool(Tool):
                 print("[DEBUG] Attempting to start Playwright...")
                 p_sync = sync_playwright().start()
                 print(f"[DEBUG] p_sync type: {type(p_sync)}")
-                if hasattr(p_sync, '_mock_name'): print(f"[DEBUG] p_sync mock name: {p_sync._mock_name}")
-                elif hasattr(p_sync, 'name'): print(f"[DEBUG] p_sync name: {p_sync.name}")
+                if hasattr(p_sync, '_mock_name'):
+                    print(f"[DEBUG] p_sync mock name: {p_sync._mock_name}")
+                elif hasattr(p_sync, 'name'):
+                    print(f"[DEBUG] p_sync name: {p_sync.name}")
 
 
                 print(f"[DEBUG] p_sync.chromium type: {type(p_sync.chromium)}")
-                if hasattr(p_sync.chromium, '_mock_name'): print(f"[DEBUG] p_sync.chromium mock name: {p_sync.chromium._mock_name}")
-                elif hasattr(p_sync.chromium, 'name'): print(f"[DEBUG] p_sync.chromium name: {p_sync.chromium.name}")
+                if hasattr(p_sync.chromium, '_mock_name'):
+                    print(f"[DEBUG] p_sync.chromium mock name: {p_sync.chromium._mock_name}")
+                elif hasattr(p_sync.chromium, 'name'):
+                    print(f"[DEBUG] p_sync.chromium name: {p_sync.chromium.name}")
 
                 print(f"[DEBUG] Is p_sync.chromium.launch callable? {callable(p_sync.chromium.launch)}")
 

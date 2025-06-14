@@ -91,7 +91,7 @@ class ModelCommand(SlashCommand):
                 # without specifying a new one, what should happen?
                 # For now, we'll assume it's an issue if not set.
                 # A more robust solution might involve prompting or having a default.
-                return f"Warning: Model set to 'mock', but --responses-file is not currently set. The agent may fail if a task is run."
+                return "Warning: Model set to 'mock', but --responses-file is not currently set. The agent may fail if a task is run."
             elif model_name != "mock" and agent_context.cli_args.model == "mock":
                 # If switching away from mock, perhaps nullify responses_file if it was only for mock?
                 # This depends on desired behavior. For now, just update model.
@@ -341,7 +341,7 @@ class HelpCommand(SlashCommand):
             help_lines.append(f"  /{command.name}\n")
             help_lines.append(f"    Description: {command.description}\n")
             if command.usage_examples:
-                help_lines.append(f"    Examples:\n")
+                help_lines.append("    Examples:\n")
                 for example in command.usage_examples:
                     help_lines.append(f"      {example}\n")
         return "".join(help_lines)

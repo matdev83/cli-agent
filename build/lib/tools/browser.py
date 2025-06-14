@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path # Not strictly needed for this initial impl, but good practice
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 from playwright.sync_api import sync_playwright, Page, BrowserContext, Playwright
 

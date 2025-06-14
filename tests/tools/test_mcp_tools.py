@@ -1,4 +1,3 @@
-import pytest
 
 from src.tools.mcp import UseMCPTool, AccessMCPResourceTool # Corrected case
 

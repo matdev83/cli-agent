@@ -1,7 +1,7 @@
 import os
 import platform
 # import re # No longer needed for regex replacements
-from typing import Iterable, List, Dict, Any
+from typing import Iterable, Dict, Any
 from src.tools.tool_protocol import Tool
 from jinja2 import Template # Import Jinja2 Template
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .tool_protocol import Tool
 
 class UseMCPTool(Tool): # Renamed to UseMCPTool

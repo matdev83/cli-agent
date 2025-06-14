@@ -1,8 +1,7 @@
 import pytest
-import time
-from unittest.mock import patch, MagicMock, ANY, call
+from unittest.mock import patch, MagicMock
 
-from openai import OpenAI, APITimeoutError, RateLimitError, APIStatusError, APIConnectionError
+from openai import APITimeoutError, RateLimitError, APIStatusError, APIConnectionError
 # Simplify mocking - avoiding direct openai.types imports for response objects
 # from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatCompletionChoice
 # from openai.types import CompletionUsage

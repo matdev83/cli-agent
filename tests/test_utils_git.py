@@ -1,8 +1,6 @@
 import pytest
 import subprocess
 from pathlib import Path
-import shutil
-import os # For setting dummy git user
 
 # Functions to test
 from src.utils import (
