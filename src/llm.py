@@ -32,7 +32,7 @@ class MockLLM(LLMWrapper): # Indicate conformance to the protocol
     ) -> Optional[LLMResponse]: # Return type changed
         # temperature and max_tokens are ignored in this mock implementation
 
-        dummy_usage = LLMUsageInfo(prompt_tokens=10, completion_tokens=20, cost=0.00123)
+        dummy_usage = LLMUsageInfo(prompt_tokens=10, completion_tokens=20, cost=0.0)
 
         if self._index >= len(self._responses):
             # Consistent with OpenRouterLLM's error return, provide a default structure
@@ -93,20 +93,33 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
 
                 if hasattr(response, 'usage') and response.usage:
                     parsed_cost = 0.0
-                    if hasattr(response.usage, 'cost'): # Check if 'cost' attribute exists
-                        if response.usage.cost is not None:
-                            parsed_cost = float(response.usage.cost)
-                    elif hasattr(response.usage, 'total_cost'): # Check for 'total_cost'
-                        if response.usage.total_cost is not None:
+                    if hasattr(response.usage, 'cost') and response.usage.cost is not None:
+                        try:
+                            if isinstance(response.usage.cost, (int, float, str)):
+                                parsed_cost = float(response.usage.cost)
+                            else:
+                                parsed_cost = 0.0
+                        except (TypeError, ValueError):
+                            parsed_cost = 0.0
+                    elif hasattr(response.usage, 'total_cost') and response.usage.total_cost is not None:
+                        try:
                             parsed_cost = float(response.usage.total_cost)
+                        except (TypeError, ValueError):
+                            parsed_cost = 0.0
                     # As a fallback, check if the cost is directly on the response object (less common for OpenAI SDK)
                     elif hasattr(response, 'cost') and response.cost is not None:
-                        parsed_cost = float(response.cost)
+                        try:
+                            parsed_cost = float(response.cost)
+                        except (TypeError, ValueError):
+                            parsed_cost = 0.0
+
+                    def _to_int(val: Any) -> int:
+                        return int(val) if isinstance(val, (int, float)) else 0
 
                     usage_info = LLMUsageInfo(
-                        prompt_tokens=response.usage.prompt_tokens or 0,
-                        completion_tokens=response.usage.completion_tokens or 0,
-                        cost=parsed_cost  # Use the parsed cost
+                        prompt_tokens=_to_int(getattr(response.usage, 'prompt_tokens', 0)),
+                        completion_tokens=_to_int(getattr(response.usage, 'completion_tokens', 0)),
+                        cost=parsed_cost
                     )
                 else:
                     # If no usage info in response, create a default one
@@ -133,8 +146,8 @@ class OpenRouterLLM(LLMWrapper): # Indicate conformance to the protocol
                 time.sleep(delay)
             except APIStatusError as e:
                 logging.warning(f"API status error on attempt {attempt + 1}/{max_retries}: {e.status_code} - {e.message}")
-                # Client-side errors (4xx other than 429) that are not retried
-                if e.status_code < 500 and e.status_code != 429 and e.status_code not in [401, 403, 400]: # More specific client errors might be retriable depending on policy
+                # Client-side errors (4xx other than 429) are not retried
+                if e.status_code < 500 and e.status_code != 429:
                     logging.error(f"Client-side API error {e.status_code} not typically retried. Failing.")
                     return LLMResponse(content=None, usage=LLMUsageInfo(prompt_tokens=0, completion_tokens=0, cost=0.0))
 

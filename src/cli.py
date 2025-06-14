@@ -183,7 +183,7 @@ def run_agent_and_update_display(
 
 def run_agent(
     task: str,
-    # responses_file: str | None = None, # This will be handled by cli_args.model == "mock"
+    responses_file: str | None = None,
     *,
     # auto_approve: bool = False, # From cli_args
     # ... other direct approval flags removed as they are in cli_args
@@ -206,8 +206,31 @@ def run_agent(
     # Extract necessary settings from cli_args
     current_model_name = cli_args.model
     current_llm_timeout = cli_args.llm_timeout
-    current_cwd = cli_args.cwd # Get cwd from cli_args
-    # responses_file is also in cli_args.responses_file
+    current_cwd = cli_args.cwd
+    if on_llm_response_callback is None:
+        def on_llm_response_callback(resp: LLMResponse, model_name: str, session_cost: float) -> None:
+            if resp.usage:
+                prompt_tokens_str = str(resp.usage.prompt_tokens) if resp.usage.prompt_tokens is not None else "N/A"
+                completion_tokens_str = str(resp.usage.completion_tokens) if resp.usage.completion_tokens is not None else "N/A"
+                cost_str = f"${resp.usage.cost:.6f}" if resp.usage.cost is not None else "N/A"
+                stats_str = (
+                    f"STATS: Model: {model_name}, "
+                    f"Prompt: {prompt_tokens_str}, "
+                    f"Completion: {completion_tokens_str}, "
+                    f"Cost: {cost_str}, "
+                    f"Session Cost: ${session_cost:.6f}"
+                )
+            else:
+                stats_str = (
+                    f"STATS: Model: {model_name}, "
+                    f"Prompt: N/A, Completion: N/A, Cost: N/A, Session Cost: ${session_cost:.6f}"
+                )
+            try:
+                update_display_text_safely(stats_str, None, None)
+            except Exception:
+                print(stats_str)
+    if responses_file is not None:
+        cli_args.responses_file = responses_file
 
     # ... (rest of the function)
 

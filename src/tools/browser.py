@@ -4,7 +4,11 @@ import json
 from pathlib import Path # Not strictly needed for this initial impl, but good practice
 from typing import Dict, Any, List, Optional
 
-from playwright.sync_api import sync_playwright, Page, BrowserContext, Playwright
+try:  # Optional Playwright import so tests don't require heavy dependency
+    from playwright.sync_api import sync_playwright, Page, BrowserContext, Playwright
+except Exception:  # pragma: no cover - dependency may not be installed
+    sync_playwright = None  # type: ignore
+    Page = BrowserContext = Playwright = object  # fallbacks for type hints
 
 from .tool_protocol import Tool
 
@@ -84,6 +88,8 @@ class BrowserActionTool(Tool):
                 url = params.get("url")
                 if not url:
                     return json.dumps({"status": "error", "message": "Missing 'url' for 'launch' action."})
+                if sync_playwright is None:
+                    return json.dumps({"status": "error", "message": "Playwright not installed"})
 
                 # Close existing browser if any, before launching a new one
                 existing_context = self._get_playwright_context(agent_tools_instance)
