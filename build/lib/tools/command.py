@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import json
-from typing import Dict, Any, List, Optional, Tuple # Added Tuple
+from typing import Dict, Any, Optional, Tuple # Added Tuple
 
 from .tool_protocol import Tool
 from src.utils import to_bool # Import the new utility function

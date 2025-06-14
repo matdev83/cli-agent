@@ -5,7 +5,7 @@ import re
 import fnmatch
 import json # For ListFilesTool and SearchFilesTool output
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from .tool_protocol import Tool
 
 # --- Helper function for ReplaceInFileTool ---

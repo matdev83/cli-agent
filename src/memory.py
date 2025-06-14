@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import re
 from textwrap import shorten
-from typing import Dict, List, Iterable
+from typing import Dict, List
 
 
 @dataclass

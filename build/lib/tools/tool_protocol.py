@@ -1,4 +1,4 @@
-from typing import Protocol, Dict, Any, List
+from typing import Protocol, Dict, Any
 
 class Tool(Protocol):
     """

@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
+from typing import Optional # Import Optional
 
 from src.slash_commands import UndoCommand, UndoAllCommand
 from src.cli import AgentCliContext # Corrected import
@@ -11,7 +12,7 @@ from src.cli import AgentCliContext # Corrected import
 # from src import utils # Alternative: patch('src.slash_commands.utils.revert_to_commit')
 
 # Helper to create a mock agent_context
-def create_mock_agent_context(cwd: str, session_history: list[str], initial_hash: str | None):
+def create_mock_agent_context(cwd: str, session_history: list[str], initial_hash: str | None, file_cache_instance: Optional[MagicMock] = None):
     mock_agent = MagicMock()
     mock_agent.cwd = cwd
     mock_agent.session_commit_history = list(session_history) # Use a copy
@@ -28,7 +29,15 @@ def create_mock_agent_context(cwd: str, session_history: list[str], initial_hash
     # We are patching 'src.slash_commands.utils', so no need to mock utils module here
     # if commands correctly call e.g. utils.revert_to_commit.
 
-    context = AgentCliContext(cli_args_namespace=MagicMock(), display_update_func=MagicMock(), agent_instance=mock_agent)
+    # Default to a new MagicMock if no file_cache_instance is provided
+    effective_file_cache = file_cache_instance if file_cache_instance is not None else MagicMock()
+
+    context = AgentCliContext(
+        cli_args_namespace=MagicMock(),
+        display_update_func=MagicMock(),
+        agent_instance=mock_agent,
+        file_cache_instance=effective_file_cache
+    )
     return context
 
 @pytest.fixture

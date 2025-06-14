@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .tool_protocol import Tool
 
 class NewTaskTool(Tool):
@@ -127,7 +127,7 @@ class LoadMcpDocumentationTool(Tool):
     def execute(self, params: Dict[str, Any], agent_tools_instance: Any) -> str:
         """Executes the tool. Expects no parameters. Full implementation pending."""
         # No parameters expected, so params dictionary might be empty or not contain specific keys.
-        return f"Success: LoadMcpDocumentationTool called. Full implementation pending."
+        return "Success: LoadMcpDocumentationTool called. Full implementation pending."
 
 class CondenseTool(Tool):
     @property

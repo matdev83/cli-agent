@@ -34,3 +34,11 @@ addopts = "-v"
 [tool.ruff]
 line-length = 100
 exclude = ["vendor"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

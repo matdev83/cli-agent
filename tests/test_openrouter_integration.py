@@ -3,7 +3,6 @@ import shutil
 import argparse
 from pathlib import Path
 import pytest
-from typing import Any, Dict, List
 
 from src.cli import run_agent
 

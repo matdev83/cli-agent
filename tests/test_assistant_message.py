@@ -1,4 +1,3 @@
-import pytest
 from src.assistant_message import parse_assistant_message, TextContent, ToolUse, TOOL_USE_NAMES
 import xml.etree.ElementTree as ET # For checking unknown tag behavior if needed
 

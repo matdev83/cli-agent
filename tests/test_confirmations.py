@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch
 import io
-import sys # Required for patching sys.stdout
 
 from src.confirmations import request_user_confirmation
 

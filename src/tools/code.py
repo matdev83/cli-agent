@@ -5,7 +5,7 @@ import json  # For returning structured output
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from .tool_protocol import Tool
 

@@ -28,7 +28,7 @@ class AtMentionCompleter(Completer):
             # logger.debug("AtMentionCompleter: FileCache is not available.")
             return []
 
-        text_before_cursor = document.text_before_cursor
+        # text_before_cursor = document.text_before_cursor # F841: Unused
         word_before_cursor = document.get_word_before_cursor(WORD=True)
 
         # logger.debug(f"Text before cursor: '{text_before_cursor}'")

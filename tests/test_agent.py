@@ -1,13 +1,10 @@
 import pytest
-import json
 import unittest
 import argparse # Added import
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import subprocess # For git_repo fixture and direct git calls
-import shutil # For git_repo fixture
-import os # For git_repo fixture
 
 from src.agent import DeveloperAgent
 from src.llm import MockLLM
@@ -89,7 +86,7 @@ def test_agent_max_steps_reached(mock_user_confirm, tmp_path: Path):
     original_read_file_tool = agent.tools_map.get("read_file")
     assert original_read_file_tool is not None
 
-    with patch.object(original_read_file_tool, 'execute', return_value="mock content") as mock_read_execute:
+    with patch.object(original_read_file_tool, 'execute', return_value="mock content"): # as mock_read_execute (F841)
         result = agent.run_task("A task that will exceed max steps.", max_steps=3)
         # mock_read_execute.assert_called_with(ANY, agent_tools_instance=agent)
         assert result == "Max steps reached without completion."
@@ -146,7 +143,7 @@ def test_agent_llm_runs_out_of_responses(mock_user_confirm, tmp_path: Path):
     original_read_file_tool = agent.tools_map.get("read_file")
     assert original_read_file_tool is not None
 
-    with patch.object(original_read_file_tool, 'execute', return_value="mock content") as mock_read_execute:
+    with patch.object(original_read_file_tool, 'execute', return_value="mock content"): # as mock_read_execute (F841)
         # Agent gets one tool call, processes it. (LLM Call 1)
         # Then calls send_message again. MockLLM exhausted, returns LLMResponse(content=None). (LLM Call 2)
         # Agent processes content=None as empty string, no tools, returns empty string.
@@ -194,7 +191,7 @@ def test_agent_handles_execute_command_approval_json(tmp_path: Path):
     assert len(agent.history) == 5
     tool_result_message_content = agent.history[3]['content']
 
-    assert f"Result of execute_command:" in tool_result_message_content
+    assert "Result of execute_command:" in tool_result_message_content
     assert '"success": false' in tool_result_message_content
     assert f"Error: Command '{command_to_run}' requires approval" in tool_result_message_content
 
@@ -397,6 +394,99 @@ def test_agent_error_counter_resets_after_unknown_tool_then_valid_text(tmp_path:
     assert agent.consecutive_tool_errors == 0 # Should be reset
     assert "Error: Unknown tool 'unknown_tool_123'" in agent.history[3]["content"] # Error was processed
     assert agent.current_session_cost == 0.0 # Two calls to MockLLM, 0.0 cost each
+
+
+def test_agent_max_consecutive_tool_errors_admonishment(tmp_path: Path):
+    """
+    Tests that the agent sends an admonishment message after
+    MAX_CONSECUTIVE_TOOL_ERRORS.
+    """
+    # MAX_CONSECUTIVE_TOOL_ERRORS is 3 in agent.py
+    # MockLLM expects a list of content strings. It will wrap them in LLMResponse.
+    response_contents = [
+        "<tool_use><tool_name>unknown_tool_A</tool_name><params/></tool_use>", # Error 1
+        "<tool_use><tool_name>unknown_tool_B</tool_name><params/></tool_use>", # Error 2
+        "<tool_use><tool_name>unknown_tool_C</tool_name><params/></tool_use>", # Error 3
+        "<text_content>Final valid response after admonishment.</text_content>"  # LLM's response
+    ]
+    # Use a factory or direct MockLLM for send_message
+    mock_llm_instance = MockLLM(response_contents)
+    agent = DeveloperAgent(send_message=mock_llm_instance.send_message, cwd=str(tmp_path))
+
+    final_result = agent.run_task("Trigger multiple tool errors for admonishment", max_steps=10)
+
+    assert final_result == "Final valid response after admonishment."
+    admonishment_found = False
+    admonishment_message_content = (
+        "System: You have made several consecutive errors in tool usage or formatting. "
+        "Please carefully review the available tools, their required parameters, "
+        "and the expected XML format. Ensure your next response is a valid tool call "
+        "or a text response."
+    )
+    for msg in agent.history:
+        if msg["role"] == "system" and msg["content"] == admonishment_message_content:
+            admonishment_found = True
+            break
+    assert admonishment_found, "Admonishment message not found in history"
+    assert agent.consecutive_tool_errors == 0
+
+
+def test_agent_llm_returns_none_object(tmp_path: Path):
+    """
+    Tests how the agent handles the LLM's send_message returning None directly.
+    """
+    # Custom mock send_message that returns None
+    def mock_send_message_returns_none(history: List[Dict[str, str]]) -> Optional[LLMResponse]:
+        return None
+
+    agent = DeveloperAgent(send_message=mock_send_message_returns_none, cwd=str(tmp_path))
+    result = agent.run_task("Test task where LLM returns None object", max_steps=1)
+
+    expected_message = "LLM did not provide a response. Ending task."
+    assert result == expected_message
+    assert len(agent.history) == 3 # System prompt, user task, system error message
+    assert agent.history[2]["role"] == "system"
+    assert agent.history[2]["content"] == expected_message
+
+
+def test_agent_llm_returns_llmresponse_with_none_content(tmp_path: Path):
+    """
+    Tests how the agent handles the LLM returning an LLMResponse with content=None.
+    """
+    # dummy_usage = LLMUsageInfo(prompt_tokens=1, completion_tokens=1, cost=0.000001) # F841: Unused
+    # MockLLM expects a list of content strings (or None for content).
+    # It will internally create LLMResponse(content=None, usage=...) if a None is in its list.
+    response_contents = [None] # Pass None as the content for the first response
+    mock_llm_instance = MockLLM(response_contents)
+    agent = DeveloperAgent(send_message=mock_llm_instance.send_message, cwd=str(tmp_path))
+
+    result = agent.run_task("Test task with None content in LLMResponse", max_steps=1)
+    assert result == "" # Should be empty string as per current agent logic
+    assert len(agent.history) == 3
+    assert agent.history[2]["role"] == "assistant"
+    assert agent.history[2]["content"] == "" # Assistant's response was None, converted to ""
+
+
+def test_agent_llm_returns_raw_string_backward_compatibility(tmp_path: Path):
+    """
+    Tests agent handling if send_message returns a raw string (backward compatibility).
+    """
+    raw_string_response = "<text_content>This is a raw string response.</text_content>"
+    # Custom mock send_message that returns a raw string
+    def mock_send_message_returns_raw_string(history: List[Dict[str, str]]) -> str: # Type hint is str
+        return raw_string_response
+
+    # The DeveloperAgent expects Callable[..., Optional[LLMResponse]].
+    # We are testing a deviation here, so a type: ignore might be needed if type checking was strict.
+    agent = DeveloperAgent(send_message=mock_send_message_returns_raw_string, cwd=str(tmp_path)) # type: ignore
+    result = agent.run_task("Test task with raw string LLM response", max_steps=1)
+
+    assert result == "This is a raw string response."
+    assert len(agent.history) == 3 # System, User, Assistant
+    assert agent.history[2]["role"] == "assistant"
+    assert agent.history[2]["content"] == raw_string_response
+    assert agent.consecutive_tool_errors == 0
+    assert agent.current_session_cost == 0.0 # No usage info from raw string
 
 
 def test_agent_malformed_tool_xml_unrecognized_tag(tmp_path: Path):
@@ -926,6 +1016,35 @@ class TestAgentConfirmationLogic(unittest.TestCase):
         mock_request_confirmation.assert_called_once()
         mock_cmd_execute.assert_called_once()
 
+    @patch('src.agent.request_user_confirmation', return_value=False) # User denies
+    def test_tool_browser_action_missing_url_user_denies(self, mock_request_confirmation):
+        agent = self._create_agent(cli_args_overrides={"allow_use_browser": False})
+        # Params missing "url"
+        params = {"action": "browse_url"} # "url" is missing
+        tool_use = ToolUse(name="browser_action", params=params)
+        # Mock the tool's execute to ensure it's not called
+        browser_tool_instance = agent.tools_map.get("browser_action")
+        assert browser_tool_instance is not None
+        with patch.object(browser_tool_instance, 'execute') as mock_tool_execute:
+            result = agent._run_tool(tool_use)
+            mock_request_confirmation.assert_called_once()
+            mock_tool_execute.assert_not_called()
+            self.assertIn("User denied permission to browser_action for browser action.", result) # Default message when url is missing
+
+    @patch('src.agent.request_user_confirmation', return_value=False) # User denies
+    def test_tool_mcp_missing_tool_name_user_denies(self, mock_request_confirmation):
+        agent = self._create_agent(cli_args_overrides={"allow_use_mcp": False})
+        # Params missing "tool_name" for use_mcp_tool
+        params = {"server_name": "s1", "arguments": "{}"} # "tool_name" is missing
+        tool_use = ToolUse(name="use_mcp_tool", params=params)
+        mcp_tool_instance = agent.tools_map.get("use_mcp_tool")
+        assert mcp_tool_instance is not None
+        with patch.object(mcp_tool_instance, 'execute') as mock_tool_execute:
+            result = agent._run_tool(tool_use)
+            mock_request_confirmation.assert_called_once()
+            mock_tool_execute.assert_not_called()
+            self.assertIn("User denied permission to use_mcp_tool for MCP action.", result)
+
 
 # --- Unit Tests for DeveloperAgent.__init__() ---
 
@@ -1090,6 +1209,21 @@ class TestRunToolBehaviors(unittest.TestCase):
         self.assertEqual(result, "Error: Tool 'generic_exception_tool' failed to execute. Reason: Generic problem in tool")
         self.assertEqual(agent.consecutive_tool_errors, 1)
 
+    def test_run_tool_catches_not_implemented_error(self):
+        agent = self._create_agent(cli_args=self.cli_args_auto_approve_all)
+        mock_not_implemented_tool = MockTool(name="not_implemented_tool")
+        mock_not_implemented_tool.execute_fn.side_effect = NotImplementedError("This tool is not done yet.")
+        agent.tools_map["not_implemented_tool"] = mock_not_implemented_tool
+
+        tool_use = ToolUse(name="not_implemented_tool", params={})
+        result = agent._run_tool(tool_use)
+
+        expected_message = "Note: Tool 'not_implemented_tool' is recognized but not fully implemented. This tool is not done yet."
+        self.assertEqual(result, expected_message)
+        # According to current logic in DeveloperAgent._run_tool, NotImplementedError does not increment consecutive_tool_errors
+        self.assertEqual(agent.consecutive_tool_errors, 0)
+
+
     def test_run_tool_read_file_adds_to_memory(self):
         agent = self._create_agent(cli_args_obj=self.cli_args_auto_approve_all) # Bypass confirmation for read_file
 
@@ -1152,7 +1286,7 @@ def test_run_task_known_tool_execution_returns_error(tmp_path: Path):
     """
     file_to_read = "test_error_file.txt"
     llm_tool_call = f"<tool_use><tool_name>read_file</tool_name><params><path>{file_to_read}</path></params></tool_use>"
-    llm_second_response = "<text_content>LLM acknowledged the tool error and is continuing.</text_content>"
+    # llm_second_response = "<text_content>LLM acknowledged the tool error and is continuing.</text_content>" # F841: Unused
 
     # Make the second response also an error to check counter increment
     llm_second_response_error = "<tool_use><tool_name>another_unknown_tool</tool_name><params/></tool_use>"
@@ -1315,6 +1449,29 @@ def test_agent_initialization_git_attributes_mocked_subprocess(mock_check_output
     agent_not_found = DeveloperAgent(send_message=MagicMock(return_value=LLMResponse("default", LLMUsageInfo())), cwd=str(tmp_path), cli_args=mock_cli_args)
     assert agent_not_found.initial_session_head_commit_hash is None
     assert agent_not_found.current_session_cost == 0.0
+
+
+@patch('src.agent.subprocess.check_output')
+def test_agent_initialization_git_filenotfound_error(mock_check_output, tmp_path: Path):
+    """Test agent init when git command is not found."""
+    mock_check_output.side_effect = FileNotFoundError("git command not found")
+    # Ensure .git directory exists for the subprocess call to be attempted
+    (tmp_path / ".git").mkdir()
+    mock_cli_args = argparse.Namespace(model="git_test_fnf", disable_git_auto_commits=False)
+    agent = DeveloperAgent(send_message=MagicMock(return_value=LLMResponse("default", LLMUsageInfo())), cwd=str(tmp_path), cli_args=mock_cli_args)
+    assert agent.initial_session_head_commit_hash is None
+    mock_check_output.assert_called_once()
+
+@patch('src.agent.subprocess.check_output')
+def test_agent_initialization_git_generic_exception(mock_check_output, tmp_path: Path):
+    """Test agent init when git rev-parse raises a generic exception."""
+    mock_check_output.side_effect = Exception("Some generic git error")
+    # Ensure .git directory exists
+    (tmp_path / ".git").mkdir()
+    mock_cli_args = argparse.Namespace(model="git_test_generic_exc", disable_git_auto_commits=False)
+    agent = DeveloperAgent(send_message=MagicMock(return_value=LLMResponse("default", LLMUsageInfo())), cwd=str(tmp_path), cli_args=mock_cli_args)
+    assert agent.initial_session_head_commit_hash is None
+    mock_check_output.assert_called_once()
 
 
 @patch('src.agent.request_user_confirmation', return_value=True) # Auto-confirm any tool use prompts
@@ -1557,14 +1714,19 @@ class TestAgentMentionProcessing(unittest.TestCase):
         abs_dir_file = str(self.cwd / "dir_file.txt")
 
         def exists_side_effect(path):
-            if path == abs_file1: return True
-            if path == abs_nonexistent: return False
-            if path == abs_dir_file: return True
+            if path == abs_file1:
+                return True
+            if path == abs_nonexistent:
+                return False
+            if path == abs_dir_file:
+                return True
             return False
 
         def isfile_side_effect(path):
-            if path == abs_file1: return True
-            if path == abs_dir_file: return False # This is a directory
+            if path == abs_file1:
+                return True
+            if path == abs_dir_file:
+                return False # This is a directory
             return False
 
         mock_exists.side_effect = exists_side_effect
@@ -1665,9 +1827,9 @@ class TestAgentMentionProcessing(unittest.TestCase):
         # Construct the expected modified user input that should be in history
         # This mirrors the logic in DeveloperAgent.run_task
         expected_prepended_text = (
-            f"<file_content path=\"test.txt\">\n"
-            f"content of test.txt\n"
-            f"</file_content>"
+            "<file_content path=\"test.txt\">\n"
+            "content of test.txt\n"
+            "</file_content>"
         )
         expected_user_message_in_history = f"{expected_prepended_text}\n\n---\nOriginal user input:\n{user_input_with_mention}"
         self.assertEqual(self.agent.history[first_user_message_index]["content"], expected_user_message_in_history)
@@ -1754,3 +1916,31 @@ class TestAgentMentionProcessing(unittest.TestCase):
         self.assertEqual(self.agent.history[1]["role"], "user")
         self.assertEqual(self.agent.history[1]["content"], original_input)
         self.agent._process_file_mentions.assert_called_once_with(original_input)
+
+    @patch("src.agent.os.path.exists", return_value=True)
+    @patch("src.agent.os.path.isfile", return_value=True)
+    @patch("builtins.open", side_effect=IOError("Disk is full"))
+    def test_process_file_mentions_io_error(self, mock_open, mock_isfile, mock_exists):
+        user_input = "Please read @disk_full.txt"
+        abs_disk_full_path = str(self.cwd / "disk_full.txt")
+
+        with self.assertLogs(level='WARNING') as cm:
+            processed_files = self.agent._process_file_mentions(user_input)
+
+        self.assertTrue(any(f"IOError when reading mentioned file {abs_disk_full_path}" in message for message in cm.output))
+        self.assertEqual(len(processed_files), 0)
+        mock_open.assert_called_once_with(abs_disk_full_path, 'r', encoding='utf-8')
+
+    @patch("src.agent.os.path.exists", return_value=True) # File exists before open
+    @patch("src.agent.os.path.isfile", return_value=True)
+    @patch("builtins.open", side_effect=FileNotFoundError("Race condition: File disappeared"))
+    def test_process_file_mentions_file_not_found_race_condition(self, mock_open, mock_isfile, mock_exists):
+        user_input = "Read @race_condition_file.txt"
+        abs_race_file_path = str(self.cwd / "race_condition_file.txt")
+
+        with self.assertLogs(level='WARNING') as cm:
+            processed_files = self.agent._process_file_mentions(user_input)
+
+        self.assertTrue(any(f"Mentioned file not found (race condition?): {abs_race_file_path}" in message for message in cm.output))
+        self.assertEqual(len(processed_files), 0)
+        mock_open.assert_called_once_with(abs_race_file_path, 'r', encoding='utf-8')

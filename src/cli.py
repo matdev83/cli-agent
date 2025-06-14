@@ -15,16 +15,15 @@ from io import StringIO # For capturing stdout
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.layout.containers import HSplit, Window, VSplit
-from prompt_toolkit.layout.controls import FormattedTextControl, BufferControl
+from prompt_toolkit.layout.containers import HSplit, Window
+from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
-from prompt_toolkit.widgets import TextArea, SearchToolbar, Label
-from prompt_toolkit.document import Document
+from prompt_toolkit.widgets import TextArea, SearchToolbar
 from prompt_toolkit.styles import Style
 
 from src.agent import DeveloperAgent # Changed to absolute import
 from src.llm import MockLLM, OpenRouterLLM # Changed to absolute import
-from src.llm_protocol import LLMResponse, LLMUsageInfo # Changed to absolute import
+from src.llm_protocol import LLMResponse # Changed to absolute import
 from src.slash_commands import ( # Changed to absolute import
     SlashCommandRegistry, ModelCommand, SetTimeoutCommand,
     PlanModeCommand, ActModeCommand, HelpCommand, RefreshCommand, # AgentCliContext is defined below

@@ -512,10 +512,16 @@ OTHER_FLAGS = ["disable_git_auto_commits"]
 
 # And ensure tests use these local definitions, not cli.APPROVAL_ARGS_FLAGS
 # The tests already use them without `cli.` prefix, so they should pick up these local ones.
+import os # Moved to top
+from unittest.mock import patch, MagicMock # Moved to top, F811 should be resolved
+from src.llm_protocol import LLMResponse, LLMUsageInfo # Moved to top
+
 # This matches the original test file's structure.
 
-from src.llm_protocol import LLMResponse, LLMUsageInfo # Added for new test
+# ... (other imports)
 
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "dummy_api_key_for_test"}) # Corrected indentation
 @patch('src.cli.OpenRouterLLM') # Mock the LLM class used by run_agent for non-mock models
 @patch('src.cli.MockLLM') # Mock the LLM class used by run_agent for mock models
 @patch('src.cli.update_display_text_safely')
@@ -675,15 +681,15 @@ def test_cli_mock_llm_cost_display_and_accumulation(
 
     # Check first stats line
     # STATS: Model: mock, Prompt: 10, Completion: 20, Cost: $0.000000, Session Cost: $0.000000
-    assert f"Model: mock" in stats_lines_calls[0]
+    assert "Model: mock" in stats_lines_calls[0]
     assert f"Cost: {expected_cost_str}" in stats_lines_calls[0]
-    assert f"Session Cost: $0.000000" in stats_lines_calls[0]
+    assert "Session Cost: $0.000000" in stats_lines_calls[0]
 
     # Check second stats line (from the second <write_to_file>)
     # STATS: Model: mock, Prompt: 10, Completion: 20, Cost: $0.000000, Session Cost: $0.000000
-    assert f"Model: mock" in stats_lines_calls[1]
+    assert "Model: mock" in stats_lines_calls[1]
     assert f"Cost: {expected_cost_str}" in stats_lines_calls[1]
-    assert f"Session Cost: $0.000000" in stats_lines_calls[1]
+    assert "Session Cost: $0.000000" in stats_lines_calls[1]
 
     # Optional: Check if the task completed (agent output)
 

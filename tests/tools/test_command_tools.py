@@ -1,4 +1,3 @@
-import pytest
 import subprocess
 import json
 from unittest.mock import patch, MagicMock
