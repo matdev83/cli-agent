@@ -287,7 +287,7 @@ def test_parse_unknown_tag_as_text():
     # but here it's an element within the wrapped root.
     # The current implementation uses ET.tostring(element, encoding='unicode', method='xml')
     # This should give a clean representation of the element itself.
-    unknown_tag_str = ET.tostring(ET.fromstring("<unknown_tool><param>value</param></unknown_tool>"), encoding='unicode', method='xml')
+    ET.tostring(ET.fromstring("<unknown_tool><param>value</param></unknown_tool>"), encoding='unicode', method='xml')
     # The above line is for testing what ET.tostring does to a similar structure.
     # Depending on the ET version and exact internal handling, it might be exactly
     # "<unknown_tool><param>value</param></unknown_tool>" or e.g. add default xmlns.
@@ -322,7 +322,7 @@ def test_parse_tool_with_nested_tags_in_param_not_tool_tags():
 
     # For now, let's write the test for the *desired* behavior.
     expected_content = "<note><to>Tove</to><from>Jani</from></note>" # Desired
-    expected = [
+    [
         ToolUse(name="write_to_file", params={"path": "file.xml", "content": expected_content})
     ]
     # This test will likely require modification of the `parse_assistant_message` function.
@@ -332,7 +332,6 @@ def test_parse_tool_with_nested_tags_in_param_not_tool_tags():
     # which implies the current simpler parsing. So this test might be out of scope for *current* parser spec.
     # Let's adjust the expectation to current parser behavior for now.
     # Current parser behavior: content = "" because <content> has no direct text.
-    current_parser_expected_content = "" # This should be the actual string including tags if parsed as such
 
     # The current parser logic for params is: `(param_child.text or "").strip()`
     # If <content> has <note> as a child, <content>'s .text is typically None or whitespace.

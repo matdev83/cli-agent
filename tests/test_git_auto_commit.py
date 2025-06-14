@@ -1,6 +1,7 @@
 import subprocess
 import argparse
 from pathlib import Path
+import logging # Moved here
 
 from src.agent import DeveloperAgent
 
@@ -16,7 +17,6 @@ def commit_count(path: Path) -> int:
     return int(out.decode().strip())
 
 
-import logging # Add this import
 def test_auto_commit_after_write(tmp_path: Path, caplog):
     caplog.set_level(logging.INFO) # Ensure INFO messages are captured
     init_repo(tmp_path)
