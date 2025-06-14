@@ -22,14 +22,36 @@ from prompt_toolkit.widgets import TextArea, SearchToolbar, Label
 from prompt_toolkit.document import Document
 from prompt_toolkit.styles import Style
 
-from .agent import DeveloperAgent
-from .llm import MockLLM, OpenRouterLLM
-from .llm_protocol import LLMResponse, LLMUsageInfo # Added imports
-from .slash_commands import (
+from src.agent import DeveloperAgent # Changed to absolute import
+from src.llm import MockLLM, OpenRouterLLM # Changed to absolute import
+from src.llm_protocol import LLMResponse, LLMUsageInfo # Changed to absolute import
+from src.slash_commands import ( # Changed to absolute import
     SlashCommandRegistry, ModelCommand, SetTimeoutCommand,
-    PlanModeCommand, ActModeCommand, HelpCommand, AgentCliContext,
+    PlanModeCommand, ActModeCommand, HelpCommand, RefreshCommand, # AgentCliContext is defined below
     UndoCommand, UndoAllCommand # Added new commands
 )
+from src.file_cache import FileCache # Changed to absolute import
+from src.autocompletion import AtMentionCompleter # For autocomplete
+
+# Define AgentCliContext class at the module level so it can be imported
+class AgentCliContext:
+    def __init__(self, cli_args_namespace: argparse.Namespace,
+                 display_update_func: Callable[[str], None],
+                 file_cache_instance: Optional[FileCache],
+                 agent_instance: Optional[DeveloperAgent] = None):
+        self.cli_args = cli_args_namespace
+        self.display_update_func = display_update_func
+        self.agent = agent_instance
+        self.file_cache = file_cache_instance
+        self.mode = "ACT" # Default mode
+
+    def set_mode(self, mode_name: str):
+        self.mode = mode_name
+        self.display_update_func(f"Context: Mode changed to {mode_name.upper()}")
+
+    # Method to update the agent instance if needed, e.g., after re-creation
+    def set_agent_instance(self, agent_instance: Optional[DeveloperAgent]):
+        self.agent = agent_instance
 
 # Global list to store display messages for FormattedTextControl
 # Global list to store display messages for FormattedTextControl
@@ -348,6 +370,19 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
     # This will be properly initialized after app and display_control exist.
     agent_cli_context = None # Will be initialized later
 
+    # --- FileCache Initialization ---
+    # Instantiate FileCache early, using args.cwd
+    # It will perform an initial scan.
+    # Error handling for FileCache instantiation (e.g., if cwd is invalid) can be added if necessary.
+    try:
+        file_cache = FileCache(root_dir=args.cwd, initial_scan=True)
+        logging.info(f"FileCache initialized. Found {len(file_cache.get_paths())} files in initial scan of {args.cwd}.")
+    except Exception as e:
+        logging.error(f"Failed to initialize FileCache with root_dir {args.cwd}: {e}", exc_info=True)
+        # Depending on severity, might want to exit or continue without cache functionality.
+        # For now, log and continue; slash command using it should handle its absence if file_cache is None.
+        file_cache = None # Ensure file_cache is defined even if init fails.
+
     # Register commands
     try:
         slash_command_registry.register(ModelCommand())
@@ -359,6 +394,8 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
         # Register HelpCommand
         help_command = HelpCommand(slash_command_registry)
         slash_command_registry.register(help_command)
+        # RefreshCommand will be registered after AgentCliContext is fully defined
+        # and can hold the file_cache instance.
 
     except ValueError as e:
         # This is early in startup, so print to stderr and exit.
@@ -452,11 +489,33 @@ def main(argv: Optional[List[str]] = None) -> int: # Changed return to int, was 
     # Create a general UI update function for the context
     # This is important for commands that might want to give feedback directly.
     context_ui_update_func = partial(update_display_text_safely, app_ref=app, dc_ref=display_control)
-    agent_cli_context = AgentCliContext(
+
+    agent_cli_context = AgentCliContext( # AgentCliContext class definition moved to top level
         cli_args_namespace=args,
-        display_update_func=context_ui_update_func
-        # agent_instance can be added later if needed by commands
+        display_update_func=context_ui_update_func,
+        file_cache_instance=file_cache # Pass the initialized file_cache
     )
+    # Now that agent_cli_context is created with file_cache, other commands needing it can be registered
+    try:
+        # Register RefreshCommand now that agent_cli_context (and its file_cache) is available
+        refresh_cmd = RefreshCommand()
+        slash_command_registry.register(refresh_cmd)
+        logging.info("RefreshCommand registered.")
+    except ValueError as e: # Catch potential registration errors for this specific command
+        logging.error(f"Error registering RefreshCommand: {e}", exc_info=True)
+        # Optionally, inform the user via UI if this is critical
+        context_ui_update_func(f"Error: Could not register RefreshCommand: {e}")
+
+    # --- Autocompleter Setup ---
+    # Instantiate the completer with the file_cache from the context
+    # Ensure file_cache in agent_cli_context is not None, or handle it in AtMentionCompleter
+    if agent_cli_context.file_cache:
+        at_mention_completer = AtMentionCompleter(file_cache=agent_cli_context.file_cache)
+        input_field.completer = at_mention_completer
+        logging.info("AtMentionCompleter initialized and attached to input field.")
+    else:
+        logging.warning("FileCache not available in AgentCliContext. AtMentionCompleter not attached.")
+
 
     # Input handler for the TextArea
     def accept_input_handler(buff: Buffer):

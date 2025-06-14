@@ -9,9 +9,10 @@ from src.slash_commands import (
     SetTimeoutCommand,
     PlanModeCommand,
     ActModeCommand,
-    HelpCommand,
-    AgentCliContext
+    HelpCommand
+    # AgentCliContext will be imported from src.cli
 )
+from src.cli import AgentCliContext # Corrected import
 
 
 # --- Mock Commands for HelpCommand Tests ---

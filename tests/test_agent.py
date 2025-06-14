@@ -1498,3 +1498,259 @@ def test_on_llm_response_callback_is_called(tmp_path: Path):
 
     # Verify history to ensure agent processed content correctly
     assert agent.history[2]["content"] == llm_content1
+
+
+class TestAgentMentionProcessing(unittest.TestCase):
+    def setUp(self):
+        self.mock_send_message = MagicMock(return_value=LLMResponse(content="default", usage=LLMUsageInfo()))
+        self.cwd = Path(".").resolve() # Standard CWD for tests
+        # Use a basic cli_args, can be overridden per test if needed
+        # Ensure all boolean flags expected by DeveloperAgent.__init__ are present
+        self.cli_args = argparse.Namespace(
+            model="test_mention_model",
+            auto_approve=True,
+            allow_read_files=True,
+            allow_edit_files=True,
+            allow_execute_safe_commands=True,
+            allow_execute_all_commands=True,
+            allow_use_browser=True,
+            allow_use_mcp=True,
+            disable_git_auto_commits=True # Default to True for tests unless specified
+        )
+        self.agent = DeveloperAgent(
+            send_message=self.mock_send_message,
+            cwd=str(self.cwd),
+            cli_args=self.cli_args
+        )
+        self.agent.mentioned_file_contents = [] # Ensure clean state for each test
+
+    @patch("src.agent.os.path.exists")
+    @patch("src.agent.os.path.isfile")
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
+    def test_process_file_mentions_single_valid_file(self, mock_file_open, mock_isfile, mock_exists):
+        mock_exists.return_value = True
+        mock_isfile.return_value = True
+        mock_file_open.return_value.read.return_value = "content of file1.txt"
+
+        user_input = "Please process @file1.txt and see details."
+        # self.agent.cwd is already absolute Path(".").resolve()
+        expected_abs_path = str(self.cwd / "file1.txt")
+
+
+        processed_files = self.agent._process_file_mentions(user_input)
+
+        mock_exists.assert_called_once_with(expected_abs_path)
+        mock_isfile.assert_called_once_with(expected_abs_path)
+        mock_file_open.assert_called_once_with(expected_abs_path, 'r', encoding='utf-8')
+        self.assertEqual(len(processed_files), 1)
+        self.assertEqual(processed_files[0]["path"], "file1.txt")
+        self.assertEqual(processed_files[0]["content"], "content of file1.txt")
+
+    @patch("src.agent.os.path.exists")
+    @patch("src.agent.os.path.isfile")
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
+    def test_process_file_mentions_multiple_files_one_invalid(self, mock_file_open, mock_isfile, mock_exists):
+        # Configure mocks
+        # Note: os.path.abspath will be called on these paths within the method
+        abs_file1 = str(self.cwd / "file1.txt")
+        abs_nonexistent = str(self.cwd / "nonexistent.txt")
+        abs_dir_file = str(self.cwd / "dir_file.txt")
+
+        def exists_side_effect(path):
+            if path == abs_file1: return True
+            if path == abs_nonexistent: return False
+            if path == abs_dir_file: return True
+            return False
+
+        def isfile_side_effect(path):
+            if path == abs_file1: return True
+            if path == abs_dir_file: return False # This is a directory
+            return False
+
+        mock_exists.side_effect = exists_side_effect
+        mock_isfile.side_effect = isfile_side_effect
+        mock_file_open.return_value.read.return_value = "content of file1"
+
+        user_input = "Check @file1.txt then @nonexistent.txt and also @dir_file.txt"
+
+        with self.assertLogs(level='WARNING') as cm: # Changed logger
+            processed_files = self.agent._process_file_mentions(user_input)
+
+        self.assertTrue(any(f"Mentioned file does not exist: {abs_nonexistent}" in message for message in cm.output))
+        self.assertTrue(any(f"Mentioned path is not a file: {abs_dir_file}" in message for message in cm.output))
+
+        self.assertEqual(len(processed_files), 1)
+        self.assertEqual(processed_files[0]["path"], "file1.txt") # Path stored should be relative
+        self.assertEqual(processed_files[0]["content"], "content of file1")
+
+        mock_file_open.assert_called_once_with(abs_file1, 'r', encoding='utf-8')
+
+    @patch("src.agent.os.path.exists", return_value=True)
+    @patch("src.agent.os.path.isfile", return_value=True)
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
+    def test_process_file_mentions_duplicate_mentions(self, mock_file_open, mock_isfile, mock_exists):
+        mock_file_open.return_value.read.return_value = "content of dup.txt"
+        # Changed second mention to be identical to the first for clear deduplication test
+        user_input = "Look at @dup.txt and again @dup.txt"
+        abs_dup_path = str(self.cwd / "dup.txt")
+
+        processed_files = self.agent._process_file_mentions(user_input)
+
+        mock_exists.assert_called_once_with(abs_dup_path)
+        mock_isfile.assert_called_once_with(abs_dup_path)
+        mock_file_open.assert_called_once_with(abs_dup_path, 'r', encoding='utf-8')
+
+        self.assertEqual(len(processed_files), 1)
+        self.assertEqual(processed_files[0]["path"], "dup.txt")
+
+    @patch("src.agent.os.path.exists", return_value=True)
+    @patch("src.agent.os.path.isfile", return_value=True)
+    @patch("builtins.open", side_effect=PermissionError("Permission denied"))
+    def test_process_file_mentions_permission_error(self, mock_file_open, mock_isfile, mock_exists):
+        user_input = "Try to read @secret.txt"
+        abs_secret_path = str(self.cwd / "secret.txt")
+
+        with self.assertLogs(level='WARNING') as cm: # Changed logger
+            processed_files = self.agent._process_file_mentions(user_input)
+
+        self.assertTrue(any(f"Permission denied when trying to read mentioned file: {abs_secret_path}" in message for message in cm.output))
+        self.assertEqual(len(processed_files), 0)
+        mock_file_open.assert_called_once_with(abs_secret_path, 'r', encoding='utf-8')
+
+    def test_process_file_mentions_no_mentions(self):
+        user_input = "This is a regular message with no file mentions."
+        processed_files = self.agent._process_file_mentions(user_input)
+        self.assertEqual(len(processed_files), 0)
+
+    def test_process_file_mentions_empty_input(self):
+        user_input = ""
+        processed_files = self.agent._process_file_mentions(user_input)
+        self.assertEqual(len(processed_files), 0)
+
+    @patch("src.agent.os.path.exists")
+    @patch("src.agent.os.path.isfile")
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
+    def test_run_task_calls_process_file_mentions(self, mock_file_open, mock_isfile, mock_exists):
+        mock_exists.return_value = True
+        mock_isfile.return_value = True
+        mock_file_open.return_value.read.return_value = "content of test.txt"
+        user_input_with_mention = "Please check @test.txt and respond."
+
+        # Reset send_message on the instance for this specific test
+        self.agent.send_message = MagicMock(return_value=LLMResponse(content="<text_content>OK</text_content>", usage=LLMUsageInfo()))
+
+        with self.assertLogs(level='INFO') as cm: # Changed logger
+            self.agent.run_task(user_input_with_mention, max_steps=1)
+
+        self.assertEqual(len(self.agent.mentioned_file_contents), 1)
+        self.assertEqual(self.agent.mentioned_file_contents[0]["path"], "test.txt")
+        self.assertEqual(self.agent.mentioned_file_contents[0]["content"], "content of test.txt")
+        self.assertTrue(any("Processed @-mentions. Found 1 valid files to load into prompt." in message for message in cm.output))
+
+        # Check history for user message. It should be the original user input.
+        # The last message is assistant "OK", message before that is user "Result of ...",
+        # message before that is assistant (tool call or text), message before that is user input.
+        # This depends on whether tools were called or not.
+        # If _process_file_mentions is called before memory.add_message("user", user_input),
+        # then the user message in history should be the raw input.
+
+        # Find the first user message after system prompt
+        first_user_message_index = -1
+        for i, msg in enumerate(self.agent.history):
+            if msg["role"] == "user":
+                first_user_message_index = i
+                break
+        self.assertGreaterEqual(first_user_message_index, 0, "No user message found in history")
+
+        # Construct the expected modified user input that should be in history
+        # This mirrors the logic in DeveloperAgent.run_task
+        expected_prepended_text = (
+            f"<file_content path=\"test.txt\">\n"
+            f"content of test.txt\n"
+            f"</file_content>"
+        )
+        expected_user_message_in_history = f"{expected_prepended_text}\n\n---\nOriginal user input:\n{user_input_with_mention}"
+        self.assertEqual(self.agent.history[first_user_message_index]["content"], expected_user_message_in_history)
+
+    def test_run_task_with_single_mentioned_file_prepends_content(self):
+        original_input = "Analyze this: @file1.txt"
+        file_path = "file1.txt"
+        file_content = "Content of file1."
+
+        # Mock _process_file_mentions to return predefined data
+        self.agent._process_file_mentions = MagicMock(return_value=[
+            {"path": file_path, "content": file_content}
+        ])
+        # Mock send_message to stop after first user message is processed
+        self.agent.send_message = MagicMock(return_value=LLMResponse(content="<text_content>LLM processed.</text_content>", usage=LLMUsageInfo()))
+
+        self.agent.run_task(original_input, max_steps=1)
+
+        expected_prepended_text = (
+            f"<file_content path=\"{file_path}\">\n"
+            f"{file_content}\n"
+            f"</file_content>"
+        )
+        expected_user_message_in_history = f"{expected_prepended_text}\n\n---\nOriginal user input:\n{original_input}"
+
+        # The user message is the first one after the system prompt
+        self.assertEqual(self.agent.history[1]["role"], "user")
+        self.assertEqual(self.agent.history[1]["content"], expected_user_message_in_history)
+        self.agent._process_file_mentions.assert_called_once_with(original_input)
+
+    def test_run_task_with_multiple_mentioned_files_prepends_content(self):
+        original_input = "Compare @file1.txt and @file2.md"
+        file1_path = "file1.txt"
+        file1_content = "Content of file1."
+        file2_path = "docs/file2.md"
+        file2_content = "## Markdown Content"
+
+        self.agent._process_file_mentions = MagicMock(return_value=[
+            {"path": file1_path, "content": file1_content},
+            {"path": file2_path, "content": file2_content}
+        ])
+        self.agent.send_message = MagicMock(return_value=LLMResponse(content="<text_content>LLM processed files.</text_content>", usage=LLMUsageInfo()))
+
+        self.agent.run_task(original_input, max_steps=1)
+
+        expected_prepended_text1 = (
+            f"<file_content path=\"{file1_path}\">\n"
+            f"{file1_content}\n"
+            f"</file_content>"
+        )
+        expected_prepended_text2 = (
+            f"<file_content path=\"{file2_path}\">\n"
+            f"{file2_content}\n"
+            f"</file_content>"
+        )
+        expected_full_prepended_text = f"{expected_prepended_text1}\n{expected_prepended_text2}"
+        expected_user_message_in_history = f"{expected_full_prepended_text}\n\n---\nOriginal user input:\n{original_input}"
+
+        self.assertEqual(self.agent.history[1]["role"], "user")
+        self.assertEqual(self.agent.history[1]["content"], expected_user_message_in_history)
+        self.agent._process_file_mentions.assert_called_once_with(original_input)
+
+    def test_run_task_with_no_mentioned_files_preserves_input(self):
+        original_input = "Just a normal task."
+        self.agent._process_file_mentions = MagicMock(return_value=[]) # No files processed
+        self.agent.send_message = MagicMock(return_value=LLMResponse(content="<text_content>Got it.</text_content>", usage=LLMUsageInfo()))
+
+        self.agent.run_task(original_input, max_steps=1)
+
+        self.assertEqual(self.agent.history[1]["role"], "user")
+        self.assertEqual(self.agent.history[1]["content"], original_input) # Should be unchanged
+        self.agent._process_file_mentions.assert_called_once_with(original_input)
+
+    def test_run_task_with_failed_mention_read_preserves_input_if_all_fail(self):
+        # This case is covered if _process_file_mentions returns an empty list,
+        # which is tested by test_run_task_with_no_mentioned_files_preserves_input.
+        # If _process_file_mentions handles errors internally and returns an empty list
+        # for mentioned_file_contents, then the input to LLM should not be prepended.
+        original_input = "Task with @badfile.txt that fails to read."
+        self.agent._process_file_mentions = MagicMock(return_value=[]) # Simulate all reads failed
+        self.agent.send_message = MagicMock(return_value=LLMResponse(content="<text_content>Understood.</text_content>", usage=LLMUsageInfo()))
+
+        self.agent.run_task(original_input, max_steps=1)
+        self.assertEqual(self.agent.history[1]["role"], "user")
+        self.assertEqual(self.agent.history[1]["content"], original_input)
+        self.agent._process_file_mentions.assert_called_once_with(original_input)

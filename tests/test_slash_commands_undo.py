@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from src.slash_commands import UndoCommand, UndoAllCommand, AgentCliContext
+from src.slash_commands import UndoCommand, UndoAllCommand
+from src.cli import AgentCliContext # Corrected import
 # Assuming DeveloperAgent can be mocked. If it's too complex,
 # we'll mock its attributes directly on agent_context.agent.
 # from src.agent import DeveloperAgent # Not strictly needed if we mock agent attributes

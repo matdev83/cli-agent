@@ -15,6 +15,7 @@ from .prompts.system import get_system_prompt
 from .confirmations import request_user_confirmation # New import
 from src.utils import to_bool, commit_all_changes # For handling 'requires_approval' and auto commits
 from src.llm_protocol import LLMResponse, LLMUsageInfo # Added import
+from src.mentions import extract_file_mentions # For @-mention processing
 
 from src.tools import (
     Tool,
@@ -100,6 +101,7 @@ class DeveloperAgent:
         self.session_commit_history: List[str] = []
         self.initial_session_head_commit_hash: Optional[str] = None
         self.current_session_cost: float = 0.0 # Added for cost tracking
+        self.mentioned_file_contents: list[dict[str, str]] = [] # For storing @-mentioned file content
 
         tool_instances: List[Tool] = [
             ReadFileTool(), WriteToFileTool(), ReplaceInFileTool(), ListFilesTool(),
@@ -340,9 +342,84 @@ class DeveloperAgent:
             return f"Error: Tool '{tool_name}' failed to execute. Reason: {str(e)}"
 
 
+    def _process_file_mentions(self, user_input: str) -> list[dict[str, str]]:
+        """
+        Finds all file path mentions in the user_input, reads their content,
+        and returns a list of dictionaries with path and content.
+        """
+        if not user_input:
+            return []
+
+        mentioned_file_data: list[dict[str, str]] = []
+        processed_abs_paths = set() # To avoid reading the same file multiple times
+
+        # FILE_MENTION_REGEX is already compiled in src.mentions
+        # extract_file_mentions returns a list of path strings
+        path_strings = extract_file_mentions(user_input)
+
+        for rel_path_str in path_strings:
+            # Construct absolute path
+            # It's important that self.cwd is correctly set and absolute.
+            abs_path = os.path.abspath(os.path.join(self.cwd, rel_path_str))
+
+            if abs_path in processed_abs_paths:
+                continue # Already processed this exact absolute path
+
+            try:
+                if not os.path.exists(abs_path):
+                    logging.warning(f"Mentioned file does not exist: {abs_path} (from mention '{rel_path_str}')")
+                    continue
+                if not os.path.isfile(abs_path):
+                    logging.warning(f"Mentioned path is not a file: {abs_path} (from mention '{rel_path_str}')")
+                    continue
+
+                with open(abs_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                mentioned_file_data.append({"path": rel_path_str, "content": content})
+                processed_abs_paths.add(abs_path)
+                logging.info(f"Successfully read mentioned file: {abs_path} (from mention '{rel_path_str}')")
+
+            except FileNotFoundError: # Should be caught by os.path.exists, but as a safeguard
+                logging.warning(f"Mentioned file not found (race condition?): {abs_path} (from mention '{rel_path_str}')")
+            except PermissionError:
+                logging.warning(f"Permission denied when trying to read mentioned file: {abs_path} (from mention '{rel_path_str}')")
+            except IOError as e:
+                logging.warning(f"IOError when reading mentioned file {abs_path} (from mention '{rel_path_str}'): {e}")
+            except Exception as e: # Catch any other unexpected errors during file processing
+                logging.error(f"Unexpected error processing mentioned file {abs_path} (from mention '{rel_path_str}'): {e}", exc_info=True)
+
+        return mentioned_file_data
+
     def run_task(self, user_input: str, max_steps: int = 20) -> str:
         """Run the agent loop until attempt_completion or step limit reached."""
-        self.memory.add_message("user", user_input)
+
+        # Process @-mentions for files before adding user_input to memory or sending to LLM
+        self.mentioned_file_contents = self._process_file_mentions(user_input)
+        if self.mentioned_file_contents:
+            logging.info(f"Processed @-mentions. Found {len(self.mentioned_file_contents)} valid files to load into prompt.")
+
+            prepended_texts = []
+            for file_data in self.mentioned_file_contents:
+                # Using XML-like tags for consistency with tool result formatting
+                formatted_content = (
+                    f"<file_content path=\"{file_data['path']}\">\n"
+                    f"{file_data['content']}\n"
+                    f"</file_content>"
+                )
+                prepended_texts.append(formatted_content)
+
+            if prepended_texts:
+                prepended_string = "\n".join(prepended_texts)
+                # Add a clear separator between prepended content and original user input
+                user_input_for_history = f"{prepended_string}\n\n---\nOriginal user input:\n{user_input}"
+                logging.debug(f"Prepending mentioned file content to user input. New length: {len(user_input_for_history)}")
+            else:
+                user_input_for_history = user_input
+        else:
+            user_input_for_history = user_input
+
+        self.memory.add_message("user", user_input_for_history)
         for _i in range(max_steps):
             # Step 3: Admonishment before calling LLM
             if self.consecutive_tool_errors >= MAX_CONSECUTIVE_TOOL_ERRORS:

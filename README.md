@@ -21,6 +21,14 @@ This project aims to re-implement core features of the Cline VSCode extension as
 *   **System Prompt**: Utilizes a detailed system prompt inspired by Cline, guiding the LLM's behavior and tool usage.
 *   **Stubbed Advanced Tools**: Includes stubs for future implementation of `browser_action`, `use_mcp_tool`, and `access_mcp_resource`.
 
+## Interactive Features
+
+*   **At-Mentions**:
+    *   Users can type `@` followed by a file path (e.g., `@src/agent.py`) within their task description.
+    *   The content of the mentioned file will be automatically fetched and prepended to the task input, providing context to the agent.
+    *   Tab-based autocompletion for file paths is available after typing `@`, helping users quickly find and reference files.
+*   **Slash Commands**: Special commands can be typed into the input prompt for various actions (see "Slash Commands" section below).
+
 ## Setup Instructions
 
 1.  **Python Version**: Python 3.8+ is recommended.
@@ -67,6 +75,21 @@ python -m src.cli "Create a Python file that prints hello world" --model mock --
 ```bash
 python -m src.cli "Refactor the main function in utils.py to be more efficient" --model anthropic/claude-3-opus --auto-approve
 ```
+
+**Slash Commands (Interactive CLI):**
+
+When running the agent in its interactive CLI mode (by not providing a task directly as a command-line argument, or after an initial task completes), you can use slash commands:
+
+*   `/model <model_name>`: Change the active LLM (e.g., `/model anthropic/claude-3-sonnet-3.5`).
+*   `/set-timeout <seconds>`: Adjust the LLM API call timeout.
+*   `/plan`: Switch the agent to "PLAN MODE".
+*   `/act`: Switch the agent to "ACT MODE" (default).
+*   `/refresh`: Re-scans the project directory to update the file list used for at-mention autocompletion. Useful if you've added or removed files while the agent is running.
+*   `/undo`: Reverts the last auto-committed change made by the agent in the current session.
+*   `/undo-all`: Reverts all auto-committed changes made during the current session to the state at the start of the session.
+*   `/help`: Displays help information for all available slash commands.
+*   `/stop`: Signals the currently running agent task to stop (if possible).
+*   `/exit`: Exits the CLI application.
 
 ## How to Run Tests
 
