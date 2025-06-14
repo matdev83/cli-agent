@@ -159,13 +159,13 @@ class DeveloperAgent:
             },
             "browser_action": {
                 "cli_arg_flag": "allow_use_browser",
-                "prompt_verb": "using browser for",
+                "prompt_verb": "browser action",
                 "resource_param_key": "url",
                 "action_param_key": "action",
             },
             "use_mcp_tool": {
                 "cli_arg_flag": "allow_use_mcp",
-                "prompt_verb": "using MCP tool",
+                "prompt_verb": "MCP action",
                 "resource_param_key": "tool_name",
             },
             "access_mcp_resource": {
@@ -320,7 +320,12 @@ class DeveloperAgent:
             prompt_msg = f"Allow {prompt_verb}: '{resource_name}'? (y/n)"
             if request_user_confirmation(prompt_msg):
                 return True, None
-            return False, f"{user_denial_message_template}: {resource_name}"
+            denial_msg = (
+                f"{user_denial_message_template} for {prompt_verb}."
+                if resource_name == unknown_res_name_default
+                else f"{user_denial_message_template}: {resource_name}"
+            )
+            return False, denial_msg
 
         if cli_arg_flag_name and getattr(
             self.cli_args, cli_arg_flag_name, False
@@ -340,7 +345,12 @@ class DeveloperAgent:
         if request_user_confirmation(confirm_action_prompt):
             return True, None
 
-        return False, f"{user_denial_message_template}: {resource_name}"
+        denial_msg = (
+            f"{user_denial_message_template} for {prompt_verb}."
+            if resource_name == unknown_res_name_default
+            else f"{user_denial_message_template}: {resource_name}"
+        )
+        return False, denial_msg
 
     def _run_tool(self, tool_use: ToolUse) -> str:
         tool_name = tool_use.name
@@ -379,11 +389,11 @@ class DeveloperAgent:
                 tool_params, agent_tools_instance=self
             )
 
-            if result_str.startswith("Error:"):
+            if result_str.startswith("Error"):
                 self.consecutive_tool_errors += 1
                 if tool_name == "replace_in_file" and (
                     "Error: Search block" in result_str or
-                    "Error processing diff_blocks" in result_str
+                    "Error processing diff" in result_str
                 ):
                     file_path = tool_params.get("path")
                     if file_path:
@@ -433,13 +443,13 @@ class DeveloperAgent:
             logging.error(
                 f"ValueError in tool '{tool_name}': {e}\n{traceback.format_exc()}"
             )
-            return f"Error: Tool '{tool_name}' value error. Reason: {str(e)}"
+            return f"Error: Tool '{tool_name}' encountered a value error. Reason: {str(e)}"
         except Exception as e:  # noqa: E722
             self.consecutive_tool_errors += 1
             logging.error(
                 f"Unexpected error in tool '{tool_name}': {e}\n{traceback.format_exc()}"
             )
-            return f"Error: Tool '{tool_name}' failed. Reason: {str(e)}"
+            return f"Error: Tool '{tool_name}' failed to execute. Reason: {str(e)}"
 
     def _process_file_mentions(
         self, user_input: str
@@ -458,12 +468,14 @@ class DeveloperAgent:
 
             try:
                 if not os.path.exists(abs_path):
-                    logging.warning(f"Mentioned file {abs_path} (from "
-                                    f"'{rel_path_str}') not found.")
+                    logging.warning(
+                        f"Mentioned file does not exist: {abs_path}"
+                    )
                     continue
                 if not os.path.isfile(abs_path):
-                    logging.warning(f"Mentioned path {abs_path} (from "
-                                    f"'{rel_path_str}') is not a file.")
+                    logging.warning(
+                        f"Mentioned path is not a file: {abs_path}"
+                    )
                     continue
                 with open(abs_path, "r", encoding="utf-8") as f:
                     content = f.read()
@@ -473,15 +485,17 @@ class DeveloperAgent:
                     f"Read mentioned file: {abs_path} (from '{rel_path_str}')"
                 )
             except FileNotFoundError:  # Should be caught by os.path.exists
-                logging.warning(f"Mentioned file not found (race condition?): "
-                                f"{abs_path} (from mention '{rel_path_str}')")
+                logging.warning(
+                    f"Mentioned file not found (race condition?): {abs_path}"
+                )
             except PermissionError:
                 logging.warning(
-                    f"Permission denied for file: {abs_path} "
-                    f"(from mention '{rel_path_str}')")
+                    f"Permission denied when trying to read mentioned file: {abs_path}"
+                )
             except IOError as e:
-                logging.warning(f"IOError for file {abs_path} "
-                                f"(from mention '{rel_path_str}'): {e}")
+                logging.warning(
+                    f"IOError when reading mentioned file {abs_path}: {e}"
+                )
             except Exception as e:  # Catch any other unexpected errors
                 logging.error(f"Error processing file {abs_path} "
                               f"(from mention '{rel_path_str}'): {e}",
