@@ -6,7 +6,7 @@ from typing import List, Optional, Any, Dict
 # It's generally better to import specific names if utils is a module
 # For example: from .utils import revert_to_commit, revert_to_state_before_commit
 # However, the prompt asked for `from . import utils`
-from . import utils
+from src import utils # Changed to absolute import from src
 # For type hinting agent_context.agent. DeveloperAgent might cause circular dependency if imported directly.
 # Using 'Any' for now as per instructions, but consider forward reference 'DeveloperAgent' if appropriate.
 # from .agent import DeveloperAgent # Example of potential direct import
@@ -190,20 +190,53 @@ class ActModeCommand(SlashCommand):
             # MVP Task 3.1: Implement ACT MODE vs. PLAN MODE Logic
             return "ActModeCommand: ACT MODE activated (actual mode switching pending full implementation)."
 
-# Definition for the AgentCliContext class (can be refined later)
-# This will be instantiated in cli.py and passed to commands.
-class AgentCliContext:
-    def __init__(self, cli_args_namespace: Any, display_update_func: callable, agent_instance: Any = None):
-        self.cli_args = cli_args_namespace  # This would be the args object from argparse
-        self.display_update_func = display_update_func # For commands that might want to directly update UI
-        self.agent = agent_instance # Optional, if commands need to interact with agent directly
-        self.mode = "ACT" # Default mode
+# The AgentCliContext class is now primarily defined and instantiated in cli.py.
+# Slash commands will receive an instance of that context.
 
-    def set_mode(self, mode_name: str):
-        # This is a placeholder for where mode switching logic would go.
-        # It might involve updating self.cli_args, self.agent, or other state.
-        self.mode = mode_name
-        self.display_update_func(f"Context: Mode changed to {mode_name}")
+class RefreshCommand(SlashCommand):
+    """
+    Re-scans the project directory to update the at-mention autocomplete cache.
+    """
+    @property
+    def name(self) -> str:
+        return "refresh"
+
+    @property
+    def description(self) -> str:
+        return "Re-scans the project directory to update the at-mention autocomplete cache."
+
+    @property
+    def usage_examples(self) -> List[str]:
+        return ["/refresh"]
+
+    def execute(self, args: List[str], agent_context: Any = None) -> Optional[str]:
+        if not agent_context or not hasattr(agent_context, 'file_cache') or not agent_context.file_cache:
+            # Attempt to provide a helpful message even if display_update_func is also missing
+            msg = "Error: File cache context not available for refresh command."
+            if agent_context and hasattr(agent_context, 'display_update_func') and agent_context.display_update_func:
+                agent_context.display_update_func(msg)
+            return msg
+
+        if not hasattr(agent_context.file_cache, 'refresh'):
+            msg = "Error: File cache object is invalid or does not support refresh."
+            if agent_context.display_update_func:
+                agent_context.display_update_func(msg)
+            return msg
+
+        try:
+            agent_context.display_update_func("Starting file cache refresh...")
+            updated_paths = agent_context.file_cache.refresh()
+            # The refresh method itself logs details, so this is a summary for the UI
+            success_msg = f"File cache refreshed successfully. Found {len(updated_paths)} files."
+            agent_context.display_update_func(success_msg)
+            return success_msg # Return for potential direct printing if UI update fails
+        except Exception as e:
+            # import traceback # Would be useful for full debugging in local env
+            # err_msg = f"Error during file cache refresh: {e}\n{traceback.format_exc()}"
+            err_msg = f"Error during file cache refresh: {e}"
+            if agent_context.display_update_func:
+                agent_context.display_update_func(err_msg)
+            return err_msg
 
 
 class SlashCommandRegistry:
