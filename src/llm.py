@@ -182,16 +182,18 @@ class OpenRouterLLM(LLMWrapper):  # Indicate conformance to the protocol
 
 
         for cost_val in cost_sources_values:
-            if cost_val is not None:
+            if cost_val is not None and isinstance(cost_val, (int, float, str)):
                 try:
                     parsed_cost = float(cost_val)
-                    if parsed_cost >= 0: # Found a valid, non-negative cost
+                    if parsed_cost >= 0:  # Found a valid, non-negative cost
                         break
                 except (TypeError, ValueError):
                     continue  # Try next source if current one is not a valid float
 
         def _to_int_internal(val: Any) -> int:
             if val is None:
+                return 0
+            if not isinstance(val, (int, float, str)):
                 return 0
             try:
                 return int(val)
